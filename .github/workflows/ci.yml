@@ -50,9 +50,6 @@ jobs:
   rtl:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    env:
-      SSC_TOOL_PREFIX: ${{ runner.temp }}/ssc-tools
-      SSC_TOOL_SOURCE: ${{ runner.temp }}/ssc-tool-source
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -68,6 +65,9 @@ jobs:
           key: ubuntu-24.04-verilator-5.048-${{ hashFiles('scripts/setup_rtl.sh') }}
       - name: Install RTL tools
         id: tools
+        env:
+          SSC_TOOL_PREFIX: ${{ runner.temp }}/ssc-tools
+          SSC_TOOL_SOURCE: ${{ runner.temp }}/ssc-tool-source
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends iverilog build-essential autoconf bison flex help2man libfl-dev zlib1g-dev

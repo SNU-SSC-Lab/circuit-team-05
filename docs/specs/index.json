@@ -214,8 +214,17 @@
         "docs/ci.md",
         "scripts/setup_rtl.sh",
         "scripts/ci_report.py",
-        "src/*.v",
-        ".gitattributes"
+        ".gitattributes",
+        "src/accumulator_reg.v",
+        "src/adder12.v",
+        "src/dot8_controller.v",
+        "src/illegal_flag_reg.v",
+        "src/nibble_rx.v",
+        "src/result_tx.v",
+        "src/ternary_decoder.v",
+        "src/ternary_term.v",
+        "src/v_ternary8_top.v",
+        "src/weight_shift_reg.v"
       ],
       "rfcs": [
         {
