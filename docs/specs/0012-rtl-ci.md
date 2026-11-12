@@ -189,4 +189,6 @@ RFC 0002에 따라 규약·기획·구현 결과를 구분하고, 관련 SPEC과
 
 Workflow를 작성했으며 GitHub 실행 결과는 PR의 Checks와 실행 링크로 기록한다. 실제 실행하기 전까지 GHA 통과로 표시하지 않는다. 브랜치 보호 등록은 관리자 권한이 필요한 별도 작업이다. ASIC 도구 환경 준비를 주장하지 않는다.
 
+2026-11-12 첫 GitHub 실행은 head `b6da055`에서 문서·운영체제별 정책 시험·RTL 다섯 단계·보고서 업로드까지 통과했다. [실행 기록](https://github.com/SNU-SSC-Lab/circuit-team-05/actions/runs/43169698622). Icarus 12.0 stable·Verilator 5.048에서 줄 집계도 96/98이었다. 초기 실행에서 확인한 Actions의 Node 20 폐기 경고는 Node 24를 사용하는 cache v6.1.0·upload-artifact v7.0.2로 갱신해 처리하고 최종 커밋을 다시 검사한다. 공식 Actions는 확인한 커밋 SHA로 고정한다.
+
 공식 참고: [GitHub Actions 이벤트](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), [cocotb 시뮬레이터 지원](https://docs.cocotb.org/en/stable/simulator_support.html), [Vivado 2024.2 구현 대상](https://docs.amd.com/r/2024.2-English/ug904-vivado-implementation/About-the-Vivado-Implementation-Process).
