@@ -19,7 +19,7 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         },
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
@@ -40,7 +40,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -57,7 +57,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -74,7 +74,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -91,7 +91,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -108,7 +108,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -125,7 +125,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -142,7 +142,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -159,7 +159,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -176,7 +176,7 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
@@ -193,10 +193,41 @@
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
         }
       ],
       "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0012-rtl-ci.md",
+      "targets": [
+        ".github/workflows/**",
+        "scripts/ci_policy.py",
+        "scripts/run_rtl.py",
+        "scripts/policy.py",
+        "tests/rtl/**",
+        "tests/policy/**",
+        "verification/**",
+        "requirements-ci.txt",
+        "docs/specs/index.json",
+        "scripts/benchmark_ci.py",
+        "docs/ci.md",
+        "scripts/setup_rtl.sh",
+        "scripts/ci_report.py",
+        "src/*.v",
+        ".gitattributes"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
+        }
+      ],
+      "kind": "implementation"
     }
   ]
 }
