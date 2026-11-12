@@ -1,0 +1,5 @@
+`verilator_config
+// The top decodes only the current 2-bit weight. Upper bits remain inside
+// weight_shift_reg and shift into [1:0] for later terms. Review if wiring changes.
+// Limit this exception to this file, signal, bit range and warning text.
+lint_off -rule UNUSEDSIGNAL -file "*/src/v_ternary8_top.v" -match "*Bits of signal are not used: 'weights'[15:2]*"

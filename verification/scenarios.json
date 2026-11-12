@@ -1,0 +1,24 @@
+{
+  "rtl-unit": [
+    {"id":"U01", "dut":"ternary_decoder", "rfc":["HW01","HW04"], "check":"네 코드와 ACTIVE·NEGATE·ILLEGAL 표 일치"},
+    {"id":"U02", "dut":"ternary_term", "rfc":["HW01","HW06"], "check":"입력 256종·제어 네 조합 전수, 부호 확장 후 반전"},
+    {"id":"U03", "dut":"adder12", "rfc":["HW01"], "check":"A 4096종과 B 경계 7종, signed 12비트 잘림"},
+    {"id":"U04", "dut":"accumulator_reg", "rfc":["HW04","HW05"], "check":"리셋 우선·허용 저장·유지"},
+    {"id":"U05", "dut":"illegal_flag_reg", "rfc":["HW04","HW05"], "check":"오류 OR·유지·초기화·EN=0 무시"},
+    {"id":"U06", "dut":"weight_shift_reg", "rfc":["HW02","HW04"], "check":"W0·W1 부분 적재·우선순위·8회 이동"},
+    {"id":"U07", "dut":"nibble_rx", "rfc":["HW02","HW05"], "check":"256바이트 조립·READY/VALID 무수신·펄스·반 바이트 리셋"},
+    {"id":"U08", "dut":"result_tx", "rfc":["HW03","HW05"], "check":"네 조각·DONE·LOAD 우선·출력 중 리셋"},
+    {"id":"U09", "dut":"dot8_controller", "rfc":["HW02","HW03","HW04","HW05"], "check":"정상 상태 4개·정상 전이 8개·마지막 항·리셋"}
+  ],
+  "rtl-integration": [
+    {"id":"I01", "test":"boundary_packets", "rfc":["HW01","HW03"], "check":"손계산220, ±1024, -1, 1016, 0과 signed packing"},
+    {"id":"I02", "test":"positions_and_illegal", "rfc":["HW01","HW04"], "check":"각 위치 ±가중치, 단일·복수·전체 불법 코드, 오류 후 정상 복구"},
+    {"id":"I03", "test":"protocol_and_back_to_back", "rfc":["HW02","HW03"], "check":"무효 입력·공백·READY 대기 중 유지·출력 중 다음 작업 제시·연속 작업"},
+    {"id":"I04", "test":"reset_each_phase", "rfc":["HW05"], "check":"입력 조각 0~20개 수신 후·각 출력 조각 구간 리셋 및 정상 복구"}
+  ],
+  "rtl-regression": [
+    {"id":"R01", "test":"all_legal_weights", "rfc":["HW01","HW06"], "check":"6561 가중치 배열 × 설정의 다섯 입력 배열"},
+    {"id":"R02", "test":"random_jobs", "rfc":["HW01","HW02","HW03","HW04","HW06"], "check":"고정 seed 10000 작업, 네 가중치 코드·전체 입력 범위·공백"}
+  ],
+  "acceptance": "모든 정의한 필수 시나리오가 실행되고 실패가 없어야 한다. 전체 입력 공간·코드 커버리지 100%를 뜻하지 않는다."
+}

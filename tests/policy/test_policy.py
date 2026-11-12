@@ -79,7 +79,22 @@ class RepositoryTest(unittest.TestCase):
 
     def test_unmapped_rtl_is_rejected(self):
         (self.root / 'src/new.v').write_text('module new; endmodule')
-        with self.assertRaisesRegex(policy.PolicyError, '역작성 SPEC'):
+        with self.assertRaisesRegex(policy.PolicyError, '관련 SPEC'):
+            policy.check_docs(self.root)
+
+    def test_new_nested_module_accepts_forward_spec(self):
+        folder=self.root/'src/new'; folder.mkdir()
+        (folder/'forward.sv').write_text('module forward; endmodule')
+        path=self.root/policy.INDEX
+        data=json.loads(path.read_text(encoding='utf-8'))
+        data['specs'][0]['targets'].append('src/new/forward.sv')
+        path.write_text(json.dumps(data),encoding='utf-8')
+        policy.check_docs(self.root)
+
+    def test_unmapped_nested_module_is_rejected(self):
+        folder=self.root/'src/new'; folder.mkdir()
+        (folder/'new.sv').write_text('module new; endmodule')
+        with self.assertRaisesRegex(policy.PolicyError, '관련 SPEC'):
             policy.check_docs(self.root)
 
     def test_missing_or_empty_sections(self):
