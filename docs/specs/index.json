@@ -19,11 +19,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         },
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         }
       ],
       "kind": "implementation"
@@ -36,11 +36,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -53,11 +53,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -70,11 +70,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -87,11 +87,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -104,11 +104,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -121,11 +121,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -138,11 +138,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -155,11 +155,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -172,11 +172,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
@@ -189,11 +189,11 @@
       "rfcs": [
         {
           "path": "docs/rfcs/0001-ternary8-interface.md",
-          "sha256": "83f9eb17f7cde571b4e9042ba62088cc79c4d1ac717555a296f3479fc987b6b6"
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
         },
         {
           "path": "docs/rfcs/0002-collaboration.md",
-          "sha256": "1199ff0eb16c2a9a797858385816456a011dddae9eb9bb2d2c98ce03923b4782"
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
         }
       ],
       "kind": "reverse"
