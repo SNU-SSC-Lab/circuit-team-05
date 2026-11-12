@@ -153,7 +153,8 @@ def changed_files(root: Path, base: str, head: str) -> list[str]:
 def check_pr(root: Path, body: str, base: str | None = None, head: str = 'HEAD') -> None:
     required_sections(body, ('What', 'Why', 'How'))
     entries = registry(root)
-    selected = list(dict.fromkeys(re.findall(r'docs/specs/[\w-]+\.md', body)))
+    selected = list(dict.fromkeys(p for p in re.findall(r'docs/specs/[\w-]+\.md', body)
+                                  if p != 'docs/specs/README.md'))
     for path in selected:
         if path not in entries:
             raise PolicyError(f'등록되지 않은 SPEC입니다: {path}')

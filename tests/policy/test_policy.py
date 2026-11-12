@@ -98,6 +98,7 @@ class RepositoryTest(unittest.TestCase):
 
     def test_complete_pr_passes(self):
         policy.check_pr(self.root, self.body(), self.base)
+        policy.check_pr(self.root, self.body()+'\n문서 목록: docs/specs/README.md', self.base)
 
     def test_native_edit_is_denied_before_review(self):
         with self.assertRaisesRegex(policy.PolicyError, 'SPEC·RFC 확인'):
@@ -187,6 +188,8 @@ class RepositoryTest(unittest.TestCase):
         self.g('add', '.'); self.g('commit', '-m', 'changed code')
         with self.assertRaisesRegex(policy.PolicyError, 'SPEC을 PR에 연결'):
             policy.check_pr(self.root, self.body(), self.base)
+        with self.assertRaisesRegex(policy.PolicyError, 'SPEC을 PR에 연결'):
+            policy.check_pr(self.root, self.body('docs/specs/README.md'), self.base)
         policy.check_pr(self.root, self.body(S2), self.base)
 
     def test_flow_change_requires_paired_diagrams_and_diff(self):
