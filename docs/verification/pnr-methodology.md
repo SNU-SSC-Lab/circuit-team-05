@@ -1,10 +1,23 @@
 # P&R 이후 검증 방법론
 
-팀 공유용 검토 초안 v0.1 · 2026-11-12
+팀 공유용 검토 초안 v0.2 · 2026-11-13
 
 목적은 **RTL에서 맞던 계산이 실제 셀과 배선으로 바뀐 뒤에도 동작하고, 공정 규칙에 맞는 최종 GDS를 제출하는 것**입니다. 현재 PR 3은 RTL 검증까지 담당합니다. 이 문서는 다음 단계의 검증을 준비하는 방법이며 실제 합성·P&R 실행 또는 제출 승인을 뜻하지 않습니다.
 
-공유된 「SNU MyChip VCore·PCore 5Team Design Guide」(김태완, 2026-10-18) 9~10쪽을 기준으로 정리했습니다. 공정·도구·검증 deck의 실제 배포 범위와 최신 MPW 제출 규정은 담당 멘토·운영기관에 확인해야 합니다. 원문은 현재 저장소에 포함돼 있지 않습니다. 아직 합의하지 않은 팀 규칙을 이 초안으로 확정하지 않습니다.
+공유된 「SNU MyChip VCore·PCore 5Team Design Guide」(김태완, 2026-10-18) 4쪽과 9~10쪽을 기준으로 정리했습니다. 공정·도구·검증 deck의 실제 배포 범위와 최신 MPW 제출 규정은 담당 멘토·운영기관에 확인해야 합니다. 원문은 현재 저장소에 포함돼 있지 않습니다. 아직 합의하지 않은 팀 규칙을 이 초안으로 확정하지 않습니다.
+
+## 확인된 내용과 실행 환경의 미확인 사항
+
+초기 모듈 명세 DOCX에는 학교 서버·계정·접속 방법이 없습니다. 설계 안내서 4쪽은 Cadence 접근과 PDK 사용 권한 등이 준비돼 있다는 전제를 두고, 4차 공고가 제공하는 자동 배치·배선 환경을 출발점으로 사용하라고 설명합니다. 이 내용만으로 학교 리눅스 서버가 제공된다고 확인할 수는 없습니다.
+
+이 문서의 이전 버전은 학교 서버를 실행 환경으로 가정했습니다. 그 존재와 제공 여부를 확인한 사실이 아니므로 해당 표현을 정정합니다. 먼저 실제 지원 환경의 제공 주체·접속 방법·도구와 사용 권한을 확인해야 합니다.
+
+| 구분 | 현재 상태 |
+| --- | --- |
+| 안내서가 설명한 내용 | Cadence·PDK 접근 전제, 공고의 자동 배치·배선 환경 확인, 합성 이후 검증 흐름 |
+| 아직 확인하지 않은 내용 | 학교 서버 존재·제공 여부, 실행 OS·CPU, 계정·접속 방법, 실제 도구·라이선스·PDK 사용 권한 |
+| 팀이 선택할 수 있는 환경 후보 | 제공 기관의 지원 환경, 사용이 허용된 개인 PC·워크스테이션, 본인이 마련한 OCI·AWS 등의 VM |
+| GitHub 연동 | 확보한 환경의 원격·자동 실행 허용 여부를 확인한 뒤 선택할 후속 제안 |
 
 ## RTL 검증에서 무엇이 더 필요한가요?
 
@@ -51,7 +64,7 @@ flowchart TD
 | 공식 DRC/LVS/PEX deck와 소자 모델 | 공정 규칙·연결·기생성분 검증 | 운영기관이 인정하는 도구·버전·실행법 |
 | 전체 chip의 LVS 기준 회로와 셀·pad 참조 netlist | 레이아웃과 의도한 연결 비교 | 코어뿐 아니라 pad·전원 연결까지 같은 top으로 비교 |
 | SDC와 보드 I/O 조건 | 클록·입출력 타이밍 정의 | 실제 FPGA 송수신 시점, pad 지연·부하 |
-| Linux 실행 서버·도구 설치·라이선스 | 상용 ASIC 도구 실행 | 학교 제공 경로·접속·라이선스 사용 가능 여부 |
+| 도구가 지원하는 실행 환경·설치 파일·라이선스 | 합성·P&R·검증 도구 실행 | 제공 주체·접속 방법·지원 OS/CPU·실제 사용 권한 |
 
 안내서 기준 도구와 역할은 다음과 같습니다. 실제로 제공되는 제품과 라이선스를 확인한 뒤 실행 환경을 확정합니다.
 
@@ -107,23 +120,37 @@ RTL에서 사용한 정답 모델과 입력 시나리오는 재사용할 수 있
 
 ## GitHub에서 P&R 검증도 실행할 수 있나요?
 
-**GitHub Actions가 학교의 실행 서버에 작업을 요청하는 구성은 가능합니다.** 도구·PDK·라이선스·접속 권한이 그 서버에 있어야 합니다. 공개 GitHub runner에 학교 환경이 기본 제공되지는 않습니다.
+**확보한 실행 환경이 외부 작업 실행을 허용하면 GitHub 연동을 검토할 수 있습니다.** 실행 환경은 학교 서버로 한정하지 않습니다. 현재는 제공 주체·접속 방법·runner 설치 가능 여부를 확인하지 않았습니다.
 
-초기에는 학교 서버에서 수동으로 검증하고 실행 스크립트·요약 보고서·기준 버전을 정리합니다. 이 경로가 재현된 뒤 self-hosted runner 연결 여부를 결정하는 순서를 제안합니다. P&R 도구 설치나 runner 등록은 이번 PR에서 수행하지 않습니다.
+먼저 실제 이용 가능한 환경에서 제공된 합성·P&R 흐름을 수동 실행하고 실행 방법·요약 보고서·기준 버전을 남기는 순서를 제안합니다. 이후 자동화할 수 있는 명령과 권한이 확보되면 self-hosted runner 연결 여부를 결정합니다. 제공 환경이 외부 실행을 허용하지 않으면 해당 제공 절차로 검증하고 결과를 기록합니다. P&R 도구 설치나 runner 등록은 이번 PR에서 수행하지 않습니다.
 
 ```mermaid
 flowchart LR
     A[모든 PR] --> B[GitHub runner: 현재 RTL CI]
-    C[리뷰한 설계 버전·수동 실행 요청] --> D[학교 서버: 승인된 도구·PDK·라이선스]
-    D --> E[합성·P&R·STA·기능·물리 검증]
-    E --> F[허용된 범위의 결과 요약을 GitHub에 기록]
+    C[실행 환경·도구·사용 권한 확인] --> D{외부 자동 실행 허용?}
+    D -->|허용| E[해당 환경과 GitHub 연동 검토]
+    D -->|미허용| F[제공 절차로 수동 실행]
+    E --> G[합성·P&R·STA·기능·물리 검증]
+    F --> G
+    G --> H[허용된 범위의 결과 요약 기록]
 ```
 
-학교 runner에는 검토하지 않은 PR 코드를 자동으로 실행하지 않습니다. 사용할 브랜치·커밋, 실행 권한과 라이선스 동시 사용 수를 먼저 정합니다. PDK·deck·라이선스 정보와 반출이 제한된 설계 데이터는 승인된 위치에 보관합니다. GitHub artifact에 올릴 수 있는 보고서 범위도 기관 정책에 맞춰 확인합니다. 라이선스나 필수 자료가 없어서 실행하지 못하면 통과로 표시하지 않습니다.
+runner를 연결할 경우 검토하지 않은 PR 코드를 자동으로 실행하지 않는 구성을 제안합니다. 사용할 브랜치·커밋, 실행 권한과 라이선스 동시 사용 수를 먼저 정합니다. PDK·deck·라이선스 정보와 반출이 제한된 설계 데이터는 승인된 위치에 보관합니다. GitHub artifact에 올릴 수 있는 보고서 범위도 제공 기관의 정책에 맞춰 확인합니다. 라이선스나 필수 자료가 없어서 실행하지 못하면 통과로 표시하지 않습니다.
+
+### 본인 소유 OCI·AWS VM을 쓰는 경우
+
+본인이 클라우드 VM을 만들고 실행 환경을 구성하는 방식도 가능합니다. 다음 조건을 확인하고 선택합니다.
+
+- 설치할 EDA 도구가 VM의 OS와 CPU 구조를 지원해야 합니다. 예를 들어 x86-64 바이너리는 Arm VM에서 그대로 실행할 수 없습니다.
+- 해당 라이선스가 개인 클라우드 환경에서의 실행을 허용해야 합니다. Cadence는 고객이 마련한 공용 클라우드에서 도구를 사용하는 Cloud Passport 모델도 안내하지만, 우리 프로젝트에 제공될 사용 권한은 아직 확인하지 않았습니다.
+- PDK·표준셀·공식 검증 deck를 해당 클라우드에 보관·사용해도 되는지 제공 조건을 확인해야 합니다.
+- GitHub self-hosted runner 등록에는 저장소 또는 조직의 관리자 권한이 필요합니다. VM 생성 권한과 구분합니다.
+
+무료 VM 할당량·CPU 종류·지원 도구·실제 메모리 요구량을 확인한 뒤 사양과 비용을 정합니다. VM만 확보한 상태를 합성·P&R 환경 준비 완료로 표시하지 않습니다.
 
 ## 실행마다 남길 기록
 
-한 번의 실행 결과에는 다음 자료를 함께 묶습니다. 제한된 원본 파일은 승인된 서버에 두고 GitHub에는 허용된 요약과 위치 식별 정보만 남깁니다.
+한 번의 실행 결과에는 다음 자료를 함께 묶습니다. 제한된 원본 파일은 제공 기관이 허용한 위치에 두고 GitHub에는 허용된 요약과 위치 식별 정보만 남깁니다.
 
 - Git 커밋, RTL 목록·top, 관련 RFC·SPEC과 SDC 버전
 - PDK·셀·도구·deck·RC 자료의 버전, 실행일, corner·mode
@@ -136,8 +163,10 @@ WNS는 검사한 경로 중 가장 작은 여유 시간이며 음수면 위반�
 ## 다음에 확정할 일
 
 1. 운영기관·멘토에게 실제 공정/PDK·표준셀·pad·RC·공식 deck·지원 도구 목록을 확인합니다.
-2. 실행 서버와 라이선스, chip top과 보드 I/O 조건을 확인합니다.
+2. 실행 환경의 제공 주체·접속 방법·지원 OS/CPU·라이선스와 PDK 사용 권한, chip top과 보드 I/O 조건을 확인합니다.
 3. 제공 자료로 합성부터 최종 GDS 재검증까지 한 번 수동 실행하고 누락 자료를 기록합니다.
 4. 실제 도구와 결과를 바탕으로 별도 구현 SPEC과 필요한 제출·검증 규약을 검토합니다. 이후 자동화 범위를 정합니다.
 
 공식 도구 설명: [Innovus](https://www.cadence.com/en_US/home/tools/digital-design-and-signoff/soc-implementation-and-floorplanning/innovus-plus-synthesis-implementation-system.html), [Tempus](https://www.cadence.com/en_US/home/tools/digital-design-and-signoff/silicon-signoff/tempus-timing-signoff-solution.html), [Quantus](https://www.cadence.com/en_US/home/tools/digital-design-and-signoff/silicon-signoff/quantus-extraction-solution.html), [Calibre](https://www.siemens.com/en-us/products/ic/calibre-design/physical-verification/), [GitHub self-hosted runner](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners). 제작 가능 여부는 해당 공정의 공식 자료와 제출 심사에서 확인합니다.
+
+클라우드 환경 참고: [Cadence Cloud Passport](https://www.cadence.com/en_US/home/solutions/cadence-cloud/cloud-passport.html), [OCI Always Free](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm), [AWS Free Tier](https://aws.amazon.com/free/free-tier-faqs/). 무료 제공 범위는 계정 유형과 확인 시점에 따라 달라질 수 있어 실행 환경이 정해질 때 다시 확인합니다.
