@@ -14,7 +14,7 @@ Vision 칩의 경량 영상처리를 위한 **가중치 재설정형 8항 삼진
 y = w0·a0 + w1·a1 + … + w7·a7
 ```
 
-입력값은 signed 8비트 정수 8개, 가중치는 −1·0·+1입니다. 가중치에 따라 각 항을 0, +a 또는 −a로 만들고, 하나의 가산기와 누산 레지스터로 순차적으로 더합니다. 결과는 signed 12비트로 표현합니다. 현재 RTL 소스가 등록되어 있으며 RTL 테스트벤치와 CI는 준비 중입니다.
+입력값은 signed 8비트 정수 8개, 가중치는 −1·0·+1입니다. 가중치에 따라 각 항을 0, +a 또는 −a로 만들고, 하나의 가산기와 누산 레지스터로 순차적으로 더합니다. 결과는 signed 12비트로 표현합니다. RTL 테스트벤치와 GitHub Actions CI를 추가했으며 검사 방법과 범위는 [RTL CI 안내](docs/ci.md)에 정리했습니다.
 
 ### Interface
 
@@ -77,6 +77,9 @@ flowchart TD
 - [RFC 0002 — 협업과 문서 작성](docs/rfcs/0002-collaboration.md): 문서별 역할, SPEC 기반 변경, PR과 리뷰 규칙.
 - [SPEC 목록](docs/specs/README.md): 후킹 구현 계획과 모듈별 역작성 문서.
 - [후킹 사용 방법](docs/hooks.md): 설치·확인·검사와 지원 범위.
+- [PR 1·2·3 팀 안내](docs/team-pr-guide.md): 작업 내용과 팀원이 따라 할 순서. 계속 다듬을 초안.
+- [RTL CI](docs/ci.md): 검사 이름·시나리오·실행 방법과 결과 해석.
+- [P&R 검증 방법론](docs/verification/pnr-methodology.md): 합성 이후 검증과 필요한 환경의 검토 초안.
 
 ## Repository Guidelines
 

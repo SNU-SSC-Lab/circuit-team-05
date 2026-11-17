@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 INDEX = 'docs/specs/index.json'
-POLICY_FILES = {'AGENTS.md', 'CLAUDE.md', '.gitignore', '.gitattributes', INDEX}
+POLICY_FILES = {'AGENTS.md', 'CLAUDE.md', '.gitignore', '.gitattributes', INDEX, 'requirements-ci.txt'}
 
 
 class PolicyError(Exception):
@@ -138,10 +138,12 @@ def check_docs(root: Path) -> None:
     for entry in entries.values():
         # Historical SPECs can retain an older RFC version until selected for a change.
         validate_spec(root, entry, current=False)
-    for path in (root / 'src').glob('*.v'):
+    for path in (root / 'src').rglob('*'):
+        if not path.is_file() or path.suffix.lower() not in ('.v', '.sv'):
+            continue
         file = path.relative_to(root).as_posix()
-        if not any(covered(e, file) and e.get('kind') == 'reverse' for e in entries.values()):
-            raise PolicyError(f'{file}의 역작성 SPEC 연결이 없습니다.')
+        if not any(covered(e, file) for e in entries.values()):
+            raise PolicyError(f'{file}의 관련 SPEC 연결이 없습니다.')
 
 
 def changed_files(root: Path, base: str, head: str) -> list[str]:

@@ -1,0 +1,15 @@
+{
+  "name": "ternary8",
+  "top": "v_ternary8_top",
+  "sources": [
+    "src/accumulator_reg.v", "src/adder12.v", "src/dot8_controller.v",
+    "src/illegal_flag_reg.v", "src/nibble_rx.v", "src/result_tx.v",
+    "src/ternary_decoder.v", "src/ternary_term.v", "src/v_ternary8_top.v",
+    "src/weight_shift_reg.v"
+  ],
+  "unit_tops": ["ternary_decoder", "ternary_term", "adder12", "accumulator_reg", "illegal_flag_reg", "weight_shift_reg", "nibble_rx", "result_tx", "dot8_controller"],
+  "contract": {"terms": 8, "activation_bits": 8, "result_bits": 12, "pin_bits": 4, "response_cycles": 32},
+  "seed": 20261112,
+  "random_jobs": 10000,
+  "boundary_patterns": [[0,0,0,0,0,0,0,0], [127,127,127,127,127,127,127,127], [-128,-128,-128,-128,-128,-128,-128,-128], [127,-128,127,-128,127,-128,127,-128], [-128,-1,0,1,126,127,3,-3]]
+}

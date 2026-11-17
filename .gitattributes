@@ -3,3 +3,9 @@
 *.md text eol=lf
 *.json text eol=lf
 *.toml text eol=lf
+*.sh text eol=lf
+*.v text eol=lf
+*.sv text eol=lf
+*.vlt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
