@@ -5,15 +5,78 @@ Division: Circuit Design
 Status: Preparing
 
 ## Project Overview
-To be determined by the project team.
+
+Vision 칩의 경량 영상처리를 위한 **가중치 재설정형 8항 삼진 내적 CMOS 가속 코어**를 설계하고 검증합니다. 향후 작은 영상 신경망의 연산 블록으로 활용할 수 있도록 정확한 정수 연산과 구현 크기를 확인합니다.
+
+최종 목표는 **MyChip MPW 4차 서비스에 설계를 제출하고, 제작된 칩을 FPGA와 연결하여 실제 동작을 확인하는 것**입니다.
+
+```text
+y = w0·a0 + w1·a1 + … + w7·a7
+```
+
+입력값은 signed 8비트 정수 8개, 가중치는 −1·0·+1입니다. 가중치에 따라 각 항을 0, +a 또는 −a로 만들고, 하나의 가산기와 누산 레지스터로 순차적으로 더합니다. 결과는 signed 12비트로 표현합니다. 현재 RTL 소스가 등록되어 있으며 테스트벤치와 CI는 준비 중입니다.
+
+### Interface
+
+외부 FPGA와 공통 4비트 입력·4비트 출력으로 통신합니다. 가중치 두 바이트를 먼저 받은 뒤 입력값 여덟 바이트를 받고, 결과와 오류 플래그를 4비트씩 네 번 출력합니다.
+
+| 구분 | 신호 | 역할 |
+| --- | --- | --- |
+| 클록·리셋 | `CLK`, `RST_N` | 상승 에지 동작, 동기식 active-low 리셋 |
+| 입력 | `IN[3:0]`, `IN_VALID`, `IN_READY` | 가중치·입력값 수신 및 수신 허용 제어 |
+| 출력 | `OUT[3:0]`, `OUT_VALID` | 결과 전송, 별도 `OUT_READY` 없음 |
+
+상세 연산 범위, 인코딩, 통신 순서와 오류·리셋 규칙은 [RFC 0001](docs/rfcs/0001-ternary8-interface.md)에서 검토합니다.
+
+### Structure
+
+```text
+src/         Verilog RTL 소스 10개
+docs/rfcs/   동작 규칙과 설계 결정을 제안·검토하는 RFC
+```
+
+### Architecture
+
+```mermaid
+flowchart TD
+    IN["IN 4비트"] --> RX["nibble_rx<br/>바이트 조립"]
+    RX -->|가중치| W["weight_shift_reg<br/>저장·순차 선택"]
+    W --> DEC["ternary_decoder<br/>가중치 해석"]
+    RX -->|입력값| TERM["ternary_term<br/>0 또는 +a 또는 −a"]
+    DEC -->|활성·부호| TERM
+    TERM --> ADD["adder12<br/>현재 항 더하기"]
+    ACC["accumulator_reg<br/>누산값 저장"] --> ADD
+    ADD --> ACC
+    DEC -->|현재 오류| ERR["이전 오류 OR 현재 오류"]
+    DEC --> FLAG["illegal_flag_reg<br/>오류 누적"]
+    FLAG --> ERR
+    ADD -->|마지막 항까지 포함한 합| PACK["결과·오류 포장"]
+    ERR --> PACK
+    PACK --> TX["result_tx<br/>4비트씩 출력"]
+    TX --> OUT["OUT · OUT_VALID"]
+```
+
+[`v_ternary8_top`](src/v_ternary8_top.v)이 전체 모듈을 연결합니다. [`dot8_controller`](src/dot8_controller.v)는 **가중치 수신 → 입력값 8개 처리 → 결과 출력** 순서에 따라 저장·누산·가중치 이동·출력 시점을 제어합니다.
 
 ## Team Members
-To be assigned.
+
+| 이름 | 역할 | GitHub |
+| --- | --- | --- |
+| 김령교 | 팀장 | [lumirevel](https://github.com/lumirevel) |
+| 이상원 | 설계 및 구현 | [swl0421](https://github.com/swl0421) |
+| 도재겸 | 검증 및 테스트 | [Dojaegyum](https://github.com/Dojaegyum) |
 
 ## Project Documentation
-Notion project page: To be linked.
+
+- [SSC 노션 Circuit Team 05](https://app.notion.com/p/Circuit-Team-05-40f6437817b6813f8867cb2b6e1df32f): 프로젝트 정보, 팀 구성과 활동 기록
+- 설계 참고자료: 김태완, 「My Chip 설계 실습 안내서」(2026.10.18). 삼진 내적 주제는 20~23쪽, 공통 외부 인터페이스는 6~7쪽을 참고합니다.
+- [RFC 0001 — 삼진 내적 회로의 연산 및 외부 인터페이스](docs/rfcs/0001-ternary8-interface.md): 연산 범위, 통신, 오류와 리셋 규칙 제안. 현재 상태는 Draft입니다.
 
 ## Repository Guidelines
-- Keep source code organized.
-- Document setup and execution procedures.
-- Do not commit credentials, proprietary PDK files, or restricted research materials.
+
+- 소스 코드를 역할에 맞게 정리합니다.
+- 설정 및 실행 절차를 문서화합니다.
+- 변경은 작업 브랜치에서 PR로 검토하며, `main`에 직접 push하지 않습니다.
+- PR 본문은 **What**(변경 내용), **Why**(변경 이유), **How**(구현 방법과 검증 근거)를 설명합니다.
+- 동작 규칙과 설계 결정은 RFC를 통해 검토하고, 확정된 규칙을 구현·검증의 기준으로 사용합니다.
+- 자격 증명, 비공개 PDK 파일과 반출이 제한된 연구 자료는 커밋하지 않습니다.
