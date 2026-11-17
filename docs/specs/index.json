@@ -1,0 +1,202 @@
+{
+  "version": 1,
+  "specs": [
+    {
+      "path": "docs/specs/0001-agent-hooks.md",
+      "targets": [
+        "scripts/**",
+        "tests/policy/**",
+        ".githooks/**",
+        ".claude/**",
+        ".codex/**",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/pull_request_template.md",
+        ".gitignore",
+        ".gitattributes",
+        "docs/specs/index.json"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        },
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        }
+      ],
+      "kind": "implementation"
+    },
+    {
+      "path": "docs/specs/0002-ternary-decoder.md",
+      "targets": [
+        "src/ternary_decoder.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0003-ternary-term.md",
+      "targets": [
+        "src/ternary_term.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0004-adder12.md",
+      "targets": [
+        "src/adder12.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0005-accumulator-reg.md",
+      "targets": [
+        "src/accumulator_reg.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0006-illegal-flag-reg.md",
+      "targets": [
+        "src/illegal_flag_reg.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0007-weight-shift-reg.md",
+      "targets": [
+        "src/weight_shift_reg.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0008-nibble-rx.md",
+      "targets": [
+        "src/nibble_rx.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0009-result-tx.md",
+      "targets": [
+        "src/result_tx.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0010-dot8-controller.md",
+      "targets": [
+        "src/dot8_controller.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    },
+    {
+      "path": "docs/specs/0011-v-ternary8-top.md",
+      "targets": [
+        "src/v_ternary8_top.v"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "453368549acd57ecc3a543d4b6fe3af53f2179965aff9283ffb36752a1b47b65"
+        }
+      ],
+      "kind": "reverse"
+    }
+  ]
+}

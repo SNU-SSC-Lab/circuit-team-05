@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$(git rev-parse --show-toplevel)/scripts/policy.py\" hook --agent codex",
+            "timeout": 15,
+            "commandWindows": "python \"$(git rev-parse --show-toplevel)/scripts/policy.py\" hook --agent codex; exit $LASTEXITCODE"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$(git rev-parse --show-toplevel)/scripts/policy.py\" hook --agent codex",
+            "timeout": 15,
+            "commandWindows": "python \"$(git rev-parse --show-toplevel)/scripts/policy.py\" hook --agent codex; exit $LASTEXITCODE"
+          }
+        ]
+      }
+    ]
+  }
+}
