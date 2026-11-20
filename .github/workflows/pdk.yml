@@ -1,0 +1,20 @@
+# MyChip PDK 검사. 이 저장소의 PR·main 커밋을 4차 PDK로 합성하고, 그 netlist에 통합 검사와 같은
+# 시험기를 돌리고, 10 MHz 타이밍을 봅니다. mychip/에 올린 netlist·사인오프 결과도 검사합니다.
+# 칩끼리의 연결 계약은 integration.yml(MyChip integration)이 따로 봅니다. SPEC 0014.
+name: MyChip PDK
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pdk:
+    uses: SNU-SSC-Lab/circuit-integration/.github/workflows/pdk.yml@main
+    with:
+      team: ${{ github.event.repository.name }}
+      sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    secrets: inherit
