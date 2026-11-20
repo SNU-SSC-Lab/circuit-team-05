@@ -1,6 +1,6 @@
 # mychip/ — RTL 다음 단계 산출물
 
-합성·배치배선·사인오프 결과를 **이 폴더의 정해진 자리**에 올리면, PR마다 동아리 통합 검사([SNU-SSC-Lab/circuit-integration](https://github.com/SNU-SSC-Lab/circuit-integration))가 단계별로 자동 검사합니다. 아직 안 한 단계는 ⬜로 표시되고 실패가 아닙니다. 올라온 단계는 맞아야 통과합니다.
+합성·배치배선·사인오프 결과는 **이 폴더의 정해진 자리**에 둡니다. 이 저장소는 **`MyChip PDK`** 체크(`.github/workflows/pdk.yml`)가 PR마다 이 폴더를 단계별로 자동 검사합니다. 아직 안 한 단계는 ⬜로 표시되고 실패가 아닙니다. 올라온 단계는 맞아야 통과합니다. 칩끼리의 연결 계약은 `MyChip integration` 체크가 따로 봅니다.
 
 이 칩의 top: **`v_ternary8_top`** (아래 `<top>` 자리에 그대로 씁니다)
 
@@ -19,9 +19,9 @@ mychip/
 
 ## 단계별로 무엇을 검사하나
 
-| 단계 | 올리는 것 | CI가 하는 일 |
+| 단계 | 올리는 것 | PDK 검사가 하는 일 |
 | --- | --- | --- |
-| RTL (지금) | RTL | 포트 계약, lint, 핀 수준 시뮬레이션, 4차 PDK로 직접 합성 → 게이트 수준 시뮬레이션 → 10 MHz 타이밍 |
+| RTL (지금) | RTL | 4차 PDK로 직접 합성 → 게이트 수준 시뮬레이션 → 10 MHz 타이밍 (포트·lint·핀 수준 시뮬레이션은 통합 검사) |
 | 1-synth | Genus netlist, SDC, 리포트 | **팀 netlist**에 같은 시험기·같은 정답 모델, 같은 타이밍 검사. SDC 클록이 계약(100 ns)보다 느리면 실패 |
 | 2-pnr | 배선 후 netlist, SPEF, 리포트 | 위와 같고, SPEF가 있으면 실제 배선 지연으로 타이밍 |
 | 3-signoff | DRC·LVS 리포트, GDS 해시 | DRC 0건, LVS 일치, 두 리포트가 이 칩 top을 가리키는지, 해시 형식 |
