@@ -1,0 +1,14 @@
+# Only these file types belong in mychip/ (the integration CI checks the same list:
+# SNU-SSC-Lab/circuit-integration contract/flow.toml). No GDS, no tool databases.
+*
+!*/
+!*.v
+!*.sdc
+!*.sdf
+!*.spef
+!*.rpt
+!*.txt
+!*.sha256
+!*.md
+!.gitignore
+!.gitkeep

@@ -1,0 +1,21 @@
+# MyChip 통합 검사. 이 저장소의 PR·main 커밋을 다른 팀 칩(검증된 고정 커밋)과 함께
+# 공통 핀·프로토콜 계약과 안내서 golden 모델로 검사합니다. 무엇을 검사하는지와 결과 읽는 법:
+# https://github.com/SNU-SSC-Lab/circuit-integration
+# 이 파일은 수정할 필요가 없습니다. RTL 위치나 top 이름이 바뀌면 저장소 루트에 mychip.toml을 둡니다.
+name: MyChip integration
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    uses: SNU-SSC-Lab/circuit-integration/.github/workflows/checks.yml@main
+    with:
+      override_team: ${{ github.event.repository.name }}
+      override_sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    secrets: inherit
