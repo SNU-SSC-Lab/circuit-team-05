@@ -15,5 +15,6 @@
 - [0011-v-ternary8-top](0011-v-ternary8-top.md): 기존 RTL 역작성
 
 - [0012 RTL CI](0012-rtl-ci.md): PR 3의 문서·RTL 검증 CI 설계 초안
+- [0013 MyChip 통합 검사 연결](0013-mychip-integration.md): 동아리 통합 저장소의 공통 계약 검사를 PR마다 실행
 
 index.json은 검사 대상 파일과 확인한 규약의 버전을 기록한다. SHA256은 파일 내용으로 계산한 식별값이다. 사람이 읽는 설명은 각 SPEC의 RFC 확인 항목에 둔다.
