@@ -10,6 +10,8 @@
 
 검사 내용은 안내서(김태완, 2026-10-18) 공통 계약이다: top 포트 이름·방향·폭, Verilator lint, 핀 수준 시뮬레이션(매 에지 handshake 규칙, 출력 nibble 수·연속성, 32클록 응답 상한, 모든 위치의 reset, 안내서 golden 모델과 비트 단위 일치). 다섯 칩을 보드에서 이어 붙일 때 연결부가 맞는지 보는 것이 목적이다.
 
+또 RTL 다음 단계 산출물을 둘 고정 폴더 `mychip/`의 뼈대를 추가한다(안내 `README.md`, 허용 파일 형식만 남기는 `.gitignore`, 빈 폴더 표시 `.gitkeep`). 합성 netlist·SDC·리포트는 `mychip/1-synth`·`mychip/constraints`에, 배치·배선 netlist·SPEF는 `mychip/2-pnr`에, DRC·LVS 리포트와 최종 GDS의 SHA-256은 `mychip/3-signoff`에 둔다. 통합 검사는 파일이 있는 단계만 검사하고(팀 netlist에 같은 시험기·4차 PDK 타이밍, 사인오프 리포트 판정), 없는 단계는 실패로 치지 않는다. 통합 저장소의 규칙은 `contract/flow.toml`이다.
+
 RTL·테스트·기존 workflow는 바꾸지 않는다.
 
 ## Why
@@ -23,7 +25,7 @@ workflow 하나가 통합 저장소의 재사용 workflow(`checks.yml`)를 호�
 현재 `main`(a0120cc)은 통합 저장소 첫 실행에서 포트·lint·시뮬레이션을 모두 통과했다. RFC 0001과 통합 계약의 차이는 발견되지 않았다. 통합 검사의 자체 검사(복사본에 버그를 심어 반드시 잡는지)에서도 이 저장소 RTL에 심은 `illegal` 누적 누락, 결과 11비트 축소가 모두 검출됐다.
 
 흐름 변경: 없음
-시각화 생략 이유: RTL 블록·순서·연결과 기존 CI 흐름을 바꾸지 않고, PR에 체크 하나가 추가된다.
+시각화 생략 이유: RTL 블록·순서·연결과 기존 CI 흐름을 바꾸지 않고, PR에 체크 하나와 빈 산출물 폴더가 추가된다.
 
 ## RFC 확인
 
