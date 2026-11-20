@@ -1,10 +1,29 @@
-# SSC 2nd Generation — Circuit Team 05
+# circuit-team-05 · 삼진 내적 3-A
+
+MyChip 2026 4차(0.5 µm CMOS) 회로팀. 안내서 팀 3(3-A): 삼진 가중치 8개 내적 (10바이트 → 2바이트). top `v_ternary8_top`.
+
+## 폴더 구조
+
+| 경로 | 내용 |
+| --- | --- |
+| `src/` | 설계 원본 전부: RTL 모듈 10개 (`v_ternary8_top` 외) |
+| `mychip/` | 합성·배치배선·사인오프 결과 ([안내](mychip/README.md)) |
+| `docs/` | 문서 |
+| `.github/` | CI: `RTL CI`(팀 자체 검사), `MyChip integration`(칩 간 연결 계약), `MyChip PDK`(4차 PDK 합성·타이밍) |
+| `scripts/` · `tests/` · `verification/` | 팀 PR 규칙 검사·RTL CI 도구와 시험 (저장소 맨 위 경로를 전제로 동작) |
+| `.githooks/` · `.claude/` · `.codex/` · `AGENTS.md` · `CLAUDE.md` | 에이전트·Git 후킹과 작업 규칙 |
+| `requirements-ci.txt` | CI 파이썬 의존성 |
+| `README.md` · `.gitignore` 등 | 저장소 안내와 Git 설정 |
+
+다섯 팀 저장소의 맨 위는 같은 모양입니다. 이 표에 없는 것이 맨 위에 생기면 `MyChip integration` 체크가 실패합니다 (규칙: [contract/flow.toml](https://github.com/SNU-SSC-Lab/circuit-integration/blob/main/contract/flow.toml)). 새 폴더·파일은 `src/` 아래에 둡니다.
+
+## 팀 안내
 
 Division: Circuit Design
 
 Status: Preparing
 
-## Project Overview
+### Project Overview
 
 Vision 칩의 경량 영상처리를 위한 **가중치 재설정형 8항 삼진 내적 CMOS 가속 코어**를 설계하고 검증합니다. 향후 작은 영상 신경망의 연산 블록으로 활용할 수 있도록 정확한 정수 연산과 구현 크기를 확인합니다.
 
@@ -16,7 +35,7 @@ y = w0·a0 + w1·a1 + … + w7·a7
 
 입력값은 signed 8비트 정수 8개, 가중치는 −1·0·+1입니다. 가중치에 따라 각 항을 0, +a 또는 −a로 만들고, 하나의 가산기와 누산 레지스터로 순차적으로 더합니다. 결과는 signed 12비트로 표현합니다. RTL 테스트벤치와 GitHub Actions CI를 추가했으며 검사 방법과 범위는 [RTL CI 안내](docs/ci.md)에 정리했습니다.
 
-### Interface
+#### Interface
 
 외부 FPGA와 공통 4비트 입력·4비트 출력으로 통신합니다. 가중치 두 바이트를 먼저 받은 뒤 입력값 여덟 바이트를 받고, 결과와 오류 플래그를 4비트씩 네 번 출력합니다.
 
@@ -28,7 +47,7 @@ y = w0·a0 + w1·a1 + … + w7·a7
 
 상세 연산 범위, 인코딩, 통신 순서와 오류·리셋 규칙은 [RFC 0001](docs/rfcs/0001-ternary8-interface.md)에서 검토합니다.
 
-### Structure
+#### Structure
 
 ```text
 src/         Verilog RTL 소스 10개
@@ -38,7 +57,7 @@ scripts/     에이전트·PR·Git 공통 검사
 tests/policy/ 후킹 검사 시험
 ```
 
-### Architecture
+#### Architecture
 
 ```mermaid
 flowchart TD
@@ -61,7 +80,7 @@ flowchart TD
 
 [`v_ternary8_top`](src/v_ternary8_top.v)이 전체 모듈을 연결합니다. [`dot8_controller`](src/dot8_controller.v)는 **가중치 수신 → 입력값 8개 처리 → 결과 출력** 순서에 따라 저장·누산·가중치 이동·출력 시점을 제어합니다.
 
-## Team Members
+### Team Members
 
 | 이름 | 역할 | GitHub |
 | --- | --- | --- |
@@ -69,7 +88,7 @@ flowchart TD
 | 이상원 | 설계 및 구현 | [swl0421](https://github.com/swl0421) |
 | 도재겸 | 검증 및 테스트 | [Dojaegyum](https://github.com/Dojaegyum) |
 
-## Project Documentation
+### Project Documentation
 
 - [SSC 노션 Circuit Team 05](https://app.notion.com/p/Circuit-Team-05-40f6437817b6813f8867cb2b6e1df32f): 프로젝트 정보, 팀 구성과 활동 기록
 - 설계 참고자료: 김태완, 「My Chip 설계 실습 안내서」(2026.10.18). 삼진 내적 주제는 20~23쪽, 공통 외부 인터페이스는 6~7쪽을 참고합니다.
@@ -81,7 +100,7 @@ flowchart TD
 - [RTL CI](docs/ci.md): 검사 이름·시나리오·실행 방법과 결과 해석.
 - [P&R 검증 방법론](docs/verification/pnr-methodology.md): 합성 이후 검증과 필요한 환경의 검토 초안.
 
-## Repository Guidelines
+### Repository Guidelines
 
 - 소스 코드를 역할에 맞게 정리합니다.
 - 설정 및 실행 절차를 문서화합니다.
