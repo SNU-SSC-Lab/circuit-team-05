@@ -57,11 +57,14 @@ jobs:
           key: nspl-archive-260820-2e49115a
       - name: Fetch and verify full NSPL views
         run: python scripts/asic/fetch_pdk.py --out "$RUNNER_TEMP/nspl" --archive "$HOME/ssc-asic-archive/NSPL_05CMOS_PDK_260820.tar.gz"
+      - name: Match every active source DRC check (SPEC 0018)
+        run: python scripts/asic/drc_catalog.py --pdk "$RUNNER_TEMP/nspl/NSPL_05CMOS_PDK_260820" --out "$RUNNER_TEMP/drc-catalog"
       - name: asic-unit and negative physical fixtures
         run: |
           python -m unittest discover -s tests/asic -v
           python -m unittest discover -s tests/physical -v
           python scripts/asic/selftest.py --out "$RUNNER_TEMP/asic-selftest"
+          python scripts/asic/drc_selftest.py --out "$RUNNER_TEMP/drc-selftest"
       - name: asic-build and qualification
         env:
           EXPERIMENTAL: ${{ inputs.experimental || false }}
@@ -69,6 +72,12 @@ jobs:
           extra=()
           if [ "$EXPERIMENTAL" = true ]; then extra+=(--experimental); fi
           python scripts/run_asic.py --pdk "$RUNNER_TEMP/nspl/NSPL_05CMOS_PDK_260820" --openroad "$HOME/ssc-asic-tools/bin/openroad" --target chip --out .policy-tmp/asic-results "${extra[@]}"
+      - name: Expanded geometry audit of core (not full-process DRC)
+        if: ${{ !cancelled() && hashFiles('.policy-tmp/asic-results/v_ternary8_top.gds') != '' }}
+        run: python scripts/asic/drc_audit.py --pdk "$RUNNER_TEMP/nspl/NSPL_05CMOS_PDK_260820" --gds .policy-tmp/asic-results/v_ternary8_top.gds --top v_ternary8_top --out .policy-tmp/drc-audit-core
+      - name: Expanded geometry audit of proposed chip (not full-process DRC)
+        if: ${{ !cancelled() && hashFiles('.policy-tmp/asic-results/ternary8_sop28.gds') != '' }}
+        run: python scripts/asic/drc_audit.py --pdk "$RUNNER_TEMP/nspl/NSPL_05CMOS_PDK_260820" --gds .policy-tmp/asic-results/ternary8_sop28.gds --top ternary8_sop28 --out .policy-tmp/drc-audit-chip
       - name: Publish readable result
         if: ${{ !cancelled() }}
         run: |
@@ -77,6 +86,9 @@ jobs:
           else
             echo 'ASIC build did not reach reporting. Read the failed setup step; no physical pass is available.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          for summary in .policy-tmp/drc-audit-core/summary.md .policy-tmp/drc-audit-chip/summary.md; do
+            if [ -f "$summary" ]; then cat "$summary" >> "$GITHUB_STEP_SUMMARY"; fi
+          done
       - name: Preserve result and evidence (also on failure)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -84,7 +96,11 @@ jobs:
           name: asic-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .policy-tmp/asic-results/
+            .policy-tmp/drc-audit-core/
+            .policy-tmp/drc-audit-chip/
             ${{ runner.temp }}/asic-selftest/
+            ${{ runner.temp }}/drc-selftest/
+            ${{ runner.temp }}/drc-catalog/
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7
