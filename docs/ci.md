@@ -1,5 +1,7 @@
 # RTL CI 실행과 결과 해석
 
+RTL부터 실제 배치배선·GDS·검증·리포트까지 확장하는 계획은 [SPEC 0017](specs/0017-rtl-to-gds.md)과 [전체 흐름 안내](verification/rtl-to-gds-guide.md)에 있다. 1팀 방식과 Qflow·OpenROAD를 비교한 뒤 선택한다. 현재 `asic-*` 검사·전체 칩 GDS 자동 생성은 아직 구현하지 않았다. 아래는 지금 실행되는 CI의 설명이다.
+
 PR 3은 전체 검사를 매 PR에서 실행한다. main 병합 후 push와 수동 실행도 지원한다. GitHub Actions 실행 상태는 PR의 Checks에서 확인한다. 팀은 핫픽스 대응 여지를 두기 위해 GitHub branch protection과 필수 상태 검사를 별도로 설정하지 않는다. CI 결과를 보고 병합 여부를 판단하며, 기존 로컬 main 차단 훅과 평상시 PR 흐름은 유지한다.
 
 GitHub에는 `pr-policy`, `policy-unit (ubuntu-24.04)`, `policy-unit (windows-2022)`, `rtl`의 네 job이 표시된다. 아래 다섯 RTL 검사 이름은 `rtl` job의 단계 이름이다. 도구를 한 번만 설치하고 결과를 한곳에 보관하기 위해 묶었다. 앞 RTL 검사가 실패해도 뒤 검사는 실행하며 최종 실패는 유지한다.
