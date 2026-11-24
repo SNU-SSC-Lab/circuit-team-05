@@ -1,20 +1,95 @@
-# MyChip PDK 검사. 이 저장소의 PR·main 커밋을 4차 PDK로 합성하고, 그 netlist에 통합 검사와 같은
-# 시험기를 돌리고, 10 MHz 타이밍을 봅니다. mychip/에 올린 netlist·사인오프 결과도 검사합니다.
-# 칩끼리의 연결 계약은 integration.yml(MyChip integration)이 따로 봅니다. SPEC 0014.
+# MyChip PDK 검사 (SPEC 0015). 이 저장소의 RTL을 4차 PDK 표준셀로 합성하고, 그 netlist에 팀의 top 시험
+# (tests/rtl/test_top.py)을 돌리고, 10 MHz 타이밍을 봅니다. mychip/에 올린 netlist·사인오프 결과와
+# 파일 종류도 검사하고, 심은 버그를 잡는지 자체 검사합니다. 코드는 모두 이 저장소에 있습니다
+# (scripts/run_pdk.py). 칩끼리의 연결 계약은 integration.yml(MyChip integration)이 따로 봅니다.
 name: MyChip PDK
 
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'pr: 게이트 수준에서 integration 그룹, full: integration + regression 그룹'
+        type: choice
+        options: [pr, full]
+        default: pr
 
 permissions:
   contents: read
 
+concurrency:
+  group: mychip-pdk-${{ github.event.pull_request.number || github.ref }}-${{ inputs.tier || 'pr' }}
+  cancel-in-progress: true
+
 jobs:
   pdk:
-    uses: SNU-SSC-Lab/circuit-integration/.github/workflows/pdk.yml@main
-    with:
-      team: ${{ github.event.repository.name }}
-      sha: ${{ github.event.pull_request.head.sha || github.sha }}
-    secrets: inherit
+    name: pdk (${{ inputs.tier || 'pr' }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.tier == 'full' && 120 || 40 }}
+    env:
+      SSC_TIER: ${{ inputs.tier || 'pr' }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.12.3'
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - name: Install synthesis and simulation tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends iverilog yosys libtcl8.6 > /dev/null
+          python -m pip install -q -r requirements-ci.txt
+          iverilog -V 2>&1 | head -1; yosys -V
+      - name: OpenSTA cache
+        id: sta
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/ssc-tools/opensta
+          key: ubuntu-24.04-opensta-8b4cc283-${{ hashFiles('scripts/build_opensta.sh') }}
+      - name: Build OpenSTA (first run only)
+        if: steps.sta.outputs.cache-hit != 'true'
+        run: bash scripts/build_opensta.sh ~/ssc-tools/opensta
+      - name: PDK cache
+        id: pdk
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/ssc-pdk
+          key: pdk-NSPL_05CMOS_PDK_260820-2e49115a-${{ hashFiles('scripts/fetch_pdk.sh') }}
+      - name: Fetch the public PDK (first run only)
+        if: steps.pdk.outputs.cache-hit != 'true'
+        run: bash scripts/fetch_pdk.sh ~/ssc-pdk
+      - name: PDK and OpenSTA on the path
+        id: tools
+        run: |
+          echo "$HOME/ssc-tools/opensta/bin" >> "$GITHUB_PATH"
+          echo "SSC_PDK=$HOME/ssc-pdk" >> "$GITHUB_ENV"
+      - name: mychip-flow-unit
+        run: python -m unittest discover -s tests/pdk -v
+      - name: pdk-check
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: python scripts/run_pdk.py check --tier "$SSC_TIER"
+      - name: pdk-selftest (SYNTHESIS 뒤에 숨긴 버그와 2 ns 클록을 잡는지)
+        if: ${{ !cancelled() && steps.tools.outcome == 'success' }}
+        run: python scripts/run_pdk.py selftest
+      - name: pdk-report
+        if: ${{ !cancelled() }}
+        run: python scripts/run_pdk.py report
+      - name: Upload PDK results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mychip-pdk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .policy-tmp/results/pdk/*.json
+            .policy-tmp/results/pdk/report.md
+            .policy-tmp/results/pdk/work/netlist.v
+            .policy-tmp/results/pdk/work/sta.log
+            .policy-tmp/results/pdk/work/synth.log
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

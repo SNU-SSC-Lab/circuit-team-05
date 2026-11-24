@@ -1,5 +1,5 @@
-# Only these file types belong in mychip/ (the integration CI checks the same list:
-# SNU-SSC-Lab/circuit-integration contract/flow.toml). No GDS, no tool databases.
+# Only these file types belong in mychip/ (the MyChip PDK check reads the same list from
+# verification/pdk/flow.toml). No GDS, no tool databases.
 *
 !*/
 !*.v

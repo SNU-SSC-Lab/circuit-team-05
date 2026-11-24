@@ -1,0 +1,43 @@
+# What this team commits after RTL, in one fixed folder: `mychip/` (scripts/mychip_flow.py, SPEC 0015).
+# Ported from SNU-SSC-Lab/circuit-integration contract/flow.toml at 60c7acc; the [layout] rule of the
+# top level stays with the integration check. CI finds each stage by the files that exist.
+# A stage that is not there yet is "missing", never a failure; a stage that is there must be right.
+#
+#   mychip/
+#   ├─ constraints/<top>.sdc        timing constraints the team synthesized with
+#   ├─ 1-synth/<top>.v              synthesized netlist (Genus), + reports/*.rpt
+#   ├─ 2-pnr/<top>.v                placed-and-routed netlist (Innovus, no power pins)
+#   │        <top>.spef             parasitics, optional; timing uses them when present
+#   │        reports/*.rpt
+#   └─ 3-signoff/drc.rpt            Calibre or Assura DRC summary
+#               lvs.rpt             Calibre or Assura LVS report
+#               <top>.gds.sha256    SHA-256 of the final GDS; the GDS itself never enters Git
+
+folder = "mychip"
+
+# Only these file types may sit under mychip/ (mychip/.gitignore says the same).
+allowed = [".v", ".sdc", ".sdf", ".spef", ".rpt", ".txt", ".sha256", ".md", ".gitignore", ".gitkeep"]
+
+constraints = "constraints/{top}.sdc"
+
+[stages.synth]
+dir = "1-synth"
+netlist = "{top}.v"
+
+[stages.pnr]
+dir = "2-pnr"
+netlist = "{top}.v"
+spef = "{top}.spef"
+
+[stages.signoff]
+dir = "3-signoff"
+drc = "drc.rpt"
+lvs = "lvs.rpt"
+gds_sha256 = "{top}.gds.sha256"
+
+# Copies of PDK files anywhere in the repository are listed in the report (not failed: the PDK is
+# public). pdk_blobs.txt holds the git blob id of every PDK file over 1 KB and of the ZIP, so the
+# scan reads git trees only and downloads no file contents.
+[leak]
+blob_list = "pdk_blobs.txt"
+name_pattern = "NSPL_0p5um|NSPL_05CMOS|05cmos_(model|mosfet)|ETRI_NSPL_GPIO|MPW_PAD_28pin"

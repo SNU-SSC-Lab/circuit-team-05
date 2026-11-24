@@ -9,8 +9,8 @@ MyChip 2026 4차(0.5 µm CMOS) 회로팀. 안내서 팀 3(3-A): 삼진 가중치
 | `src/` | 설계 원본 전부: RTL 모듈 10개 (`v_ternary8_top` 외) |
 | `mychip/` | 합성·배치배선·사인오프 결과 ([안내](mychip/README.md)) |
 | `docs/` | 문서 |
-| `.github/` | CI: `RTL CI`(팀 자체 검사), `MyChip integration`(칩 간 연결 계약), `MyChip PDK`(4차 PDK 합성·타이밍) |
-| `scripts/` · `tests/` · `verification/` | 팀 PR 규칙 검사·RTL CI 도구와 시험 (저장소 맨 위 경로를 전제로 동작) |
+| `.github/` | CI: `RTL CI`(팀 자체 검사), `MyChip integration`(칩 간 연결 계약), `MyChip PDK`(4차 PDK 합성·게이트 수준·타이밍·`mychip/` 검사, 이 저장소 코드로 실행) |
+| `scripts/` · `tests/` · `verification/` | 팀 PR 규칙 검사·RTL CI·PDK 검사 도구와 시험 (저장소 맨 위 경로를 전제로 동작) |
 | `.githooks/` · `.claude/` · `.codex/` · `AGENTS.md` · `CLAUDE.md` | 에이전트·Git 후킹과 작업 규칙 |
 | `requirements-ci.txt` | CI 파이썬 의존성 |
 | `README.md` · `.gitignore` 등 | 저장소 안내와 Git 설정 |
