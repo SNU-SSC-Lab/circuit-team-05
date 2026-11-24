@@ -26,7 +26,7 @@ mychip/
 | 2-pnr | 배선 후 netlist, SPEF, 리포트 | 위와 같고, SPEF가 있으면 실제 배선 지연으로 타이밍 |
 | 3-signoff | DRC·LVS 리포트, GDS 해시 | DRC 0건, LVS 일치, 두 리포트가 이 칩 top을 가리키는지, 해시 형식 |
 
-DRC·LVS 자체는 학교 서버의 Calibre/Assura로 돌리고(안내서 p. 8: 공식 deck만 인정), 결과 리포트로 판정합니다.
+제출용 DRC·LVS는 제출처가 인정하는 도구·공정 규칙으로 실행하고 결과 리포트로 판정합니다. 학교 서버의 제공 여부는 확인되지 않았습니다. Magic·Netgen 보조 검사는 [상세 사용서](../docs/verification/magic-netgen-guide.md)를 참고합니다. 새 `Physical checks`는 현재 scmos 연습 회로 자체 시험이며 실제 5팀 GDS 검사나 제출용 사인오프 통과를 뜻하지 않습니다.
 
 ## 만드는 법 (예)
 
@@ -44,7 +44,7 @@ rcOut -spef mychip/2-pnr/v_ternary8_top.spef
 ```
 
 ```bash
-# 최종 GDS의 해시 (GDS는 학교 서버에 두고 해시만 올림)
+# 최종 GDS의 해시 (GDS는 허용된 별도 작업 공간에 두고 해시만 올림)
 sha256sum v_ternary8_top.gds > mychip/3-signoff/v_ternary8_top.gds.sha256
 ```
 

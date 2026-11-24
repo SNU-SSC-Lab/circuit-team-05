@@ -1,0 +1,29 @@
+# Copy OUTSIDE the repository, fill EVERY path/hash after review.
+# Relative paths resolve from this manifest's directory, not the shell's cwd.
+# No NSPL Magic/Netgen configuration has been approved yet (2026-11-24).
+[design]
+top = "v_ternary8_top"
+technology_name = ""  # Exact result of Magic 'tech name'; do not guess.
+drc_style = ""        # Empty = kit default; actual style is recorded.
+gds_input_style = ""  # Empty = kit default; confirm layer map and units.
+timeout_seconds = 300
+
+[files]
+layout = ""          # Final uncompressed .gds; .mag also accepted locally.
+schematic = ""       # SPICE/CDL with this top and complete transistor subcells.
+magicrc = ""         # Reviewed, process-specific startup Tcl.
+technology = ""      # Actual .tech file loaded by that startup Tcl.
+netgen_setup = ""    # Reviewed process-specific device/pin/property rules.
+
+[sha256]
+layout = ""
+schematic = ""
+magicrc = ""
+technology = ""
+netgen_setup = ""
+
+# Enumerate ALL included CDL/Tcl/model/layer-map files and child .mag files.
+# The runner cannot discover arbitrary file reads in user-provided Tcl.
+# [[dependencies]]
+# path = "cells.cdl"
+# sha256 = "..."
