@@ -320,6 +320,36 @@
         }
       ],
       "kind": "implementation"
+    },
+    {
+      "path": "docs/specs/0017-rtl-to-gds.md",
+      "targets": [
+        "docs/specs/index.json",
+        ".github/workflows/asic.yml",
+        ".github/workflows/pdk.yml",
+        "scripts/run_asic.py",
+        "scripts/asic/**",
+        "scripts/run_pdk.py",
+        "scripts/pdk.py",
+        "scripts/mychip_flow.py",
+        "scripts/run_physical.py",
+        "tests/asic/**",
+        "tests/pdk/**",
+        "tests/physical/**",
+        "verification/asic/**",
+        "verification/pdk/**"
+      ],
+      "rfcs": [
+        {
+          "path": "docs/rfcs/0001-ternary8-interface.md",
+          "sha256": "4980e70fd29438444380088f97e10ff0278cd64da5a899aec199621bfd0fb073"
+        },
+        {
+          "path": "docs/rfcs/0002-collaboration.md",
+          "sha256": "b92320a3a1da78948117cf0f767bc673b1f242ec753015a191483a53d2cce3bf"
+        }
+      ],
+      "kind": "implementation"
     }
   ]
 }
