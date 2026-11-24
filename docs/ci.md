@@ -90,3 +90,21 @@ Linux 기준 순차 합계는 약 2분 43초다. Windows 정책 시험 시간은
 top은 현재 항의 `weights[1:0]`만 읽는다. 상위 비트는 `weight_shift_reg` 내부에서 저장·이동되고 다음 항에서 하위 비트가 된다. 이 연결에 대한 경고만 제외하며 다른 미사용 신호나 파일 끝 개행 경고는 그대로 검사한다. 설계자는 이 근거와 연결을 PR에서 검토해야 한다. 이 lint 제외는 RTL 줄 커버리지 제외가 아니다.
 
 참고: [cocotb 2.0.1 시뮬레이터 지원](https://docs.cocotb.org/en/v2.0.1/simulator_support.html), [OpenTitan 검증 방법론](https://opentitan.org/book/doc/contributing/dv/methodology/index.html).
+
+## MyChip PDK 검사
+
+`.github/workflows/pdk.yml`(`MyChip PDK`)은 RTL을 4차 PDK 표준셀로 합성하고, 그 netlist에 `tests/rtl/test_top.py`를 돌리고, 10 MHz 타이밍과 `mychip/` 산출물을 본다. 기획과 합격 조건은 [SPEC 0015](specs/0015-own-pdk-checks.md), 기준값은 `verification/pdk/pdk.toml`·`flow.toml`에 있다. PR·`main`마다 게이트 수준에서 `integration`·`regression` 그룹을 모두 돌린다(약 3분).
+
+로컬(Linux·WSL)에서는 Yosys·Icarus·OpenSTA와 공개 PDK가 필요하다.
+
+```sh
+bash scripts/fetch_pdk.sh ~/ssc-pdk          # 한 번만. SHA-256을 확인한다
+bash scripts/build_opensta.sh ~/ssc-tools/opensta   # OpenSTA가 없을 때만
+export SSC_PDK=~/ssc-pdk
+python scripts/run_pdk.py check              # 게이트 수준 integration + regression
+python scripts/run_pdk.py selftest
+python scripts/run_pdk.py report             # 한국어 요약, 실패가 있으면 종료 코드 1
+python -m unittest discover -s tests/pdk -v  # EDA 도구 없이 mychip/ 검사 시험
+```
+
+결과는 `.policy-tmp/results/pdk/`에 남는다. 타이밍은 typical 라이브러리에 setup ×1.5, hold ×0.7을 곱한 가정이며 공정 코너별 사인오프가 아니다.

@@ -1,6 +1,7 @@
 # SPEC 0014 MyChip PDK 검사
 
 - 상태: 이 저장소(3-A 삼진 내적)에 먼저 켠다. 다른 팀은 각자 판단해 같은 파일 하나로 켤 수 있다.
+- 이후 변경: 검사 코드는 [SPEC 0015](0015-own-pdk-checks.md)에서 이 저장소로 옮겼다. 아래 How의 통합 저장소 재사용 workflow·deploy key 설명은 그 전의 기록이다. 검사 내용(What)은 그대로다.
 - 기준: `main` 위의 단일 PR. 기존 `RTL CI`(SPEC 0012)와 `MyChip integration`(SPEC 0013)은 바꾸지 않는다.
 - 관련 규약: RFC 0001 HW01~HW06(현재 회로 계약), RFC 0002 PR01·AUTO01.
 

@@ -1,0 +1,31 @@
+# The 4th-run process kit this chip is built with, and the assumptions of our own PDK checks
+# (scripts/pdk.py, SPEC 0015). Ported from SNU-SSC-Lab/circuit-integration contract/pdk.toml
+# at 60c7acc; from now on this team maintains it. The kit is public: the ETRI050 kit repository
+# GoodKook/ETRI-0.5um-CMOS-MPW-Std-Cell-DK (GPL-3.0) carries a byte-identical copy.
+# scripts/fetch_pdk.sh downloads it (pinned commit, SHA-256). This repository holds no PDK file,
+# only names and hashes.
+name = "NSPL_05CMOS_PDK_260820"
+source_sha256 = "319377c5e77c568c4dd46414a51ea19746c5ec2a8112ead221d7efa76cbd2953"   # the ZIP as handed out
+
+[digital]                         # NSPL 0.5 um 2P3M 5 V, 12-track standard cells
+liberty = "NSPL_05CMOS_PDK_260820/NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_PnR/LIB/NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_std_tt.lib"
+liberty_sha256 = "0c84f0d970d374ba5c9c4cf7aec22fec96e306f8be373bda9ef20ce2bb48de51"
+tie_high = ["TIEHIX1", "Y"]
+tie_low = ["TIELOX1", "Y"]
+# LATCHX1: no latches (guide p. 9). TBUF*: no tri-state inside a core; every pin is driven.
+forbidden_cells = ["LATCHX1", "TBUFX1", "TBUFX2"]
+
+# Static timing of the synthesized core (no pads, ideal clock). These are assumptions, not the
+# guide's: the guide fixes 10 MHz and the tester's edges, not board delays.
+[timing]
+# 10 MHz, copied from circuit-integration contract/interface.toml clock_period_ns (no runtime link).
+clock_period_ns = 100
+input_delay_ns = 50               # the tester drives IN, IN_VALID and RST_N at the falling edge
+output_delay_ns = 20              # pad, board trace and FPGA setup before the next rising edge
+output_load_pf = 0.5              # pad input and routing, generous for a core-level check
+driving_cell = ["BUFX2", "Y"]     # what drives the core inputs
+# The kit ships only a typical library (5 V, 25 C). Slow silicon is modelled by stretching every
+# delay: setup is checked with delays x late_derate, hold with delays x early_derate.
+# This is not a sign-off corner analysis.
+late_derate = 1.5
+early_derate = 0.7

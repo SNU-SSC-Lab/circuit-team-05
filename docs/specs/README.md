@@ -17,5 +17,6 @@
 - [0012 RTL CI](0012-rtl-ci.md): PR 3의 문서·RTL 검증 CI 설계 초안
 - [0013 MyChip 통합 검사 연결](0013-mychip-integration.md): 동아리 통합 저장소의 공통 계약 검사를 PR마다 실행
 - [0014 MyChip PDK 검사](0014-mychip-pdk-checks.md): 4차 PDK 합성·게이트 수준·타이밍과 mychip/ 산출물 검사를 PR마다 실행
+- [0015 MyChip PDK 검사를 이 저장소로 옮기기](0015-own-pdk-checks.md): 같은 검사를 통합 저장소 없이 이 저장소의 scripts/로 실행, 게이트 수준은 팀 top 시험
 
 index.json은 검사 대상 파일과 확인한 규약의 버전을 기록한다. SHA256은 파일 내용으로 계산한 식별값이다. 사람이 읽는 설명은 각 SPEC의 RFC 확인 항목에 둔다.
