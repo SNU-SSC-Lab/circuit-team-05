@@ -31,6 +31,15 @@ class VerdictTests(unittest.TestCase):
     def test_intermediate_match_cannot_hide_final_failure(self):
         self.assertFalse(self.check([self.cell], 'Circuits match uniquely.\nFinal result: mismatch'))
 
+    def test_ubuntu_netgen_133_final_line_with_complete_json(self):
+        old_report = 'Cell pin lists are equivalent.\nCircuits match uniquely.\n'
+        self.assertTrue(self.check([self.cell], old_report))
+        self.assertFalse(self.check([], old_report))
+
+    def test_older_report_intermediate_success_is_not_final_success(self):
+        report = 'Circuits match uniquely.\nTop level cell failed pin matching.\n'
+        self.assertFalse(self.check([self.cell], report))
+
     def test_property_and_connectivity_errors_fail(self):
         for key in ('badnets', 'badelements', 'properties'):
             with self.subTest(key=key):

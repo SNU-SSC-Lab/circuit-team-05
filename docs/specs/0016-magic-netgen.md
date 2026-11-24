@@ -90,6 +90,7 @@ flowchart LR
 - 문서 검사 통과. Windows Python 3.13 정책 시험 50개 통과, 새 입력·판정 시험 16개 통과.
 - WSL Ubuntu의 Magic 8.3.681·Netgen 1.5.323에서 자체 시험 6개 통과. 정상, 연결 오류, W/L 오류, GDS 핀 누락, 하위 셀 DRC, 없는 top을 구분했다.
 - 실제 5팀 GDS 검사·NSPL PEX는 미실행이다. 공정 설정·레이아웃·기준 회로가 없다. Ubuntu 배포판 패키지와 GitHub 실행 결과는 PR에 별도로 기록한다.
+- Ubuntu 24.04의 Netgen 1.5.133 보고서에는 최신판의 `Final result:` 머리말이 없다. 이 버전은 보고서의 마지막 비어 있지 않은 행이 정확히 `Circuits match uniquely.`인지 확인한다. 두 형식 모두 JSON의 top·소자 수·net·핀·속성 오류 검사를 함께 통과해야 한다.
 
 흐름 변경: 있음
 

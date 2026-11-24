@@ -197,10 +197,14 @@ def spice_has_devices(path, top):
 
 def lvs_verdict(report, cells, top):
     """Fail on missing / incomplete results, property errors and black boxes."""
-    if 'Final result:' not in report:
-        return False
-    final = report.rsplit('Final result:', 1)[1]
-    if 'Circuits match uniquely.' not in final:
+    # Ubuntu 24.04 ships 1.5.133: no "Final result:" header; the final
+    # nonempty report line is the verdict. Never accept a subcell match.
+    if 'Final result:' in report:
+        final = report.rsplit('Final result:', 1)[1]
+    else:
+        lines = [line.strip() for line in report.splitlines() if line.strip()]
+        final = lines[-1] if lines else ''
+    if final.strip() != 'Circuits match uniquely.':
         return False
     if re.search(r'property errors|do not match|mismatch|black.?box|undefined', report, re.I):
         return False
