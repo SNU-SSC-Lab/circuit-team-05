@@ -25,6 +25,7 @@ CORE_CHECKS = {'asic-input', 'asic-synth', 'asic-pnr', 'asic-cts', 'asic-route',
                'asic-pex', 'asic-drc', 'asic-estimated-sta'}
 CHIP_CHECKS = {'asic-chip-gds', 'asic-chip-connectivity', 'asic-chip-lvs',
                'asic-chip-timing', 'asic-pinmap'}
+UNQUALIFIED = {'asic-pex', 'asic-drc', 'asic-chip-lvs', 'asic-chip-timing', 'asic-pinmap'}
 
 
 def outcome(checks, error=None, target='core'):
@@ -34,6 +35,18 @@ def outcome(checks, error=None, target='core'):
     if not required.issubset(checks) or any(c.get('status') != 'pass' for c in checks.values()):
         return 'incomplete'
     return 'pass'
+
+
+def exit_status(checks, error=None, target='core', experimental=False):
+    status = outcome(checks, error, target)
+    if status == 'pass':
+        return 0
+    required = CORE_CHECKS | (CHIP_CHECKS if target == 'chip' else set())
+    if not experimental or status != 'incomplete' or not required.issubset(checks):
+        return 1
+    return int(any(c.get('status') != 'pass' and
+                   not (name in UNQUALIFIED and c.get('status') == 'unsupported')
+                   for name, c in checks.items()))
 
 
 def tool_environment(executable):
@@ -59,6 +72,10 @@ def run_core(args):
     source_files = set(pdk.sources()) | set(HERE.glob('*.py')) | set(HERE.glob('*.tcl'))
     source_files |= set((ROOT/'verification/asic').glob('*')) | {ROOT/'scripts/pdk.py', ROOT/'scripts/run_physical.py'}
     source_files |= set((ROOT/'tests/rtl').glob('*.py'))
+    source_files |= {ROOT/name for name in ['scripts/run_asic.py', 'scripts/run_rtl.py',
+                     'requirements-ci.txt', 'verification/designs/ternary8.json',
+                     'verification/scenarios.json', 'verification/pdk/pdk.toml',
+                     '.github/workflows/asic.yml']}
     result['source_hashes'] = {str(p.relative_to(ROOT)): sha(p) for p in sorted(source_files) if p.is_file()}
 
     def write():
@@ -106,6 +123,9 @@ def run_core(args):
             if version.returncode:
                 raise RuntimeError(name+' version check failed')
             result['tools'][name] = (version.stdout or version.stderr).splitlines()[0]
+        lock = json.loads((ROOT/'verification/asic/tools.json').read_text())
+        if result['tools']['openroad'].strip() != lock['openroad_version']:
+            raise RuntimeError('OpenROAD differs from reviewed tools.json')
         netgen = subprocess.run([run_physical.executable('netgen'), '-batch'],
                                 capture_output=True, text=True, timeout=30)
         version = re.search(r'Netgen\s+1\.5\.\d+', netgen.stdout+netgen.stderr)
@@ -177,13 +197,19 @@ set_load 0.5 [all_outputs]
                 raise
         checks['asic-drc-subset']['errors'] = json.loads((out/'drc-subset.json').read_text())['errors']
         if args.target == 'chip':
-            env.update(SSC_PAD_ROOT=str(args.pdk.resolve()), SSC_CORE_GDS=str(out/(top+'.gds')),
-                       SSC_CORE_TOP=top, SSC_CHIP_PLAN=str(out/'chip-plan.json'),
-                       SSC_POWER_ANCHORS=str(road/'power-anchors.txt'), SSC_CHIP_OUT=str(out/'ternary8_sop28.gds'))
-            command('asic-chip-gds', ['klayout', '-b', '-r', HERE/'chip.py'], env=env)
-            env.update(SSC_CHIP_GDS=str(out/'ternary8_sop28.gds'), SSC_CHIP_ASSEMBLY=str(out/'ternary8_sop28.json'),
-                       SSC_CHIP_CHECK_OUT=str(out/'chip-connectivity.json'))
-            command('asic-chip-connectivity', ['klayout', '-b', '-r', HERE/'chip_check.py'], env=env)
+            try:
+                env.update(SSC_PAD_ROOT=str(args.pdk.resolve()), SSC_CORE_GDS=str(out/(top+'.gds')),
+                           SSC_CORE_TOP=top, SSC_CHIP_PLAN=str(out/'chip-plan.json'),
+                           SSC_POWER_ANCHORS=str(road/'power-anchors.txt'), SSC_CHIP_OUT=str(out/'ternary8_sop28.gds'))
+                command('asic-chip-gds', ['klayout', '-b', '-r', HERE/'chip.py'], env=env)
+                env.update(SSC_CHIP_GDS=str(out/'ternary8_sop28.gds'), SSC_CHIP_ASSEMBLY=str(out/'ternary8_sop28.json'),
+                           SSC_CHIP_CHECK_OUT=str(out/'chip-connectivity.json'))
+                command('asic-chip-connectivity', ['klayout', '-b', '-r', HERE/'chip_check.py'], env=env)
+            except Exception as error:
+                result['chip_error'] = str(error)
+                if not any(checks.get(name, {}).get('status') == 'fail' for name in CHIP_CHECKS):
+                    checks['asic-chip-connectivity'] = {'status': 'fail', 'detail': str(error)}
+                write()
             checks['asic-chip-lvs'] = {'status': 'unsupported', 'detail': 'core LVS is separate; GPIO/ESD extraction and independent GPIO reference not qualified'}
             checks['asic-chip-timing'] = {'status': 'unsupported', 'detail': 'qualified GPIO and package timing/RC unavailable'}
             checks['asic-pinmap'] = {'status': 'unsupported', 'detail': 'proposed 28 connected pads vs guide <=25 used pins; team review required'}
@@ -229,4 +255,4 @@ set_load 0.5 [all_outputs]
     result['status'] = status
     write()
     render(result, out)
-    return int(actual_failure or (status != 'pass' and not args.experimental))
+    return exit_status(checks, result.get('error'), args.target, args.experimental)

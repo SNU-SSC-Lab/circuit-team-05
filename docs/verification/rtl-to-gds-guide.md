@@ -72,13 +72,13 @@ python scripts/asic/selftest.py --out .policy-tmp/asic-selftest-new
 python scripts/run_asic.py --pdk "$HOME/ssc-asic-pdk/NSPL_05CMOS_PDK_260820" --openroad "$HOME/ssc-asic-tools/bin/openroad" --target chip --out .policy-tmp/asic-new
 ```
 
-현재 마지막 명령은 산출물을 만든 뒤에도 미확인 공정 항목 때문에 1로 종료한다. `result.json`에서 실제 실패와 미완료를 구분한다. 구현 실험에서만 `--experimental`을 붙이면 **실제 실패가 없는 미완료 실행**의 종료 코드를 0으로 허용한다. 보고서의 `incomplete`와 `ready_for_submission: false`는 유지한다. `--target core`는 pad 조립을 생략하며 코어도 RC·전체 DRC가 미확인이므로 제출 통과가 아니다.
+현재 마지막 명령은 산출물을 만든 뒤에도 미확인 공정 항목 때문에 1로 종료한다. `result.json`에서 실제 실패와 미완료를 구분한다. 구현 실험에서만 `--experimental`을 붙이면 **지정한 공정 미확인 항목 외의 필수 검사를 전부 실행·통과한 경우**만 종료 코드 0을 허용한다. 검사 누락·미실행은 실험에서도 실패한다. 보고서의 `incomplete`와 `ready_for_submission: false`는 유지한다. `--target core`는 pad 조립을 생략하며 코어도 RC·전체 DRC가 미확인이므로 제출 통과가 아니다.
 
 OpenROAD 버전·URL·SHA-256은 [tools.json](../../verification/asic/tools.json), 표준셀 원본 해시는 [nspl.py](../../scripts/asic/nspl.py)에 있다. 다른 CPU·OS용 설치기로 사용하지 않는다. 캐시를 재사용해도 매번 해시를 검사한다. PDK 원본은 Git에 올리지 않는다.
 
 ## GitHub에서 받는 결과
 
-`ASIC RTL to GDS`는 PR·main push에서 기본 `asic (strict)`로 실행한다. 현재는 끝까지 만들어도 미확인 항목 때문에 **이 검사가 빨간색으로 남는 것이 정상**이다. 이를 성공으로 덮거나 자동 병합하지 않는다. 수동 실행의 `experimental` 선택은 구현 실험용이며 검사 이름에도 표시한다. workflow가 main에 반영된 뒤 Actions 화면에서 수동 실행할 수 있다.
+`ASIC RTL to GDS`는 PR·main push에서 기본 `asic (strict)`로 실행한다. 정상적으로 끝까지 실행해도 미확인 항목 때문에 **이 검사가 빨간색으로 남는다**. 11월 24일 첫 원격 실행은 그보다 앞선 실행기 할당 단계에서 계정 결제/사용 한도 안내로 차단되어 실제 ASIC 검사를 실행하지 못했다. 이를 성공으로 덮거나 자동 병합하지 않는다. 수동 실행의 `experimental` 선택은 구현 실험용이며 검사 이름에도 표시한다. workflow가 main에 반영된 뒤 Actions 화면에서 수동 실행할 수 있다.
 
 Summary에서 상태·시간을 읽고, `asic-실행ID-시도번호` artifact를 받는다. 보관 기간은 7일이다. 실패해도 만들어진 증거를 올린다. 설치 단계에서 실패하면 GDS가 없을 수 있으며 해당 로그를 먼저 확인한다.
 
@@ -94,7 +94,7 @@ Summary에서 상태·시간을 읽고, `asic-실행ID-시도번호` artifact를
 | `drc-subset.json`, `chip-connectivity.json`, `gate/` | 검사 범위·오류 좌표·금속 연결·게이트 회귀 근거 |
 | `technology/adapter.json`, `lef-audit.json` | 원본/파생 설정 해시와 도형 대조 |
 
-로컬 `ternary-05`는 전체 177.086초, P&R 14.106초, 게이트 회귀 141.8초였다. 논리 452셀·66FF·247,564.8µm², 코어 MOS 3,790개가 LVS 일치했다. 배선 도구 DRC와 독립 배선 규칙 일부 항목은 각각 0건이다. 조립 후 183개 탐침점·996개 코어 금속 연결 성분의 단선/합선은 0건이었다. TT 추정 setup/hold slack은 +49.145/+1.636ns였다. 미커밋 코드·로컬 Yosys 0.68의 한 번 실행이며 GitHub 시간·모든 PVT 보증은 아니다. 최신 PR은 해당 Actions 결과를 우선한다.
+로컬 `ternary-05`는 전체 177.086초, P&R 14.106초, 게이트 회귀 141.8초였다. 논리 452셀·66FF·247,564.8µm², 코어 MOS 3,790개가 LVS 일치했다. 배선 도구 DRC와 독립 배선 규칙 일부 항목은 각각 0건이다. 조립 후 183개 탐침점·996개 코어 금속 연결 성분의 단선/합선은 0건이었다. TT 추정 setup/hold slack은 +49.145/+1.636ns였다. 미커밋 코드·로컬 Yosys 0.68의 한 번 실행이며 GitHub 시간·모든 PVT 보증은 아니다. 추가 Ubuntu 24.04 Yosys 0.33·Netgen 1.5.133 호환 실행은 437셀·66FF·3,892 MOS LVS·42,907작업 통과였고 전체 256.202초였다. 두 로컬 실행의 차이를 도구별 성능 우열로 읽지 않는다. [입력·검사·증거 기록](../../verification/asic/experiment-20261124.json)에 범위를 남겼다. GitHub 실제 시간은 아직 측정하지 못했다.
 
 ## 제작 준비를 끝내려면
 

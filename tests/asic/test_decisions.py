@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'scripts'))
-from asic.flow import outcome, CORE_CHECKS, CHIP_CHECKS
+from asic.flow import outcome, exit_status, CORE_CHECKS, CHIP_CHECKS, UNQUALIFIED
 from asic.reference import convert
 
 
@@ -31,6 +31,18 @@ class OutcomeTests(unittest.TestCase):
             value = {key: {'status': 'pass'} for key in CORE_CHECKS}
             del value[name]
             self.assertEqual(outcome(value), 'incomplete')
+
+    def test_experiment_only_allows_the_named_qualification_gaps(self):
+        checks = {name: {'status': 'pass'} for name in CORE_CHECKS | CHIP_CHECKS}
+        for name in UNQUALIFIED:
+            checks[name] = {'status': 'unsupported'}
+        self.assertEqual(exit_status(checks, target='chip'), 1)
+        self.assertEqual(exit_status(checks, target='chip', experimental=True), 0)
+        for state in ['not_run', 'unsupported', 'fail']:
+            checks['asic-lvs'] = {'status': state}
+            self.assertEqual(exit_status(checks, target='chip', experimental=True), 1)
+        del checks['asic-lvs']
+        self.assertEqual(exit_status(checks, target='chip', experimental=True), 1)
 
 
 class IndependentReferenceTests(unittest.TestCase):
