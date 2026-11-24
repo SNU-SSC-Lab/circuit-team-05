@@ -1,0 +1,54 @@
+name: Physical checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: physical-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  physical-selftest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.12.3'
+      - name: Install Magic and circuit LVS Netgen
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends magic netgen-lvs
+          dpkg-query -W magic netgen-lvs
+      - name: physical-unit
+        run: python -m unittest discover -s tests/physical -v
+      - name: physical-selftest (scmos practice circuit only)
+        run: python scripts/run_physical.py selftest
+      - name: physical-report
+        if: ${{ !cancelled() }}
+        run: |
+          if test -f .policy-tmp/physical/selftest/result.json; then
+            python scripts/run_physical.py report >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '도구 자체 시험을 완료하지 못했습니다. 실제 5팀 DRC·LVS는 미실행입니다.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - name: Upload practice results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: physical-selftest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .policy-tmp/physical/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7

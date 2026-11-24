@@ -108,3 +108,9 @@ python -m unittest discover -s tests/pdk -v  # EDA 도구 없이 mychip/ 검사 
 ```
 
 결과는 `.policy-tmp/results/pdk/`에 남는다. 타이밍은 typical 라이브러리에 setup ×1.5, hold ×0.7을 곱한 가정이며 공정 코너별 사인오프가 아니다.
+
+## Magic DRC·Netgen LVS 실행 준비
+
+`Physical checks / physical-selftest`는 PR·main·손 실행에서 공개 `scmos` 연습 회로를 사용한다. `physical-unit`은 입력·해시·보고서 판정 시험, `physical-selftest`는 실제 Magic·Netgen으로 정상·연결 오류·소자 폭 오류·GDS 핀 누락·하위 셀 DRC·top 누락의 6개 사례를 확인한다. 결과는 `.policy-tmp/physical/`와 Actions artifact에 7일 보관한다.
+
+**현재 실제 5팀 GDS·공정 설정·기준 회로가 없으므로 칩 DRC·LVS는 미실행이다.** 이 자체 시험을 칩 검증 통과나 제작 승인으로 해석하지 않는다. 실제 입력을 준비한 뒤 `python scripts/run_physical.py check --manifest /path/run.toml --out /path/new-results`로 로컬 실행할 수 있다. 설치·입력 준비·오류 찾기·PEX와 실제 CI 연결의 남은 일은 [상세 사용서](verification/magic-netgen-guide.md)에 정리했다. 기존 `MyChip PDK`와 제출용 리포트 판정은 유지한다.

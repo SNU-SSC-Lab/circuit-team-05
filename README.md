@@ -99,6 +99,7 @@ flowchart TD
 - [PR 1·2·3 팀 안내](docs/team-pr-guide.md): 작업 내용과 팀원이 따라 할 순서. 계속 다듬을 초안.
 - [RTL CI](docs/ci.md): 검사 이름·시나리오·실행 방법과 결과 해석.
 - [P&R 검증 방법론](docs/verification/pnr-methodology.md): 합성 이후 검증과 필요한 환경의 검토 초안.
+- [Magic·Netgen 상세 사용서](docs/verification/magic-netgen-guide.md): 설치·연습·실제 DRC/LVS 준비·PEX. `Physical checks`는 연습 회로 자체 시험이며 실제 5팀 물리 검증은 아직 미실행.
 
 ### Repository Guidelines
 
