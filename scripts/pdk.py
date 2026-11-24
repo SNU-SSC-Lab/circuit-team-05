@@ -33,9 +33,9 @@ PDK = tomllib.loads((ROOT / 'verification' / 'pdk' / 'pdk.toml').read_text(encod
 DESIGN = json.loads((ROOT / 'verification' / 'designs' / 'ternary8.json').read_text(encoding='utf-8'))
 CLOCK_NS = PDK['timing']['clock_period_ns']
 YOSYS_PROBLEM = re.compile(r'logic loop|conflicting|multiple drivers|is used but has no driver', re.I)
-# Gate-level test groups of scripts/run_rtl.py per tier: every PR runs the top-level integration
-# group; the full tier (manual run) adds the regression group.
-TIERS = {'pr': ('integration',), 'full': ('integration', 'regression')}
+# Gate-level test groups of scripts/run_rtl.py per tier. Every PR and main commit runs the
+# integration and regression groups (decided 2026-11-24); `full` names a manual run of the same.
+TIERS = {'pr': ('integration', 'regression'), 'full': ('integration', 'regression')}
 
 
 def locate(pdk_root):

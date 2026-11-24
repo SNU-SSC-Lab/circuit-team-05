@@ -93,7 +93,7 @@ top은 현재 항의 `weights[1:0]`만 읽는다. 상위 비트는 `weight_shift
 
 ## MyChip PDK 검사
 
-`.github/workflows/pdk.yml`(`MyChip PDK`)은 RTL을 4차 PDK 표준셀로 합성하고, 그 netlist에 `tests/rtl/test_top.py`를 돌리고, 10 MHz 타이밍과 `mychip/` 산출물을 본다. 기획과 합격 조건은 [SPEC 0015](specs/0015-own-pdk-checks.md), 기준값은 `verification/pdk/pdk.toml`·`flow.toml`에 있다. PR·`main`은 게이트 수준에서 `integration` 그룹만 돌린다. Actions 화면의 "Run workflow"에서 `tier: full`을 고르면 `regression` 그룹도 돌린다.
+`.github/workflows/pdk.yml`(`MyChip PDK`)은 RTL을 4차 PDK 표준셀로 합성하고, 그 netlist에 `tests/rtl/test_top.py`를 돌리고, 10 MHz 타이밍과 `mychip/` 산출물을 본다. 기획과 합격 조건은 [SPEC 0015](specs/0015-own-pdk-checks.md), 기준값은 `verification/pdk/pdk.toml`·`flow.toml`에 있다. PR·`main`마다 게이트 수준에서 `integration`·`regression` 그룹을 모두 돌린다(약 3분).
 
 로컬(Linux·WSL)에서는 Yosys·Icarus·OpenSTA와 공개 PDK가 필요하다.
 
@@ -101,7 +101,7 @@ top은 현재 항의 `weights[1:0]`만 읽는다. 상위 비트는 `weight_shift
 bash scripts/fetch_pdk.sh ~/ssc-pdk          # 한 번만. SHA-256을 확인한다
 bash scripts/build_opensta.sh ~/ssc-tools/opensta   # OpenSTA가 없을 때만
 export SSC_PDK=~/ssc-pdk
-python scripts/run_pdk.py check              # --tier full 로 regression 포함
+python scripts/run_pdk.py check              # 게이트 수준 integration + regression
 python scripts/run_pdk.py selftest
 python scripts/run_pdk.py report             # 한국어 요약, 실패가 있으면 종료 코드 1
 python -m unittest discover -s tests/pdk -v  # EDA 도구 없이 mychip/ 검사 시험

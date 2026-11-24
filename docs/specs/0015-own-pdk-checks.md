@@ -11,12 +11,12 @@
 검사 다섯 가지:
 
 1. 합성: Yosys로 RTL을 4차 PDK(NSPL_05CMOS_PDK_260820) 표준셀에 맞춘다. 표준셀로 바뀌지 않은 셀, 금지 셀(`LATCHX1`, `TBUFX1`, `TBUFX2`), Yosys `check`가 찾은 조합 루프·구동 없는 net·중복 구동이 있으면 실패한다. 셀 수·플립플롭 수·면적을 보고한다.
-2. 게이트 수준: 합성 netlist의 셀을 PDK Liberty의 `function`대로 동작하는 Verilog로 바꾸고, **팀의 top 시험** `tests/rtl/test_top.py`를 `scripts/run_rtl.py`의 `integration` 그룹(4개 시험, 102작업)으로 돌린다. 통합 저장소의 시험기는 더 쓰지 않는다.
+2. 게이트 수준: 합성 netlist의 셀을 PDK Liberty의 `function`대로 동작하는 Verilog로 바꾸고, **팀의 top 시험** `tests/rtl/test_top.py`를 `scripts/run_rtl.py`의 `integration`·`regression` 그룹(6개 시험, 42,907작업)으로 돌린다. 통합 저장소의 시험기는 더 쓰지 않는다.
 3. 타이밍: OpenSTA로 100 ns(10 MHz) 클록에서 setup·hold 여유를 본다. 입력 지연 50 ns, 출력 지연 20 ns, 출력 부하 0.5 pF, 입력 구동 `BUFX2`. PDK에 typical 라이브러리 하나만 있어 setup은 지연 ×1.5, hold는 ×0.7로 계산한다. 공정 코너별 사인오프 분석이 아니다.
 4. `mychip/`: `1-synth`·`2-pnr`에 올린 팀 netlist에 2·3과 같은 검사를 한다(`2-pnr`에 SPEF가 있으면 배선 지연 반영). SDC 클록이 100 ns보다 느리면 실패한다. `3-signoff`의 DRC 0건·LVS 일치·top 이름·GDS 해시 형식을 본다. `mychip/` 안의 파일 종류를 본다. 파일이 없는 단계는 "없음"이고 실패가 아니다.
 5. 자체 검사: `` `ifdef SYNTHESIS `` 뒤에 숨긴 버그 두 개(`illegal-not-sticky`: 오류 플래그가 누적되지 않음, `sum-11-bit`: `adder12`의 합이 11비트)를 RTL 시험은 통과하고 PDK 검사는 잡아야 한다. 2 ns 클록에서는 setup 여유가 음수여야 한다.
 
-`workflow_dispatch`로 손으로 돌릴 때 `tier`를 고른다. `pr`(기본, PR·`main`과 같음)은 게이트 수준에서 `integration` 그룹, `full`은 `integration`+`regression` 그룹(6,561×5 합법 가중치 배열, 무작위 10,000작업)을 돌린다.
+PR·`main`과 손 실행(`workflow_dispatch`) 모두 게이트 수준에서 `integration`+`regression` 그룹(6,561×5 합법 가중치 배열, 무작위 10,000작업)을 돌린다. 처음 초안은 `regression`을 손 실행(`full`)에만 두었으나 2026-11-24 운영진 결정으로 PR마다 돌린다(약 3분 추가). `tier` 입력은 손 실행 이름으로만 남는다.
 
 결과는 Actions 실행 요약에 한국어 표로 쓴다: 검사별 통과·실패·없음, 셀 수·플립플롭 수·면적, setup·hold 여유, 타이밍이 typical ×1.5/×0.7 가정이라는 설명.
 
@@ -106,7 +106,7 @@ flowchart LR
 ```diff
 -    result = simulate([model], top, core, tier, work / "sim")
 +    config = dict(DESIGN, sources=[str(model)])
-+    for suite in TIERS[tier]:          # pr: integration, full: integration + regression
++    for suite in TIERS[tier]:          # pr, full: integration + regression
 +        run_rtl.simulate(config, suite, work / 'build', work / suite)
 ```
 

@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       tier:
-        description: 'pr: 게이트 수준에서 integration 그룹, full: integration + regression 그룹'
+        description: 'pr, full 모두 게이트 수준에서 integration + regression 그룹'
         type: choice
         options: [pr, full]
         default: pr
