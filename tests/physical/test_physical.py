@@ -40,6 +40,13 @@ class VerdictTests(unittest.TestCase):
         report = 'Circuits match uniquely.\nTop level cell failed pin matching.\n'
         self.assertFalse(self.check([self.cell], report))
 
+    def test_netgen_323_exact_dot_terminator_with_complete_json(self):
+        report = self.report + '.\n'
+        self.assertTrue(self.check([self.cell], report))
+        self.assertFalse(self.check([], report))
+        self.assertFalse(self.check([dict(self.cell, properties=['wrong W'])], report))
+        self.assertFalse(self.check([self.cell], report + 'Top level failed\n'))
+
     def test_property_and_connectivity_errors_fail(self):
         for key in ('badnets', 'badelements', 'properties'):
             with self.subTest(key=key):

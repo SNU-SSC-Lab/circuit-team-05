@@ -1,0 +1,22 @@
+# PROPOSED experiment: based on the common 13-pin wrapper and Team01 example.
+# Not approved for submission. Resolve the guide's <=25 used-pin condition.
+status = "proposed"
+die_size_um = 1900
+available_core_box_um = [442, 442, 1458, 1458]
+guide_used_pin_limit = 25
+vdd_pads = [1, 8, 11, 23, 25, 27, 28]
+
+[signal_pads]
+"IN[3]" = 2
+"IN[2]" = 3
+"IN[1]" = 4
+"IN[0]" = 5
+IN_VALID = 6
+IN_READY = 7
+RST_N = 10
+CLK = 12
+"OUT[3]" = 15
+"OUT[2]" = 16
+"OUT[1]" = 17
+"OUT[0]" = 18
+OUT_VALID = 19

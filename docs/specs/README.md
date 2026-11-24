@@ -20,6 +20,6 @@
 - [0015 MyChip PDK 검사를 이 저장소로 옮기기](0015-own-pdk-checks.md): 같은 검사를 통합 저장소 없이 이 저장소의 scripts/로 실행, 게이트 수준은 팀 top 시험
 
 - [0016 Magic DRC와 Netgen LVS](0016-magic-netgen.md): 도구 자체 시험 CI, 실제 회로 실행 준비와 상세 사용서
-- [0017 RTL부터 GDS·검증·리포트](0017-rtl-to-gds.md): 1팀 방식과 Qflow·OpenROAD 비교 후 선택, 전체 칩 자동화 구현 계획. 아직 미구현
+- [0017 RTL부터 GDS·검증·리포트](0017-rtl-to-gds.md): 비교 후 OpenROAD 구현·코어/제안 SOP28 생성·검사·리포트. 공정 전체 검증은 미완료
 
 index.json은 검사 대상 파일과 확인한 규약의 버전을 기록한다. SHA256은 파일 내용으로 계산한 식별값이다. 사람이 읽는 설명은 각 SPEC의 RFC 확인 항목에 둔다.

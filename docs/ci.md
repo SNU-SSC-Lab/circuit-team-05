@@ -1,6 +1,6 @@
 # RTL CI 실행과 결과 해석
 
-RTL부터 실제 배치배선·GDS·검증·리포트까지 확장하는 계획은 [SPEC 0017](specs/0017-rtl-to-gds.md)과 [전체 흐름 안내](verification/rtl-to-gds-guide.md)에 있다. 1팀 방식과 Qflow·OpenROAD를 비교한 뒤 선택한다. 현재 `asic-*` 검사·전체 칩 GDS 자동 생성은 아직 구현하지 않았다. 아래는 지금 실행되는 CI의 설명이다.
+새 `ASIC RTL to GDS`는 실제 NSPL 배치배선·GDS·검증·리포트를 실행한다. [SPEC 0017](specs/0017-rtl-to-gds.md)과 [사용 안내](verification/rtl-to-gds-guide.md)에 비교·실행법·범위가 있다. Qflow 예제와 비교해 OpenROAD를 선택했다. 코어·제안 SOP28 GDS를 만들며, 공정 RC·전체 DRC·GPIO 검증·핀맵 검토가 미완료여서 기본 strict 검사는 실패로 남긴다. 아래는 기존 RTL CI 설명이다.
 
 PR 3은 전체 검사를 매 PR에서 실행한다. main 병합 후 push와 수동 실행도 지원한다. GitHub Actions 실행 상태는 PR의 Checks에서 확인한다. 팀은 핫픽스 대응 여지를 두기 위해 GitHub branch protection과 필수 상태 검사를 별도로 설정하지 않는다. CI 결과를 보고 병합 여부를 판단하며, 기존 로컬 main 차단 훅과 평상시 PR 흐름은 유지한다.
 
