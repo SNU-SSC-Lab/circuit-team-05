@@ -54,6 +54,9 @@ class VerdictTests(unittest.TestCase):
     def test_empty_cells_fail_even_with_success_text(self):
         self.assertFalse(self.check([dict(self.cell, devices=[[], []])]))
 
+    def test_both_empty_pin_lists_are_not_accepted(self):
+        self.assertFalse(self.check([dict(self.cell, pins=[[], []])]))
+
     def test_pin_net_device_mismatches_fail(self):
         for values in (dict(pins=[['D'], ['S']]), dict(nets=[4, 5]),
                        dict(devices=[[['nfet', 1]], [['nfet', 2]]])):

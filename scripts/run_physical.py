@@ -219,6 +219,8 @@ def lvs_verdict(report, cells, top):
         nets, devices, pins = cell['nets'], cell['devices'], cell['pins']
         if len(nets) != 2 or nets[0] != nets[1] or len(devices) != 2 or len(pins) != 2:
             return False
+        if not pins[0] or not pins[1]:
+            return False
         if Counter(str(p).lower() for p in pins[0]) != Counter(str(p).lower() for p in pins[1]):
             return False
         counts = [sum(int(count) for _name, count in side) for side in devices]
