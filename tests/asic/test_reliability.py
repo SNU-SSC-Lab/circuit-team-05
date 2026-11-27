@@ -1,4 +1,5 @@
 """Golden results are keyed by the fixture definition, not by GDS bytes."""
+import collections
 import contextlib
 import io
 import json
@@ -22,6 +23,8 @@ MUTATION_GOLDEN = MUTATION_DIR/'golden.json'
 RELIABILITY = ROOT/'verification/reliability'
 RULES_JSON = ROOT/'verification/asic/drc-rules.json'
 SERVER_TRACE = re.compile(r'\.ac\.kr|\d+\.\d+\.\d+\.\d+|/tmp|/home|/var/|authorized_keys', re.I)
+LOCAL_PATH = re.compile(r'\b[A-Za-z]:[\\/](?!/)|/mnt/[a-z]/|Users[\\/]', re.I)
+PENDING_DIR = RELIABILITY/'golden'/'drc-unported-20261128'
 META = dict(calibre_version='v2023.4_17.10', deck_sha256=drc_catalog.SOURCE_SHA,
             fixture_tarball_sha256='a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8',
             generator_commit='303bcb6', run_date='2026-11-28')
@@ -244,9 +247,11 @@ class UnverifiedListTests(unittest.TestCase):
         self.items = json.loads((RELIABILITY/'unverified.json').read_text(encoding='utf-8'))['items']
 
     def test_initial_items(self):
+        # lvs-vs-calibre left on 2026-11-28: core and SOP28 chip both have an open-source ↔ Calibre comparison;
+        # the remaining gap (pad-internal devices on the open-source side) is gpio-internal-lvs.
         self.assertEqual([i['id'] for i in self.items], [
-            'drc-unported-rules', 'drc-global-flags', 'antenna', 'gpio-internal-lvs', 'lvs-vs-calibre',
-            'synth-vs-genus', 'pnr-sta-vs-innovus-tempus', 'pex', 'pinmap-25'])
+            'drc-unported-rules', 'drc-global-flags', 'antenna', 'gpio-internal-lvs', 'std-cell-netgen-11',
+            'synth-vs-genus', 'pnr-sta-vs-innovus-tempus', 'sdc-portability', 'pex', 'wire-rc-zero', 'pinmap-25'])
         for item in self.items:
             self.assertEqual(set(item), {'id', 'what', 'why', 'exit_evidence', 'allows_checks', 'docs'}, item['id'])
             for key in ('what', 'why', 'exit_evidence'):
@@ -258,9 +263,22 @@ class UnverifiedListTests(unittest.TestCase):
         allowed = set().union(*(i['allows_checks'] for i in self.items))
         self.assertEqual(allowed, {'asic-drc', 'asic-pex', 'asic-chip-lvs', 'asic-chip-timing', 'asic-pinmap'})
 
-    def test_gpio_lvs_states_cdl_progress(self):
+    def test_gpio_lvs_states_what_is_left(self):
         item = next(i for i in self.items if i['id'] == 'gpio-internal-lvs')
-        self.assertIn('원회로 CDL 확보, Calibre·오픈소스 대조 전', item['why'])
+        self.assertIn('9/9 CORRECT', item['why'])
+        self.assertIn('오픈소스 쪽 패드 내부 소자 LVS는 아직 없다', item['why'])
+        self.assertEqual(item['allows_checks'], ['asic-chip-lvs'])
+
+    def test_new_items_state_the_2026_11_28_facts(self):
+        items = {i['id']: i for i in self.items}
+        self.assertIn('AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2',
+                      items['std-cell-netgen-11']['what'])
+        self.assertIn('34/34 CORRECT', items['std-cell-netgen-11']['why'])
+        self.assertIn('estimated.spef', items['wire-rc-zero']['what'])
+        self.assertIn('delete_from_list', items['sdc-portability']['what'])
+        self.assertIn('remove_from_collection', items['sdc-portability']['why'])
+        self.assertIn('drc-unported-20261128', items['drc-unported-rules']['why'])
+        self.assertIn('drc-unported-20261128', items['antenna']['why'])
 
 
 class TableTests(unittest.TestCase):
@@ -287,12 +305,31 @@ class TableTests(unittest.TestCase):
                     self.assertTrue(row['unverified'])
                 self.assertTrue(set(row['unverified']) <= self.unverified)
 
-    def test_lvs_core_row_matches_and_antenna_stays_unverified(self):
+    def test_row_verdicts_after_wave_2(self):
         rows = {r['id']: r for r in self.table['rows']}
-        self.assertEqual((rows['lvs-core']['verdict'], rows['lvs-core']['scope']), ('match', '오픈소스 흐름 코어 1건'))
-        self.assertEqual(rows['lvs-chip']['verdict'], 'no_evidence')
-        self.assertEqual(rows['antenna']['verdict'], 'no_evidence')
-        self.assertEqual(rows['drc-fixtures']['verdict'], 'match')
+        self.assertEqual([r['id'] for r in self.table['rows']], [
+            'drc-fixtures', 'drc-unported', 'drc-chip-v2', 'drc-chip-openflow', 'lvs-core', 'lvs-cells', 'lvs-chip',
+            'spice', 'synth', 'pnr-sta', 'pex', 'antenna'])
+        verdicts = {key: row['verdict'] for key, row in rows.items()}
+        self.assertEqual(verdicts, {
+            'drc-fixtures': 'match', 'drc-unported': 'no_evidence', 'drc-chip-v2': 'match',
+            'drc-chip-openflow': 'match', 'lvs-core': 'match', 'lvs-cells': 'mismatch', 'lvs-chip': 'match',
+            'spice': 'match', 'synth': 'no_evidence', 'pnr-sta': 'match', 'pex': 'no_evidence',
+            'antenna': 'no_evidence'})
+        self.assertEqual(rows['lvs-core']['scope'], '오픈소스 흐름 코어 1건')
+        self.assertIn('오픈소스 쪽 패드 내부 소자 LVS는 아직 없음', rows['lvs-chip']['scope'])
+        self.assertIn('gpio-internal-lvs', rows['lvs-chip']['unverified'])
+        self.assertIn('estimated.spef는 RC 0', rows['pnr-sta']['scope'])
+        self.assertIn('hold 최대 0.353 ns', rows['pnr-sta']['scope'])
+        self.assertIn('std-cell-netgen-11', rows['lvs-cells']['unverified'])
+        self.assertIn('wire-rc-zero', rows['pex']['unverified'])
+        self.assertIn('golden/drc-unported-20261128/golden.json', rows['antenna']['evidence'])
+        self.assertIn('golden/drc-unported-20261128/golden.json', rows['drc-unported']['evidence'])
+        self.assertIn('golden/pex-reference-20261128/README.md', rows['pex']['evidence'])
+        self.assertIn('golden/spice-20261128/summary.json', rows['spice']['evidence'])
+        self.assertIn('golden/sta-20261128/summary.json', rows['pnr-sta']['evidence'])
+        for key in ('lvs-cells', 'lvs-chip'):
+            self.assertIn('golden/lvs-20261128/summary.json', rows[key]['evidence'])
 
     def test_render_cli_writes_lf(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -333,6 +370,17 @@ class ChipSummaryTests(unittest.TestCase):
             if path.is_file() and path.suffix in ('.md', '.json') and path.name != 'golden.json':
                 with self.subTest(path=path.name):
                     self.assertIsNone(SERVER_TRACE.search(path.read_text(encoding='utf-8')))
+
+    def test_no_local_paths_in_reliability_or_pending_files(self):
+        paths = [p for p in RELIABILITY.rglob('*') if p.is_file() and p.suffix in ('.md', '.json')]
+        paths += sorted((ROOT/'scripts'/'asic').glob('drc_cases_pending*.py'))
+        self.assertGreaterEqual(len(paths), 4)
+        for path in paths:
+            with self.subTest(path=path.name):
+                text = path.read_text(encoding='utf-8')
+                self.assertIsNone(LOCAL_PATH.search(text))
+                if path.parent.name == 'drc-unported-20261128' or path.suffix == '.py':
+                    self.assertIsNone(SERVER_TRACE.search(text))
 
 
 class GoldenFileTests(unittest.TestCase):
@@ -590,6 +638,235 @@ class MutationGoldenFileTests(unittest.TestCase):
             self.assertIn(needle, text)
         self.assertIsNone(SERVER_TRACE.search(text))
         self.assertIsNone(SERVER_TRACE.search(MUTATION_GOLDEN.read_text(encoding='utf-8')))
+
+
+ANT_RULES = {'ANT_01', 'ANT_02_1', 'ANT_02_2', 'ANT_02_3', 'ANT_03_1', 'ANT_03_2', 'ANT_03_3', 'ANT_04',
+             'ANT_05_1', 'ANT_05_2', 'ANT_06_01', 'ANT_06_02'}
+CORRECTED = {('C1a', '0225-NONSIMPLE-bow-tie.gds'): {'raises': True},
+             ('C1a', '0226-NONSIMPLE-orthogonal-self-crossing.gds'): {'raises': True},
+             ('C1a', '0227-NONSIMPLE-self-touching-vertex.gds'): {'fail': False},
+             ('C1b', '0315-ANT_06_01-boundary.gds'): {'fail': True},
+             ('C1b', '0323-ANT_06_02-boundary.gds'): {'fail': True}}
+
+
+class PendingCaseTests(unittest.TestCase):
+    """Fixtures of rules KLayout does not implement yet (C1a/C1b/C1c), kept out of drc_cases.py."""
+
+    @classmethod
+    def setUpClass(cls):
+        import drc_cases_pending
+        cls.records = drc_cases_pending.records()
+        cls.module = drc_cases_pending
+
+    def test_three_groups_857_fixtures(self):
+        self.assertEqual(collections.Counter(r['group'] for r in self.records), {'C1a': 229, 'C1b': 330, 'C1c': 298})
+        self.assertEqual([r['case'] for r in self.records], self.module.cases())
+        self.assertEqual(len({reliability.case_sha256(r['case']) for r in self.records}), 857)
+        self.assertEqual(collections.Counter(r['deck'] for r in self.records), {'DRC': 755, 'ANT': 102})
+        for record in self.records:
+            self.assertEqual(set(record['case']), {'rule', 'label', 'shapes', 'fail', 'hierarchy', 'dbu', 'raises'})
+            group_index = record['index']
+            self.assertEqual(record['gds'], reliability.fixture_name(group_index, record['case'])+'.gds')
+
+    def test_rules_are_the_unported_ones_flags_and_ant(self):
+        catalog = json.loads(RULES_JSON.read_text(encoding='utf-8'))
+        states = {rule['id']: reliability.rule_state(rule) for rule in catalog['rules']}
+        unported = {rule for rule, state in states.items() if state == 'unported'}
+        drc = {r['case']['rule'] for r in self.records if r['deck'] == 'DRC'}
+        self.assertEqual(drc, unported | {'ACUTE', 'NONSIMPLE'})
+        self.assertEqual({r['case']['rule'] for r in self.records if r['deck'] == 'ANT'}, ANT_RULES)
+        self.assertFalse({r['case']['rule'] for r in self.records} & {r for r, s in states.items() if s != 'unported'})
+
+    def test_pending_cases_stay_out_of_the_ported_selftest(self):
+        ported = {reliability.case_sha256(c) for c in cases()}
+        self.assertFalse(ported & {reliability.case_sha256(r['case']) for r in self.records})
+        self.assertFalse({c['rule'] for c in cases()} & {r['case']['rule'] for r in self.records})
+
+    def test_intent_follows_calibre_for_the_five_corrected_fixtures(self):
+        corrected = {(r['group'], r['gds']): r for r in self.records if r['correction']}
+        self.assertEqual(set(corrected), set(CORRECTED))
+        for key, change in CORRECTED.items():
+            with self.subTest(fixture=key):
+                record = corrected[key]
+                for field, value in change.items():
+                    self.assertEqual(record['case'][field], value)
+                original = dict(record['case'], **{field: not value for field, value in change.items()})
+                self.assertEqual(record['run_case_sha256'], reliability.case_sha256(original))
+                self.assertNotEqual(record['run_case_sha256'], reliability.case_sha256(record['case']))
+        for record in self.records:
+            if not record['correction']:
+                self.assertEqual(record['run_case_sha256'], reliability.case_sha256(record['case']))
+
+
+def pending_doc(entries, **meta):
+    return {'meta': dict({'pending': True, 'calibre_version': 'v2023.4_17.10'}, **meta), 'fixtures': entries}
+
+
+class PendingGoldenTests(unittest.TestCase):
+    def setUp(self):
+        self.golden = json.loads((PENDING_DIR/'golden.json').read_text(encoding='utf-8'))
+
+    def test_pending_golden_is_one_to_one_with_the_definitions(self):
+        result = reliability.check_pending(RELIABILITY/'golden')
+        self.assertEqual(result['problems'], [])
+        self.assertEqual(result['status'], 'pass')
+        self.assertEqual(result['fixtures'], 857)
+        self.assertEqual(result['sources'], ['drc-unported-20261128/golden.json'])
+
+    def test_golden_counts_and_meta(self):
+        meta, fixtures = self.golden['meta'], self.golden['fixtures']
+        self.assertTrue(meta['pending'])
+        self.assertEqual(meta['calibre_version'], 'v2023.4_17.10')
+        self.assertEqual(meta['deck_sha256'], drc_catalog.SOURCE_SHA)
+        self.assertEqual(meta['ant_deck_sha256'], '80dc257e6778121ab9a61a444d0e82c79999dc785d8e6aa5a6a2a5318c7b94b5')
+        for digest in ('69f0e00051546ae97619ad0ab61ffc9f8fe5c8fed8b7a7b1dd620bef4a21a10f',
+                       '5d6537293f63eb7205c77983662443cc0800197d99a654d31a52e705230eec9e',
+                       '76d120fdd2fd826e1b7fb79eb8602ad345e2ace5203eb5e23eb5f4b61d6aeef9'):
+            self.assertIn(digest, meta['fixture_tarball_sha256'])
+        self.assertEqual(len(fixtures), 857)
+        self.assertEqual(collections.Counter(f['calibre'] for f in fixtures)['refused'], 2)
+        self.assertEqual(collections.Counter(f['deck'] for f in fixtures), {'DRC': 755, 'ANT': 102})
+        refused = [f for f in fixtures if f['calibre'] == 'refused']
+        self.assertEqual({f['gds'] for f in refused},
+                         {'0225-NONSIMPLE-bow-tie.gds', '0226-NONSIMPLE-orthogonal-self-crossing.gds'})
+        for entry in refused:
+            self.assertTrue(entry['refused_reason'].startswith('Non-orientable boundary'))
+        by = {(f['group'], f['gds']): f for f in fixtures}
+        self.assertEqual(by[('C1b', '0315-ANT_06_01-boundary.gds')]['target_count'], 124)
+        self.assertEqual(by[('C1a', '0227-NONSIMPLE-self-touching-vertex.gds')]['calibre'], 'clean')
+        self.assertEqual(by[('C1a', '0222-ACUTE-right-triangle-45.gds')]['target_count'], 2)
+
+    def test_every_calibre_verdict_equals_the_intent(self):
+        import drc_cases_pending
+        cases_by = {(r['group'], r['gds']): r['case'] for r in drc_cases_pending.records()}
+        for entry in self.golden['fixtures']:
+            case = cases_by[(entry['group'], entry['gds'])]
+            if entry['calibre'] == 'refused':
+                self.assertTrue(case['raises'], entry['gds'])
+            else:
+                self.assertFalse(case['raises'], entry['gds'])
+                self.assertEqual(entry['calibre'] == 'fired', case['fail'], (entry['group'], entry['gds']))
+
+    def test_fixture_check_ignores_pending_golden(self):
+        loaded = reliability.load_golden(RELIABILITY/'golden')
+        self.assertEqual(len(loaded['fixtures']), 451)
+        self.assertNotIn('drc-unported-20261128/golden.json', [s['path'] for s in loaded['sources']])
+
+    def test_check_pending_reports_drift(self):
+        import drc_cases_pending
+        good = [f for f in self.golden['fixtures']]
+        broken = {
+            'missing': good[1:],
+            'extra': good+[dict(good[0], gds='9999-extra.gds', case_sha256='0'*64)],
+            'changed': [dict(good[0], case_sha256='0'*64)]+good[1:],
+            'verdict': [dict(good[0], calibre='fired' if good[0]['calibre'] == 'clean' else 'clean')]+good[1:],
+        }
+        for name, entries in broken.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                folder = Path(tmp)/'golden'/'pending'
+                folder.mkdir(parents=True)
+                (folder/'golden.json').write_text(json.dumps(pending_doc(entries)), encoding='utf-8')
+                result = reliability.check_pending(Path(tmp)/'golden', drc_cases_pending.records())
+                self.assertEqual(result['status'], 'fail')
+                self.assertTrue(result['problems'])
+
+    def test_check_pending_without_pending_golden_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp)/'fixtures').mkdir()
+            (Path(tmp)/'fixtures'/'golden.json').write_text(json.dumps(dict(meta=META, **golden(('a.gds', 'R', 'h1', 'fired')))))
+            self.assertEqual(reliability.check_pending(Path(tmp))['status'], 'fail')
+
+    def test_check_pending_cli(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(reliability.main(['check-pending']), 0)
+        self.assertIn('857', out.getvalue())
+
+    def test_readme_states_conditions(self):
+        text = (PENDING_DIR/'README.md').read_text(encoding='utf-8')
+        for needle in ('v2023.4_17.10', drc_catalog.SOURCE_SHA, '80dc257e6778121ab9a61a444d0e82c79999dc785d8e6aa5a6a2a5318c7b94b5',
+                       '69f0e00051546ae97619ad0ab61ffc9f8fe5c8fed8b7a7b1dd620bef4a21a10f', 'check-pending',
+                       'drc_cases_pending.py', '2026-11-28'):
+            self.assertIn(needle, text)
+        self.assertIsNone(SERVER_TRACE.search(text))
+
+
+class EvidenceSummaryTests(unittest.TestCase):
+    def load(self, name):
+        folder = RELIABILITY/'golden'/name
+        return json.loads((folder/'summary.json').read_text(encoding='utf-8')), (folder/'README.md').read_text(encoding='utf-8')
+
+    def test_lvs_summary(self):
+        summary, readme = self.load('lvs-20261128')
+        meta = summary['meta']
+        self.assertEqual(meta['calibre_version'], 'v2023.4_17.10')
+        self.assertEqual(meta['lvs_deck_sha256'], '4cebfddc77ab6b4fb20e869281a895be9933a900670c98ff792ed5204c6366e0')
+        self.assertFalse(meta['deck_modified'])
+        runs = summary['runs']
+        self.assertEqual(set(runs), {'core', 'chip', 'std_cells', 'gpio'})
+        core, chip = runs['core'], runs['chip']
+        self.assertEqual((core['result'], core['ports'], core['nets']), ('CORRECT', [15, 15], [2096, 2096]))
+        self.assertEqual((chip['result'], chip['ports'], chip['nets']), ('CORRECT', [15, 15], [2129, 2129]))
+        self.assertEqual(chip['instances']['R'], [7, 7])
+        self.assertEqual(chip['header_extra'], [])
+        self.assertEqual(chip['gds_sha256'], '967bcad67c0f3a4df18e2faec2c10df65c33b27f6da0fef8794ce6168c550fdb')
+        self.assertEqual(chip['source_sha256']['ternary8_sop28.cdl'],
+                         'f9b09d1731fc8790c80bc14ab552a82e690316138fe3f446729925d8030bfce1')
+        self.assertEqual(chip['open_source']['pad_internal_lvs'], None)
+        cells = runs['std_cells']
+        self.assertEqual(len(cells['cells']), 34)
+        self.assertTrue(all(c['result'] == 'CORRECT' for c in cells['cells'].values()))
+        self.assertEqual(len(cells['open_source']['matched']), 23)
+        self.assertEqual(sorted(cells['open_source']['unconfirmed']), [
+            'AND2X2', 'AOI21X1', 'BUFX4', 'INVX2', 'INVX4', 'INVX8', 'NOR2X1', 'OAI21X1', 'OAI22X1', 'OR2X2', 'TBUFX2'])
+        gpio = runs['gpio']
+        self.assertEqual(gpio['header_extra'], ['VIRTUAL CONNECT NAME "VDD" "VSS"'])
+        self.assertEqual(len(gpio['cells']), 9)
+        self.assertTrue(all(c['result'] == 'CORRECT' for c in gpio['cells'].values()))
+        self.assertIn('오픈소스 쪽 패드 내부 소자 LVS는 아직 없다', readme)
+
+    def test_sta_summary(self):
+        summary, readme = self.load('sta-20261128')
+        self.assertEqual(summary['meta']['tempus_version'], 'v23.14-s089_1')
+        self.assertEqual(summary['meta']['opensta_version'], '3.1.0')
+        corners = summary['corners']
+        self.assertEqual(set(corners), {'typical', 'bestRC', 'worstRC'})
+        typical = corners['typical']
+        self.assertEqual((typical['tempus']['setup_ns'], typical['tempus']['hold_ns']), (48.444, 1.895))
+        self.assertEqual((typical['opensta']['dmp_ceff_elmore']['setup_ns'], typical['opensta']['dmp_ceff_elmore']['hold_ns']),
+                         (48.3162, 1.6104))
+        for corner in corners.values():
+            self.assertEqual(corner['endpoints'], 72)
+            for calc in ('dmp_ceff_elmore', 'arnoldi'):
+                self.assertLessEqual(corner['max_abs_diff_ns'][calc]['setup'], 0.26)
+                self.assertLessEqual(corner['max_abs_diff_ns'][calc]['hold'], 0.36)
+        self.assertIn('delete_from_list', summary['sdc']['tempus_copy_diff'])
+        self.assertTrue(summary['open_flow']['estimated_spef_rc_zero'])
+        self.assertIn('remove_from_collection', readme)
+
+    def test_spice_summary(self):
+        summary, readme = self.load('spice-20261128')
+        self.assertEqual(summary['tests'], 65)
+        compare = summary['compare']
+        self.assertEqual(compare['transient']['max_abs_rel'], 0.015)
+        self.assertEqual(compare['dc_curves']['max_abs_rel'], 0.0367)
+        self.assertEqual(compare['metrics']['max_abs_rel'], 0.0062)
+        self.assertEqual(compare['gpio_transient_max_abs_rel'], 0.0092)
+        self.assertIn('TEMP', readme)
+
+    def test_pex_reference_readme(self):
+        text = (RELIABILITY/'golden'/'pex-reference-20261128'/'README.md').read_text(encoding='utf-8')
+        for needle in ('bd605b58e450ad173a32afebbde067a37a85562501b4b0e26680f7a87bbf57cc', 'QUERY XRC', 'Quantus',
+                       'EXTGRMP-354', '164', '저장소 밖'):
+            self.assertIn(needle, text)
+        self.assertFalse(list((RELIABILITY/'golden'/'pex-reference-20261128').glob('*.spef')))
+        self.assertFalse(list((RELIABILITY/'golden'/'pex-reference-20261128').glob('*.spf')))
+
+    def test_every_evidence_folder_has_a_readme(self):
+        for folder in (RELIABILITY/'golden').iterdir():
+            if folder.is_dir():
+                self.assertTrue((folder/'README.md').is_file(), folder.name)
+
 
 if __name__ == '__main__':
     unittest.main()

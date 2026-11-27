@@ -160,19 +160,66 @@ def compare(golden, selftest):
 
 
 def load_golden(directory):
-    """Merge every fixture golden.json at or below directory (mutation golden files are check-mutations')."""
+    """Merge every fixture golden.json at or below directory.
+
+    Mutation golden files are check-mutations', and pending golden files (rules KLayout does not implement
+    yet, meta.pending) are check-pending's: neither backs a verified rule."""
     directory = Path(directory)
     paths = sorted(directory.glob('**/golden.json'))
     sources, fixtures = [], []
     for path in paths:
         doc = json.loads(path.read_text(encoding='utf-8'))
-        if 'mutations' in doc and 'fixtures' not in doc:
+        if 'mutations' in doc and 'fixtures' not in doc or doc.get('meta', {}).get('pending'):
             continue
         sources.append(dict(doc['meta'], path=path.relative_to(directory).as_posix()))
         fixtures += doc['fixtures']
     if not sources:
         raise ValueError(f'no fixture golden.json under {directory}')
     return {'sources': sources, 'fixtures': fixtures}
+
+
+def check_pending(golden_dir, records=None):
+    """Pending golden (meta.pending) against drc_cases_pending.records(): one entry per fixture, same hashes.
+
+    Only the binding is checked: the rules have no KLayout port yet, so there is no verdict to compare.
+    A corrected fixture's entry keeps the hash of the definition Calibre ran as run_case_sha256."""
+    if records is None:
+        from drc_cases_pending import records as pending_records
+        records = pending_records()
+    golden_dir = Path(golden_dir)
+    sources, entries, problems = [], {}, []
+    for path in sorted(golden_dir.glob('**/golden.json')):
+        doc = json.loads(path.read_text(encoding='utf-8'))
+        if not doc.get('meta', {}).get('pending'):
+            continue
+        sources.append(path.relative_to(golden_dir).as_posix())
+        for entry in doc['fixtures']:
+            key = (entry.get('group'), entry['gds'])
+            if key in entries:
+                problems.append(f'{key[0]}/{key[1]}: golden lists it twice')
+            entries[key] = entry
+    if not sources:
+        problems.append(f'no pending golden.json under {golden_dir}')
+    wanted = {(record['group'], record['gds']): record for record in records}
+    for key in sorted(set(wanted)-set(entries)):
+        problems.append(f'{key[0]}/{key[1]}: fixture has no golden entry')
+    for key in sorted(set(entries)-set(wanted)):
+        problems.append(f'{key[0]}/{key[1]}: golden entry has no fixture definition')
+    for key in sorted(set(wanted) & set(entries)):
+        record, entry, name = wanted[key], entries[key], f'{key[0]}/{key[1]}'
+        case = record['case']
+        if entry['case_sha256'] != case_sha256(case):
+            problems.append(f'{name}: case_sha256 differs from the definition')
+        if entry.get('run_case_sha256', entry['case_sha256']) != record['run_case_sha256']:
+            problems.append(f'{name}: the definition Calibre ran has a different hash')
+        if entry['rule'] != case['rule'] or entry.get('deck', 'DRC') != record['deck']:
+            problems.append(f'{name}: rule or deck differs')
+        if entry['calibre'] == 'refused' and not case['raises']:
+            problems.append(f'{name}: Calibre refused it but the definition does not expect a refusal (raises)')
+        elif entry['calibre'] != 'refused' and (case['raises'] or (entry['calibre'] == 'fired') != case['fail']):
+            problems.append(f'{name}: Calibre {entry["calibre"]} but the definition says fail={case["fail"]}')
+    return {'status': 'fail' if problems else 'pass', 'fixtures': len(entries), 'definitions': len(wanted),
+            'sources': sources, 'problems': problems}
 
 
 def summary_markdown(result):
@@ -473,6 +520,9 @@ def main(argv=None):
                          help='folder; every fixture golden.json below it is used (default: all)')
     checker.add_argument('--out', type=Path, required=True)
     checker.add_argument('--rules', type=Path, default=RULES_JSON, help='drc-rules.json that names verified rules')
+    pending = commands.add_parser('check-pending',
+                                  help='pending golden (unported rules) is one-to-one with drc_cases_pending.py')
+    pending.add_argument('--golden', type=Path, default=ROOT/'verification/reliability/golden')
     renderer = commands.add_parser('render', help='write table.md from table.json')
     renderer.add_argument('--table', type=Path, required=True)
     renderer.add_argument('--out', type=Path, required=True)
@@ -512,6 +562,15 @@ def main(argv=None):
             sys.stdout.reconfigure(errors='replace')
         print((args.out/'summary.md').read_text(encoding='utf-8'))
         return code
+    if args.command == 'check-pending':
+        result = check_pending(args.golden)
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(errors='replace')
+        print(f'pending golden {", ".join(result["sources"]) or "(none)"}: {result["fixtures"]} entries, '
+              f'{result["definitions"]} fixture definitions, {result["status"]}')
+        for problem in result['problems']:
+            print('- '+problem)
+        return 0 if result['status'] == 'pass' else 1
     if args.command == 'render':
         table = json.loads(args.table.read_text(encoding='utf-8'))
         args.out.write_text(render(table), encoding='utf-8', newline='\n')

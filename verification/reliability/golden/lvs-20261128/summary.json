@@ -1,0 +1,848 @@
+{
+ "meta": {
+  "run_date": "2026-11-28",
+  "calibre_version": "v2023.4_17.10",
+  "pdk_tarball_sha256": "2e49115a08f6af96c1f8433130ad4316551b5eba9001a3133905b544166af954",
+  "lvs_deck_sha256": "4cebfddc77ab6b4fb20e869281a895be9933a900670c98ff792ed5204c6366e0",
+  "lvs_header_sha256": "59617401426050047494e0ef64976e463ea97a809832a0d5bde8de24fdbf05f2",
+  "deck_modified": false,
+  "header": "키트 lvs_header.cal에서 최상위 셀 이름(과 source 파일 이름)만 바꿈. 추가 줄은 runs.*.header_extra",
+  "command": "calibre -lvs -hier -spice layout.spi header.cal",
+  "counts": "ports·nets·instances는 [layout, source]. Calibre 보고서의 INITIAL NUMBERS OF OBJECTS(병렬·finger 줄이기 전) 값"
+ },
+ "runs": {
+  "core": {
+   "item": "C3 (1차)",
+   "top": "v_ternary8_top",
+   "role": "오픈소스 흐름 코어",
+   "gds_sha256": "fa6ab910b7f03fd4c966c9c19b2455fd7f26297614c1f20ccb221fed9b09ea93",
+   "source_sha256": {
+    "schematic.spice": "da41de1caf9ee1e08e06fb0fc9fafdc3c4dd64dfd014eb1efb3da7e92f57064c",
+    "cells.spice": "281efca41e93e7f88cf59e18e64159f9772111cfee1f86647cbd6ac3703e9f11"
+   },
+   "header_extra": [],
+   "result": "CORRECT",
+   "ports": [
+    15,
+    15
+   ],
+   "nets": [
+    2096,
+    2096
+   ],
+   "instances": {
+    "MN": [
+     1895,
+     1895
+    ],
+    "MP": [
+     1895,
+     1895
+    ]
+   },
+   "open_source": {
+    "lvs": "match",
+    "tool": "KLayout 추출 + Netgen (흐름의 asic-lvs, 같은 GDS·같은 schematic.spice)"
+   }
+  },
+  "chip": {
+   "item": "C7",
+   "top": "ternary8_sop28",
+   "role": "오픈소스 흐름이 조립한 SOP28 칩(검토 전 제안 핀맵, 28 pad)",
+   "gds_sha256": "967bcad67c0f3a4df18e2faec2c10df65c33b27f6da0fef8794ce6168c550fdb",
+   "source_sha256": {
+    "ternary8_sop28.cdl": "f9b09d1731fc8790c80bc14ab552a82e690316138fe3f446729925d8030bfce1"
+   },
+   "source_build": "코어 schematic.spice + 키트 표준셀 CDL(cells.spice) + K1 패드 auCdl(PIC·POB4·PVDD·PVSS, 무수정) + 핀맵에서 만든 최상위. build_cdl.py, 저장소 밖",
+   "header_extra": [],
+   "result": "CORRECT",
+   "ports": [
+    15,
+    15
+   ],
+   "nets": [
+    2129,
+    2129
+   ],
+   "instances": {
+    "MN": [
+     2745,
+     1963
+    ],
+    "MP": [
+     2195,
+     1934
+    ],
+    "R": [
+     7,
+     7
+    ]
+   },
+   "after_transformation": {
+    "nets": [
+     869,
+     869
+    ],
+    "MN": [
+     21,
+     21
+    ],
+    "MP": [
+     13,
+     13
+    ],
+    "R": [
+     7,
+     7
+    ]
+   },
+   "warnings": [
+    "Unbalanced smashed mosfets were matched."
+   ],
+   "open_source": {
+    "connectivity": "KLayout 연결 검사(asic-chip-connectivity): 같은 GDS에서 탐침 183개, 단선·합선 0",
+    "core_lvs": "match (runs.core)",
+    "pad_internal_lvs": null
+   }
+  },
+  "std_cells": {
+   "item": "C6",
+   "role": "키트 표준셀 34종, 셀마다 따로",
+   "layout_gds_sha256": "e42dc1fb4c9a31aaa669e8e4c3b93a4b0d6eea40a463f5eaef5dbd17b432618e",
+   "source_cdl_sha256": "281efca41e93e7f88cf59e18e64159f9772111cfee1f86647cbd6ac3703e9f11",
+   "header_extra": [],
+   "correct": 34,
+   "cells": {
+    "AND2X1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      7,
+      7
+     ],
+     "instances": [
+      6,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 2/2"
+    },
+    "AND2X2": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      7,
+      7
+     ],
+     "instances": [
+      8,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 2/2"
+    },
+    "AOI21X1": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      8,
+      8
+     ],
+     "instances": [
+      6,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 3/3"
+    },
+    "AOI22X1": {
+     "result": "CORRECT",
+     "ports": [
+      7,
+      7
+     ],
+     "nets": [
+      10,
+      10
+     ],
+     "instances": [
+      8,
+      8
+     ],
+     "note": "after transformation nets 7/7, inst 3/3"
+    },
+    "BUFX2": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      5,
+      5
+     ],
+     "instances": [
+      4,
+      4
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "BUFX4": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      5,
+      5
+     ],
+     "instances": [
+      6,
+      4
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "CLKBUFX1": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      7,
+      7
+     ],
+     "instances": [
+      8,
+      8
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "CLKBUFX2": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      9,
+      9
+     ],
+     "instances": [
+      12,
+      12
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "CLKBUFX4": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      11,
+      11
+     ],
+     "instances": [
+      16,
+      16
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "DFFNEGX1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      17,
+      17
+     ],
+     "instances": [
+      22,
+      22
+     ],
+     "note": "after transformation nets 9/9, inst 11/11"
+    },
+    "DFFPOSX1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      17,
+      17
+     ],
+     "instances": [
+      22,
+      22
+     ],
+     "note": "after transformation nets 9/9, inst 11/11"
+    },
+    "DFFSRX1": {
+     "result": "CORRECT",
+     "ports": [
+      7,
+      7
+     ],
+     "nets": [
+      23,
+      23
+     ],
+     "instances": [
+      32,
+      32
+     ],
+     "note": "after transformation nets 13/13, inst 13/13"
+    },
+    "FAX1": {
+     "result": "CORRECT",
+     "ports": [
+      7,
+      7
+     ],
+     "nets": [
+      19,
+      19
+     ],
+     "instances": [
+      28,
+      28
+     ],
+     "note": "after transformation nets 9/9, inst 10/10"
+    },
+    "HAX1": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      11,
+      11
+     ],
+     "instances": [
+      14,
+      14
+     ],
+     "note": "after transformation nets 8/8, inst 6/6"
+    },
+    "INVX1": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      4,
+      4
+     ],
+     "instances": [
+      2,
+      2
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "INVX2": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      4,
+      4
+     ],
+     "instances": [
+      4,
+      2
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "INVX4": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      4,
+      4
+     ],
+     "instances": [
+      8,
+      2
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "INVX8": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      4,
+      4
+     ],
+     "instances": [
+      16,
+      2
+     ],
+     "note": "after transformation nets 4/4, inst 1/1"
+    },
+    "LATCHX1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      11,
+      11
+     ],
+     "instances": [
+      12,
+      12
+     ],
+     "note": "after transformation nets 7/7, inst 6/6"
+    },
+    "MUX2X1": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      11,
+      11
+     ],
+     "instances": [
+      10,
+      10
+     ],
+     "note": "after transformation nets 7/7, inst 5/5"
+    },
+    "NAND2X1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      6,
+      6
+     ],
+     "instances": [
+      4,
+      4
+     ],
+     "note": "after transformation nets 5/5, inst 1/1"
+    },
+    "NAND3X1": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      8,
+      8
+     ],
+     "instances": [
+      6,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 1/1"
+    },
+    "NOR2X1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      6,
+      6
+     ],
+     "instances": [
+      4,
+      4
+     ],
+     "note": "after transformation nets 5/5, inst 1/1"
+    },
+    "NOR3X1": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      8,
+      8
+     ],
+     "instances": [
+      6,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 1/1"
+    },
+    "OAI21X1": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      8,
+      8
+     ],
+     "instances": [
+      6,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 3/3"
+    },
+    "OAI22X1": {
+     "result": "CORRECT",
+     "ports": [
+      7,
+      7
+     ],
+     "nets": [
+      10,
+      10
+     ],
+     "instances": [
+      8,
+      8
+     ],
+     "note": "after transformation nets 7/7, inst 3/3"
+    },
+    "OR2X1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      7,
+      7
+     ],
+     "instances": [
+      6,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 2/2"
+    },
+    "OR2X2": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      7,
+      7
+     ],
+     "instances": [
+      8,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 2/2"
+    },
+    "TBUFX1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      8,
+      8
+     ],
+     "instances": [
+      6,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 3/3"
+    },
+    "TBUFX2": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      10,
+      8
+     ],
+     "instances": [
+      10,
+      6
+     ],
+     "note": "after transformation nets 6/6, inst 3/3"
+    },
+    "TIEHIX1": {
+     "result": "CORRECT",
+     "ports": null,
+     "nets": null,
+     "instances": null
+    },
+    "TIELOX1": {
+     "result": "CORRECT",
+     "ports": null,
+     "nets": null,
+     "instances": null
+    },
+    "XNOR2X1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      11,
+      11
+     ],
+     "instances": [
+      12,
+      12
+     ],
+     "note": "after transformation nets 5/5, inst 1/1"
+    },
+    "XOR2X1": {
+     "result": "CORRECT",
+     "ports": [
+      5,
+      5
+     ],
+     "nets": [
+      11,
+      11
+     ],
+     "instances": [
+      12,
+      12
+     ],
+     "note": "after transformation nets 5/5, inst 1/1"
+    }
+   },
+   "open_source": {
+    "date": "2026-11-24",
+    "tools": "KLayout 0.28.16 + Netgen 1.5.323",
+    "record": "verification/asic/cell-qualification.json",
+    "matched": [
+     "AND2X1",
+     "AOI22X1",
+     "BUFX2",
+     "CLKBUFX1",
+     "CLKBUFX2",
+     "CLKBUFX4",
+     "DFFNEGX1",
+     "DFFPOSX1",
+     "DFFSRX1",
+     "FAX1",
+     "HAX1",
+     "INVX1",
+     "LATCHX1",
+     "MUX2X1",
+     "NAND2X1",
+     "NAND3X1",
+     "NOR3X1",
+     "OR2X1",
+     "TBUFX1",
+     "TIEHIX1",
+     "TIELOX1",
+     "XNOR2X1",
+     "XOR2X1"
+    ],
+    "unconfirmed": {
+     "AND2X2": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n AND2X2",
+     "AOI21X1": "Top level cell failed pin matching.",
+     "BUFX4": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n BUFX4",
+     "INVX2": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n INVX2",
+     "INVX4": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n INVX4",
+     "INVX8": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n INVX8",
+     "NOR2X1": "Top level cell failed pin matching.",
+     "OAI21X1": "Top level cell failed pin matching.",
+     "OAI22X1": "Top level cell failed pin matching.",
+     "OR2X2": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n OR2X2",
+     "TBUFX2": "Netlists do not match.\nPort matching may fail to disambiguate symmetries."
+    },
+    "cause": "우리 쪽 설정: property 오류 6(병렬 MOS 합치기), 최상위 핀 맞춤 실패 4(직렬 게이트 입력 순서), 불일치 1(TBUFX2). Calibre는 34종 모두 CORRECT"
+   }
+  },
+  "gpio": {
+   "item": "K1 + C4c (1차)",
+   "role": "키트 GPIO 패드 셀 9종, 셀마다 따로",
+   "layout": "키트 ETRI_NSPL_GPIO_250610.gds",
+   "layout_gds_sha256": "7d54a4948e775fc3a99faf157f91a3510a82c22cc134d677de83dd2214b6e971",
+   "source": "Virtuoso IC6.1.8 auCdl로 키트 OA 라이브러리(ETRI_NSPL_GPIO_250610)에서 내보낸 원회로 CDL, 무수정",
+   "source_sha256": {
+    "PANA": "c9a870d3c4e045195619750b87027768525d54aadf4f377d69fb55165732bb23",
+    "PBCT4": "8ce20fd3d38b5aaf88865986570cfc217b8e0b13803bd27af70c25fbb9fcf9da",
+    "PBCT8": "5fbf4449a2b34af82bc899a077d92bdefbcb2bf188d4435b0987d779d32c77b7",
+    "PIC": "5aaf21559d6f80d62608cfa49c9af1f6f8340cf2f6c6cf982cdea17b10709f85",
+    "POB24": "42e3b0b6b51dd9cb1bb42b30ab38062ef1b57ec38e3c617f957e350619f16b8c",
+    "POB4": "a312d27404ef311556264804f31fcf6db2ae28ff7b69916c0fc826bf9ad600fb",
+    "POB8": "3f9625aef38951f139fd604d3b3820b6e6223f0f188944c74aaa5fc05f2b3eff",
+    "PVDD": "5fd4397ade28d6eee9235168e948dd8bd8fa1cca98dc90e79fe74d8528239bfb",
+    "PVSS": "82ec6d658585f2c42c50a042f6c95d5c0c9c7c9b49a5a0fc9d54457e00f45ac4"
+   },
+   "header_extra": [
+    "VIRTUAL CONNECT NAME \"VDD\" \"VSS\""
+   ],
+   "header_extra_reason": "패드 셀 하나만 두면 VDD·VSS 레일이 둘씩 따로 있어 deck의 LVS ABORT ON SUPPLY ERROR YES에 걸린다. 칩에서는 pad ring이 이어 준다. deck은 무수정",
+   "correct": 9,
+   "cells": {
+    "PANA": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      4,
+      4
+     ],
+     "instances": [
+      12,
+      3
+     ]
+    },
+    "PBCT4": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      13,
+      13
+     ],
+     "instances": [
+      66,
+      20
+     ]
+    },
+    "PBCT8": {
+     "result": "CORRECT",
+     "ports": [
+      6,
+      6
+     ],
+     "nets": [
+      13,
+      13
+     ],
+     "instances": [
+      66,
+      20
+     ]
+    },
+    "PIC": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      6,
+      6
+     ],
+     "instances": [
+      49,
+      8
+     ]
+    },
+    "POB24": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      5,
+      5
+     ],
+     "instances": [
+      47,
+      6
+     ]
+    },
+    "POB4": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      5,
+      5
+     ],
+     "instances": [
+      41,
+      6
+     ]
+    },
+    "POB8": {
+     "result": "CORRECT",
+     "ports": [
+      4,
+      4
+     ],
+     "nets": [
+      5,
+      5
+     ],
+     "instances": [
+      41,
+      6
+     ]
+    },
+    "PVDD": {
+     "result": "CORRECT",
+     "ports": [
+      2,
+      2
+     ],
+     "nets": [
+      2,
+      2
+     ],
+     "instances": [
+      40,
+      2
+     ],
+     "warning": "Unbalanced smashed mosfets were matched."
+    },
+    "PVSS": {
+     "result": "CORRECT",
+     "ports": [
+      2,
+      2
+     ],
+     "nets": [
+      2,
+      2
+     ],
+     "instances": [
+      36,
+      1
+     ]
+    }
+   }
+  }
+ }
+}

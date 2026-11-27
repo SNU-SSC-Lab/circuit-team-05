@@ -66,6 +66,10 @@ python scripts/asic/reliability.py import --counts calibre_counts.csv --selftest
 
 실행일, 도구 버전, deck 해시와 무수정 여부, 입력 GDS·source netlist 해시, 설계별 DRC·ANT 결과 수와 LVS 판정(ports·nets·소자 수)을 적는다. 같은 GDS의 오픈소스 판정이 있으면 함께 적는다. 예시는 `golden/chip-openflow-20261128/`과 `golden/chip-v2-20261128/`이다. GDS 자체는 저장소에 넣지 않는다.
 
+### 미구현 규칙 fixture (`golden/<이름>-YYYYMMDD/golden.json`, `meta.pending` = true)
+
+KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fixture golden과 같고, `group`(묶음)과 `deck`(DRC/ANT)이 더 있다. `reliability.py check`는 이 파일을 읽지 않고, `python scripts/asic/reliability.py check-pending`이 fixture 정의(`scripts/asic/drc_cases_pending.py`)와 1:1인지와 정의의 `fail`·`raises`가 Calibre 판정과 같은지만 확인한다. fixture 정의는 생성한 파일을 그대로 옮겨 `case_sha256`이 Calibre가 읽은 GDS의 manifest 값과 같게 한다. 가설(`fail`)이 Calibre와 다르면 정의를 Calibre 판정으로 고치고(입력 거부는 `raises`), golden 항목에 Calibre가 읽은 정의의 해시를 `run_case_sha256`으로 남긴다.
+
 ## 6. 첫 사례
 
 2026-11-28 실행이 첫 기준점이다. Calibre `v2023.4_17.10`, 키트 deck 무수정으로 다음을 받았다.
@@ -73,3 +77,30 @@ python scripts/asic/reliability.py import --counts calibre_counts.csv --selftest
 - DRC fixture 427개: 425 일치, 2개 Calibre 거부(dbu). 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
 - 오픈소스 흐름 코어·SOP28 칩의 DRC·ANT·LVS → `golden/chip-openflow-20261128/`
 - v2 칩의 DRC·ANT·LVS → `golden/chip-v2-20261128/`
+- 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`, 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`
+
+## 7. 2026-11-28 실행에서 배운 절차
+
+### 서버에 파일을 남기지 않기
+
+- 실행 스크립트 첫머리에 `umask 077`과 `unset HISTFILE`을 둔다. fixture GDS와 deck 링크는 실행 폴더에 잠깐 두고 실행이 끝나면 바로 지운다.
+- 결과를 받기 전에 서버 쪽에서 보고서·로그 머리말의 서버 식별 정보를 자리표시자(`<host>`, `<user>`, `<rundir>`, `<work>`, `<calibre>`)로 바꾼다. 압축된 로그(`.gz`) 안도 바꾼다.
+- 서버에 python이 없으면 측정·집계는 결과를 받은 뒤 로컬에서 같은 스크립트로 한다(2차 K2).
+- 끝나면 임시 폴더 전체를 지우고, 지웠다는 사실을 결과 README에 적는다.
+
+### 결과 정리 방식
+
+- 묶음마다 `REQUEST.md`(정확한 명령·header 변경), `SHA256SUMS`(입력), 결과 README(도구 판, deck·입력 sha256, 실제 명령, 지시서와 다르게 한 점)를 둔다.
+- 결과 CSV는 열을 고정한다(`gds,target_rule,target_rule_count,other_rules_fired,status,calibre_exit,run_ms`). `status`는 실행 상태일 뿐이고, 의도와의 비교는 로컬에서 한다.
+- 저장소에는 판정에 필요한 요약(`golden.json` 또는 `summary.json` + `README.md`)과 해시만 넣는다. DSPF·SPEF·svdb·GDS·원본 보고서는 저장소 밖 근거 묶음에 두고, README에는 실행일과 sha256으로 가리킨다. 로컬 컴퓨터 경로도 적지 않는다.
+- 두 도구를 비교할 때는 입력을 같게 만든 방법을 적는다. 이름 형식 차이(SPEF의 인스턴스 `X` 접두어, 넷 이름 대소문자)를 로컬에서 고쳤다면 고친 규칙과 개수, 고친 파일의 sha256을 남긴다. 한 도구만 읽는 제약 문법(OpenSTA 전용 `delete_from_list`)은 다른 도구용 사본을 만들고 정확한 diff를 적는다.
+
+### deck 수정이 불가피할 때
+
+키트 deck은 고치지 않는 것이 원칙이다. 그래도 그대로는 실행이 안 되면(2차 C5: PEX deck이 batch xRC를 거부) 다음 순서를 지킨다.
+
+1. 먼저 header만으로 해결되는지 시험하고, 안 되면 그 오류 문구를 기록한다.
+2. 키트 deck은 그대로 두고 실행 폴더에 사본을 만든다.
+3. 바꿀 줄의 정확한 diff를 실행 전에 파일로 적어 둔다(`expected_*.diff`). 실행 스크립트는 사본과 키트 deck의 실제 diff가 이 파일과 한 글자라도 다르면 멈춘다.
+4. 실행 폴더마다 실제 diff와 사본의 sha256을 남기고, golden README에 diff 전문을 적는다(`golden/pex-reference-20261128/README.md`).
+5. header에 줄을 더한 경우도 같은 방식으로 기록한다(GPIO 단독 LVS의 `VIRTUAL CONNECT NAME "VDD" "VSS"`, `golden/lvs-20261128/README.md`).

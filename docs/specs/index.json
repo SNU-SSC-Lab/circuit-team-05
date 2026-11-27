@@ -385,6 +385,7 @@
         "scripts/asic/mutate.py",
         "scripts/asic/drc_geometry.py",
         "scripts/asic/drc_cases.py",
+        "scripts/asic/drc_cases_pending*.py",
         "verification/reliability/**",
         "verification/asic/drc-rules.json",
         "tests/asic/**",

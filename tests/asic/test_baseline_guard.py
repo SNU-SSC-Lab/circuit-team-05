@@ -256,7 +256,8 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(len(verified), 96)
         self.assertEqual(len(head['fixtures']), 451)
         self.assertEqual(set(head['fixture_rules'].values()), set(verified))
-        self.assertEqual(len(head['golden_fixtures']), 451)  # the mutation golden has no fixtures
+        # the mutation golden has no fixtures; the pending golden (unported rules, 857) does
+        self.assertEqual(len(head['golden_fixtures']), 451+857)
         self.assertIn('verification/reliability/golden/drc-fixtures-20261128b/golden.json', head['golden'])
         self.assertIn('verification/reliability/golden/drc-mutations-20261128/golden.json', head['golden'])
         self.assertIn('verification/reliability/golden/drc-fixtures-20261128/golden.json', head['golden'])

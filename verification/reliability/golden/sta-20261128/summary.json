@@ -1,0 +1,184 @@
+{
+ "meta": {
+  "run_date": "2026-11-28",
+  "tempus_version": "v23.14-s089_1",
+  "opensta_version": "3.1.0",
+  "design": "v_ternary8_top (오픈소스 흐름 코어)",
+  "inputs_sha256": {
+   "final.v": "1ffd0df62cfd19918932dd9c11f1b55ed84f7b30b68f171b9550b87e0cad3d35",
+   "constraints.sdc": "6fd6c5c442951e1cb66885ebc6485f9e0947ea7cbf48c7ef17702fecae878cc3",
+   "NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_std_tt.lib": "0c84f0d970d374ba5c9c4cf7aec22fec96e306f8be373bda9ef20ce2bb48de51"
+  },
+  "spef": "Calibre xRC 코어 SPEF(SOURCENAMES, pex-reference-20261128). 로컬에서 두 가지만 고침: 인스턴스 이름 앞 X 제거, 넷 이름 대소문자를 final.v 표기로 복원. 두 도구가 같은 파일을 읽음",
+  "after_sdc": "set_propagated_clock [all_clocks] (두 스크립트 모두 SDC 다음에 넣음)",
+  "compared": "끝점 72개마다 setup·hold slack 차(OpenSTA − Tempus)의 절댓값. Tempus는 SDC 사본(constraints_tempus.sdc) 사용"
+ },
+ "sdc": {
+  "tempus_copy_sha256": "2a041646012af645320c72cb10771496e520cf9e63efff97c31623fe0b7c6bd9",
+  "tempus_copy_diff": "2행만 바꿈: set data_in [delete_from_list [all_inputs] [get_ports CLK]] → set data_in [remove_from_collection [all_inputs] [get_ports CLK]]",
+  "original_in_tempus": {
+   "messages": [
+    "WARNING (CTE-25): Skipped unsupported command: delete_from_list",
+    "ERROR (TCLNL-312): set_input_delay: Invalid list of pins",
+    "ERROR (TCLNL-312): set_driving_cell: Invalid list of pins"
+   ],
+   "effect": "입력 지연 50 ns와 driving cell BUFX2가 빠져 입력이 지연 0으로 들어감",
+   "worst_ns": {
+    "no_spef": {
+     "setup": 68.681,
+     "hold": -4.958
+    },
+    "typical": {
+     "setup": 67.562,
+     "hold": -5.804
+    },
+    "bestRC": {
+     "setup": 67.717,
+     "hold": -5.701
+    },
+    "worstRC": {
+     "setup": 67.397,
+     "hold": -5.909
+    }
+   }
+  }
+ },
+ "corners": {
+  "typical": {
+   "spef_sha256": "d2907b81e98d1179fa46171e9b1c8dd55d9a25be625908e0166c05b666f83747",
+   "endpoints": 72,
+   "tempus": {
+    "setup_ns": 48.444,
+    "hold_ns": 1.895
+   },
+   "opensta": {
+    "dmp_ceff_elmore": {
+     "setup_ns": 48.3162,
+     "hold_ns": 1.6104
+    },
+    "arnoldi": {
+     "setup_ns": 48.2671,
+     "hold_ns": 1.6065
+    }
+   },
+   "max_abs_diff_ns": {
+    "dmp_ceff_elmore": {
+     "setup": 0.2442,
+     "hold": 0.3457
+    },
+    "arnoldi": {
+     "setup": 0.2491,
+     "hold": 0.348
+    }
+   },
+   "mean_abs_diff_ns": {
+    "dmp_ceff_elmore": {
+     "setup": 0.1591,
+     "hold": 0.0481
+    },
+    "arnoldi": {
+     "setup": 0.1715,
+     "hold": 0.0499
+    }
+   }
+  },
+  "bestRC": {
+   "spef_sha256": "70fa24c6abcd68d226381f29465f831bbb5e4074e4865e02bfa30670822d6630",
+   "endpoints": 72,
+   "tempus": {
+    "setup_ns": 48.572,
+    "hold_ns": 1.902
+   },
+   "opensta": {
+    "dmp_ceff_elmore": {
+     "setup_ns": 48.4225,
+     "hold_ns": 1.6158
+    },
+    "arnoldi": {
+     "setup_ns": 48.4047,
+     "hold_ns": 1.6105
+    }
+   },
+   "max_abs_diff_ns": {
+    "dmp_ceff_elmore": {
+     "setup": 0.2474,
+     "hold": 0.3531
+    },
+    "arnoldi": {
+     "setup": 0.2532,
+     "hold": 0.3503
+    }
+   },
+   "mean_abs_diff_ns": {
+    "dmp_ceff_elmore": {
+     "setup": 0.1652,
+     "hold": 0.0488
+    },
+    "arnoldi": {
+     "setup": 0.1775,
+     "hold": 0.0511
+    }
+   }
+  },
+  "worstRC": {
+   "spef_sha256": "c25375c62b9423e1250a40d9a4a037b4081deadac8bbb7c5202e0f850917d5f0",
+   "endpoints": 72,
+   "tempus": {
+    "setup_ns": 48.308,
+    "hold_ns": 1.888
+   },
+   "opensta": {
+    "dmp_ceff_elmore": {
+     "setup_ns": 48.1502,
+     "hold_ns": 1.6042
+    },
+    "arnoldi": {
+     "setup_ns": 48.1111,
+     "hold_ns": 1.5987
+    }
+   },
+   "max_abs_diff_ns": {
+    "dmp_ceff_elmore": {
+     "setup": 0.2435,
+     "hold": 0.348
+    },
+    "arnoldi": {
+     "setup": 0.2485,
+     "hold": 0.3515
+    }
+   },
+   "mean_abs_diff_ns": {
+    "dmp_ceff_elmore": {
+     "setup": 0.1558,
+     "hold": 0.0477
+    },
+    "arnoldi": {
+     "setup": 0.1683,
+     "hold": 0.0493
+    }
+   }
+  }
+ },
+ "no_spef": {
+  "tempus": {
+   "setup_ns": 49.4,
+   "hold_ns": 1.907
+  },
+  "opensta_dmp_ceff_elmore": {
+   "setup_ns": 49.1454,
+   "hold_ns": 1.6356
+  },
+  "max_abs_diff_ns": {
+   "setup": 0.3224,
+   "hold": 0.3543
+  },
+  "mean_abs_diff_ns": {
+   "setup": 0.2556,
+   "hold": 0.0478
+  }
+ },
+ "open_flow": {
+  "estimated_spef_rc_zero": true,
+  "detail": "흐름의 estimated.spef: D_NET 468개 모두 총 C 0, 저항 4373개 모두 0, CAP 항목 없음. 기술 LEF(technology.lef)에 층별 RC가 없어서다. 그래서 estimated.spef를 넣은 OpenSTA와 SPEF 없는 OpenSTA가 같은 값(setup 49.1454 / hold 1.6356 ns)을 낸다"
+ }
+}
