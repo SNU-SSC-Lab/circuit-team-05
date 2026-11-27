@@ -1,0 +1,103 @@
+# SPEC 0019 baseline-guard: a PR may not move verification baselines (verification/reliability/**,
+# rule states in verification/asic/drc-rules.json, the guard and gate workflows) without 도재겸's
+# bypass merge. pull_request_target runs this file as it is on the base branch, so a PR cannot edit
+# the guard that judges it. The head checkout is data only: the base branch's baseline_guard.py and
+# reliability.py run against it with a read-only token, no cache and no secrets.
+name: Baseline guard
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  baseline-guard:
+    name: baseline-guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.guard.outputs.result }}
+    steps:
+      - name: Check out the PR head as data
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.12.3'
+      - name: baseline-guard (base branch copy of the guard)
+        id: guard
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          guard="$RUNNER_TEMP/baseline-guard"
+          mkdir -p "$guard"
+          if git cat-file -e "$BASE_SHA:scripts/asic/baseline_guard.py" 2>/dev/null; then
+            # The head may have edited the guard; judge it with the base branch's copy.
+            git show "$BASE_SHA:scripts/asic/baseline_guard.py" > "$guard/baseline_guard.py"
+            git show "$BASE_SHA:scripts/asic/reliability.py" > "$guard/reliability.py"
+            copy=base
+          else
+            # First introduction: base has no guard yet, and with no baseline files nothing can move backward.
+            cp scripts/asic/baseline_guard.py scripts/asic/reliability.py "$guard/"
+            copy=head
+          fi
+          echo "검사 코드: ${copy} 쪽 \`baseline_guard.py\`·\`reliability.py\`, 기준 \`${BASE_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          # -E -s: ignore PYTHON* variables and user site-packages; the guard's own folder stays on sys.path.
+          python -E -s "$guard/baseline_guard.py" --base "$BASE_SHA" --root "$GITHUB_WORKSPACE" > "$guard/out.txt" || status=$?
+          cat "$guard/out.txt"
+          if [ "$status" -eq 0 ]; then
+            result=clean
+          elif head -n 1 "$guard/out.txt" | grep -qx '# 기준 파일 확인: 실패'; then
+            result=violations
+          else
+            result=error
+          fi
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+  baseline-label:
+    name: baseline-label
+    needs: baseline-guard
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Label PRs that need the baseline bypass (runs no PR code)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          RESULT: ${{ needs.baseline-guard.outputs.result }}
+        run: |
+          label=baseline-change
+          case "$RESULT" in
+            violations)
+              gh label create "$label" --repo "$REPO" --color D93F0B \
+                --description '기준 파일 변경: 도재겸이 근거 확인 후 우회 머지 (SPEC 0019)' 2>/dev/null || true
+              gh pr edit "$NUMBER" --repo "$REPO" --add-label "$label" \
+                || gh api --method POST "repos/$REPO/issues/$NUMBER/labels" -f "labels[]=$label"
+              ;;
+            clean)
+              gh pr edit "$NUMBER" --repo "$REPO" --remove-label "$label" 2>/dev/null \
+                || gh api --method DELETE "repos/$REPO/issues/$NUMBER/labels/$label" 2>/dev/null || true
+              ;;
+            *)
+              echo "baseline-guard did not finish (result '${RESULT}'); label left as it is."
+              ;;
+          esac

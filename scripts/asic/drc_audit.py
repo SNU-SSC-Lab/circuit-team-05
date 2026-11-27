@@ -8,6 +8,7 @@ import time
 
 from drc_catalog import validate, markdown, sha, CATALOG
 from drc_ports import PORTS
+from reliability import state_counts
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -44,16 +45,22 @@ def main():
         result.update(status='fail' if geometry['errors'] or run.returncode else 'incomplete',
                       gds_sha256=before, errors=geometry['errors'], tool_exit_code=run.returncode,
                       active_source_rules=len(catalog['rules']), geometry_ports=len(PORTS),
-                      unported=len(catalog['rules'])-len(PORTS), golden_compared=False)
+                      unported=len(catalog['rules'])-len(PORTS),
+                      # drc-rules.json states of the ported rules; this GDS itself is not compared with Calibre.
+                      rule_states=state_counts(catalog, set(PORTS)))
     except Exception as error:
         result['error'] = str(error)
     result['wall_seconds'] = round(time.monotonic()-started, 3)
     (out/'result.json').write_text(json.dumps(result, indent=2)+'\n')
     text = '# NSPL 확장 기하 검사: '+args.top+'\n\n'
-    text += '**공정 전체 DRC 미완료 · 원본 도구 교차 대조 미실행**\n\n'
+    text += '**공정 전체 DRC 미완료 · 이 GDS의 Calibre 대조는 기준점에서만**\n\n'
     text += f'상태: {result["status"]} · 시간: {result["wall_seconds"]}초\n\n'
     text += f'활성 원본: {result.get("active_source_rules", "-")}개 · 구현 기하 검사: {len(PORTS)}개 · '
     text += f'오류 마커: {result.get("errors", "-")}개\n\n'
+    if result.get('rule_states'):
+        states = result['rule_states']
+        text += (f'구현 규칙 상태(drc-rules.json): Calibre golden과 일치(verified) {states["verified"]}개 · '
+                 f'구현만(ported) {states["ported"]}개\n\n')
     if result.get('error'):
         text += '실행 오류: '+result['error']+'\n'
     elif result['errors']:

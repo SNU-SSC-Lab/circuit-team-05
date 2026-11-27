@@ -7,16 +7,16 @@
 | 시점 | 다시 받는 근거 |
 | --- | --- |
 | 새 DRC 규칙 묶음을 KLayout으로 옮겼을 때 | 새 규칙의 fixture Calibre 판정. 대응하는 규칙을 `ported`에서 `verified`로 올린다 |
-| 도구 버전을 바꿨을 때(KLayout 0.30.x 등) | 모든 `verified` 규칙의 fixture 판정과 실제 칩 대조 |
+| 도구 버전을 바꿨을 때(KLayout 0.30.x 등) | 모든 `verified` 규칙의 fixture 판정, 변형본 판정과 실제 칩 대조. 변형본 golden의 형상 해시는 KLayout 0.28.16으로 계산했으므로(`meta.klayout_version`) 버전이 바뀌어 해시가 달라지면 `check-mutations`가 실패한다 |
 | 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정 |
 
-생성기(`scripts/asic/drc_cases.py`)를 고쳐 `verified` 규칙의 fixture 정의가 바뀐 경우도 그 fixture의 golden이 사라지므로 기준점이 필요하다.
+생성기(`scripts/asic/drc_cases.py`)를 고쳐 `verified` 규칙의 fixture 정의가 바뀐 경우도 그 fixture의 golden이 사라지므로 기준점이 필요하다. 변형본 생성기(`scripts/asic/mutate.py`, `scripts/asic/mutate_v2.py`)를 고쳐 같은 seed에서 다른 형상이 나오는 경우도 같다.
 
 ## 2. 누가
 
 - 실행: 프로젝트 담당자 승인 하에 사람이 수동으로 한다. 에이전트가 상용 도구를 스스로 실행하지 않는다.
 - 학교 서버: 계정 주인의 동의와 상용 도구 실행 창구가 있을 때만 쓴다. 학교 서버는 우리 것이 아니고 계정도 빌린 것이다.
-- 기준점 PR 승인: 도재겸 한 명이 근거를 확인한 뒤 PR 화면에서 우회 머지한다(ruleset의 `bypass_mode: pull_request`). 근거 파일·미검증 목록·규칙 상태를 바꾸는 PR은 `Baseline guard`가 일부러 실패하므로 우회 머지가 기록으로 남는다. 에이전트는 머지하지 않는다.
+- 기준점 PR 승인: 도재겸 한 명이 근거를 확인한 뒤 PR 화면에서 우회 머지한다(ruleset의 `bypass_mode: pull_request`). 근거 파일·미검증 목록·규칙 상태를 바꾸는 PR은 필수 체크 `baseline-guard`가 일부러 실패하므로 우회 머지가 기록으로 남는다. 같은 PR에는 `baseline-label` job이 `baseline-change` 라벨을 붙이고, `.github/CODEOWNERS`가 도재겸에게 리뷰를 요청한다(리뷰 요청일 뿐 필수 승인이 아니다). 에이전트는 머지하지 않는다.
 - RFC나 정답 모델도 함께 바꾸는 PR은 RFC 0002 PR01에 따라 팀장(김령교)의 승인을 받은 뒤 병합한다. golden만 추가·갱신하는 기준점 PR은 이 조항의 대상이 아니다.
 
 ## 3. 방법
@@ -29,7 +29,7 @@
 4. **결과를 저장소 밖으로 가져와 요약한다.** 서버에서 받은 원본 보고서·로그는 저장소 밖에 보관한다. 서버 이름·주소·계정·경로는 요약에 옮기지 않는다.
 5. **golden을 만든다.** DRC fixture는 아래 5절의 `reliability.py import`로 만든다. 칩 결과는 `summary.json`과 `README.md`를 손으로 적되, 판정은 상용 보고서에 있는 값만 옮긴다.
 6. **대응표를 고친다.** `table.json` 칸의 판정·범위·근거·갱신일을 고치고 `python scripts/asic/reliability.py render --table verification/reliability/table.json --out verification/reliability/table.md`로 `table.md`를 다시 만든다. 새 규칙이 검증됐으면 `verification/asic/drc-rules.json`의 `golden_compared`를 true로 바꾼다. 근거가 생긴 미검증 항목은 `unverified.json`에서 같은 PR로 뺀다.
-7. **기준점 PR을 연다.** PR 본문에 실행 날짜·도구 버전·deck 해시·입력 해시와, `Baseline guard`가 실패하는 이유를 적는다.
+7. **기준점 PR을 연다.** PR 본문에 실행 날짜·도구 버전·deck 해시·입력 해시와, `baseline-guard`가 실패하는 이유를 적는다.
 
 golden은 상용 도구 출력이나 원본 규칙 문서에서만 만든다. 오픈소스 결과로 golden을 만들거나 덮어쓰지 않는다. 기존 golden 폴더는 고치지 않고, 새 실행은 새 날짜 폴더(`golden/<이름>-YYYYMMDD/`)에 넣는다.
 
@@ -62,6 +62,22 @@ python scripts/asic/reliability.py import --counts calibre_counts.csv --selftest
 - `--out`이 이미 있으면 덮어쓰지 않고 멈춘다.
 - 만든 뒤 `python scripts/asic/reliability.py check --selftest selftest.json --golden verification/reliability/golden --out 새폴더`로 대조하고, 검증된 규칙이 모두 일치하는지 확인한다.
 
+### DRC 변형본 (`golden/drc-mutations-YYYYMMDD/golden.json`)
+
+키트 셀(과 선택적으로 코어 GDS 창)의 도형 하나를 고친 GDS를 Calibre로 하나씩 검사한 결과다. 형상 해시(`geometry_sha256`)로 묶는다. 입력은 Calibre 발동 규칙 표(`gds,rules_fired,calibre_exit,run_ms,calibre_error`), 변형본 `manifest.json`, `mutate.py hash`로 낸 형상 해시다.
+
+```
+python scripts/asic/mutate.py hash --gds-dir 입력묶음폴더 --out geometry.json
+python scripts/asic/reliability.py import-mutations --counts counts.csv --manifest 입력묶음폴더/manifest.json \
+  --geometry geometry.json --out verification/reliability/golden/drc-mutations-YYYYMMDD/golden.json \
+  --generator scripts/asic/mutate_v2.py --calibre-version v2023.4_17.10 \
+  --deck-sha256 6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f \
+  --corpus-tarball-sha256 <입력 묶음 sha256> --run-date YYYY-MM-DD --klayout-version <형상 해시를 계산한 KLayout>
+```
+
+- 저장소에 없는 입력(우리 흐름의 코어 GDS)에서 만든 변형본은 `--checkpoint-only-source 파일이름`으로 표시한다. CI는 이것을 다시 만들지 않고 `not_regenerated`로 세며, 기준점에서 같은 파일을 `check-mutations --core-gds`로 주면 비교한다.
+- 만든 뒤 `python scripts/asic/reliability.py check-mutations --kit 키트폴더 --out 새폴더`로 모든 변형본 golden을 대조한다. 예시와 필드 설명은 `golden/drc-mutations-20261128/README.md`(1차, `mutate.py`)와 `golden/drc-mutations-20261128b/README.md`(2차, `mutate_v2.py`)에 있다.
+
 ### 칩 결과 (`golden/chip-<이름>-YYYYMMDD/summary.json`)
 
 실행일, 도구 버전, deck 해시와 무수정 여부, 입력 GDS·source netlist 해시, 설계별 DRC·ANT 결과 수와 LVS 판정(ports·nets·소자 수)을 적는다. 같은 GDS의 오픈소스 판정이 있으면 함께 적는다. 예시는 `golden/chip-openflow-20261128/`과 `golden/chip-v2-20261128/`이다. GDS 자체는 저장소에 넣지 않는다.
@@ -75,6 +91,9 @@ KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fi
 2026-11-28 실행이 첫 기준점이다. Calibre `v2023.4_17.10`, 키트 deck 무수정으로 다음을 받았다.
 
 - DRC fixture 427개: 425 일치, 2개 Calibre 거부(dbu). 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
+- 둘러싸기 경계 fixture 24개(`0427`~`0450`): 24개 모두 정의의 기대값과 같음 → `golden/drc-fixtures-20261128b/`. 두 묶음을 합쳐 fixture 451개 중 449개 일치, 2개 제외
+- 키트 셀 변형본 695개(1차, `mutate.py`): 81개 Calibre 거부(자기 교차) → `golden/drc-mutations-20261128/`
+- 키트 셀 604개 + 코어 창 196개 변형본 800개(2차, `mutate_v2.py`): Calibre 거부 0 → `golden/drc-mutations-20261128b/`
 - 오픈소스 흐름 코어·SOP28 칩의 DRC·ANT·LVS → `golden/chip-openflow-20261128/`
 - v2 칩의 DRC·ANT·LVS → `golden/chip-v2-20261128/`
 - 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`, 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`

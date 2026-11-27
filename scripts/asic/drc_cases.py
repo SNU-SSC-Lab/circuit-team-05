@@ -151,8 +151,9 @@ def cases():
             if context == 'ntap': shapes += [rectangle(14, 0, 0, size, size)]
             emit(rule, label, shapes, fail)
 
-    # Enclosure edge cases with no Calibre evidence yet; expected values are a reading of the deck
-    # and stay uncertain until the Calibre run. outer-inside-inner: the outer shape lies wholly inside
+    # Enclosure edge cases (0439-0450). The expected values were first a reading of the deck; the
+    # 2026-11-28 Calibre run agreed with all of them (golden/drc-fixtures-20261128b in
+    # verification/reliability). outer-inside-inner: the outer shape lies wholly inside
     # the inner one (for 13.PAD.E a hole in each metal under the PAD). No inner edge crosses an outer
     # edge or faces its inside, so ENC ... OVERLAP is read as not firing. Exception 2.ACT.E3: NTAP is
     # NACT AND NWELL, so NTAP equals the NWELL island and every edge coincides, which fired in Calibre

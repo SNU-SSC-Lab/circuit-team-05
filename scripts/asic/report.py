@@ -33,6 +33,9 @@ def render(result, out):
              f'전체 시간: {result.get("wall_seconds", "-")}초\n\n'
              f'합성: {synth.get("cells", "-")}셀 / {synth.get("flops", "-")}FF / {synth.get("area_um2", "-")} µm²\n\n'
              f'배선 후 기능 회귀: {gate.get("jobs", "-")}작업 / {gate.get("status", "not_run")}')
+    if result.get('mode'):
+        allowed = ', '.join(result.get('allowed_unsupported', [])) or '없음'
+        facts += f'\n\n종료 코드 판정: {result["mode"]} · 미확인(unsupported)으로 남아도 되는 검사: {allowed}'
     text = f'# {title}\n\n**{notice}**\n\n{facts}\n\n'
     text += '| 검사 | 상태 | 시간(초) | 설명 |\n| --- | --- | --- | --- |\n'+'\n'.join(rows)+'\n'
     text += '\n커밋: `'+result['commit']+'` · 미커밋 변경: '+str(result.get('dirty_checkout', False))+'\n'

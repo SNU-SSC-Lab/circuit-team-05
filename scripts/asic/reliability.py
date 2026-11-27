@@ -26,6 +26,12 @@ def rule_state(rule):
     return 'verified' if rule.get('golden_compared') else 'ported'
 
 
+def state_counts(catalog, ids=None):
+    """How many catalog rules (only `ids` when given) are unported, ported and verified."""
+    states = [rule_state(rule) for rule in catalog['rules'] if ids is None or rule['id'] in ids]
+    return {state: states.count(state) for state in ('unported', 'ported', 'verified')}
+
+
 def verified_rules(catalog):
     return sorted(rule['id'] for rule in catalog['rules'] if rule_state(rule) == 'verified')
 

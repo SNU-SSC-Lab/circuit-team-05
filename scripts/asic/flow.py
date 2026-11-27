@@ -25,7 +25,10 @@ CORE_CHECKS = {'asic-input', 'asic-synth', 'asic-pnr', 'asic-cts', 'asic-route',
                'asic-pex', 'asic-drc', 'asic-estimated-sta'}
 CHIP_CHECKS = {'asic-chip-gds', 'asic-chip-connectivity', 'asic-chip-lvs',
                'asic-chip-timing', 'asic-pinmap'}
-UNQUALIFIED = {'asic-pex', 'asic-drc', 'asic-chip-lvs', 'asic-chip-timing', 'asic-pinmap'}
+# --experimental: the fixed set of process-qualification gaps a manual trial may leave unsupported.
+UNQUALIFIED_DEFAULT = frozenset({'asic-pex', 'asic-drc', 'asic-chip-lvs', 'asic-chip-timing', 'asic-pinmap'})
+# --gate (SPEC 0019): the merge gate reads the same kind of set from the unverified list instead.
+UNVERIFIED = ROOT/'verification/reliability/unverified.json'
 
 
 def outcome(checks, error=None, target='core'):
@@ -37,16 +40,38 @@ def outcome(checks, error=None, target='core'):
     return 'pass'
 
 
-def exit_status(checks, error=None, target='core', experimental=False):
+def load_allowed(path=UNVERIFIED):
+    """Checks the unverified list lets stay `unsupported`: the union of every item's allows_checks."""
+    known = CORE_CHECKS | CHIP_CHECKS
+    allowed = set()
+    for item in json.loads(Path(path).read_text(encoding='utf-8'))['items']:
+        names = set(item.get('allows_checks', ()))
+        if names - known:  # a misspelt name would silently allow nothing and hide the item's intent
+            raise ValueError(f'unverified item {item.get("id")!r} names unknown checks: {sorted(names-known)}')
+        allowed |= names
+    return frozenset(allowed)
+
+
+def exit_status(checks, error=None, target='core', allowed=frozenset()):
+    """0 on a full pass; otherwise 0 only when every non-pass check is `unsupported` and in `allowed`."""
     status = outcome(checks, error, target)
     if status == 'pass':
         return 0
     required = CORE_CHECKS | (CHIP_CHECKS if target == 'chip' else set())
-    if not experimental or status != 'incomplete' or not required.issubset(checks):
+    if not allowed or status != 'incomplete' or not required.issubset(checks):
         return 1
     return int(any(c.get('status') != 'pass' and
-                   not (name in UNQUALIFIED and c.get('status') == 'unsupported')
+                   not (name in allowed and c.get('status') == 'unsupported')
                    for name, c in checks.items()))
+
+
+def estimated_sta(log):
+    """asic-estimated-sta from the OpenROAD log: setup and hold worst slack must both be >= 0."""
+    slacks = [float(s) for s in re.findall(r'worst slack(?: max| min)?\s+(-?[\d.]+)', log)]
+    return {'status': 'pass' if len(slacks) == 2 and min(slacks) >= 0 else 'fail',
+            'slacks_ns': slacks, 'clock': 'propagated', 'corner': 'TT 5V 25C',
+            'derates': 'none; typical trial only',
+            'rc': 'uncalibrated global-route estimate; not qualified PEX'}
 
 
 def tool_environment(executable):
@@ -66,6 +91,7 @@ def run_core(args):
     start = time.perf_counter()
     checks = {}
     result = {'target': args.target, 'top': pdk.DESIGN['top'], 'scope': 'experimental',
+              'mode': args.mode, 'allowed_unsupported': sorted(args.allowed),
               'commit': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
               'dirty_checkout': bool(subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True).strip()),
               'status': 'running', 'checks': checks, 'ready_for_submission': False}
@@ -75,7 +101,7 @@ def run_core(args):
     source_files |= {ROOT/name for name in ['scripts/run_asic.py', 'scripts/run_rtl.py',
                      'requirements-ci.txt', 'verification/designs/ternary8.json',
                      'verification/scenarios.json', 'verification/pdk/pdk.toml',
-                     '.github/workflows/asic.yml']}
+                     'verification/reliability/unverified.json', '.github/workflows/asic.yml']}
     result['source_hashes'] = {str(p.relative_to(ROOT)): sha(p) for p in sorted(source_files) if p.is_file()}
 
     def write():
@@ -174,12 +200,7 @@ set_load 0.5 [all_outputs]
         else:
             checks['asic-route'] = {'status': 'pass', 'router_drc': 0}
         timing = (out/'asic-pnr.log').read_text()
-        slacks = [float(s) for s in re.findall(r'worst slack(?: max| min)?\s+(-?[\d.]+)', timing)]
-        checks['asic-estimated-sta'] = {
-            'status': 'pass' if len(slacks) == 2 and min(slacks) >= 0 else 'fail',
-            'slacks_ns': slacks, 'clock': 'propagated', 'corner': 'TT 5V 25C',
-            'derates': 'none; typical trial only',
-            'rc': 'uncalibrated global-route estimate; not qualified PEX'}
+        checks['asic-estimated-sta'] = estimated_sta(timing)
         sink_counts = re.findall(r'Total number of Sinks:\s*(\d+)', timing)
         sinks = int(sink_counts[-1]) if sink_counts else None
         checks['asic-cts'] = {'status': 'pass' if sinks == checks['asic-synth']['flops'] else 'fail',
@@ -255,4 +276,4 @@ set_load 0.5 [all_outputs]
     result['status'] = status
     write()
     render(result, out)
-    return exit_status(checks, result.get('error'), args.target, args.experimental)
+    return exit_status(checks, result.get('error'), args.target, args.allowed)

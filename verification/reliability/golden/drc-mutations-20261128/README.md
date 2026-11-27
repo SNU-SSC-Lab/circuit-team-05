@@ -47,7 +47,8 @@ python scripts/asic/reliability.py import-mutations --counts c2_counts.csv --man
   --geometry geometry.json --out verification/reliability/golden/drc-mutations-20261128/golden.json \
   --calibre-version v2023.4_17.10 \
   --deck-sha256 6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f \
-  --corpus-tarball-sha256 0dbbcf4dcbcbae612b51e8d76da887a81e9524e3636ade5929ae9a45eaeb2225 --run-date 2026-11-28 \n  --klayout-version 0.28.16
+  --corpus-tarball-sha256 0dbbcf4dcbcbae612b51e8d76da887a81e9524e3636ade5929ae9a45eaeb2225 --run-date 2026-11-28 \
+  --klayout-version 0.28.16
 ```
 
 `c2_counts.csv`는 GDS마다 Calibre가 발동한 규칙(`규칙:수;…`), 종료 코드, 실행 시간, 거부 사유를 모은 표다. 이 입력 파일들은 저장소 밖에 보관한다. `import-mutations`는 기존 파일을 덮어쓰지 않는다. 결과를 바꿔야 하면 기준점 절차로 새 실행 날짜의 폴더를 만든다.

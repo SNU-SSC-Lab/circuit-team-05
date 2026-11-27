@@ -12,8 +12,8 @@
 | header | 키트 `drc_header.cal`에서 최상위 셀 이름만 `mut`로 바꿈. `DRC MAXIMUM RESULTS ALL` |
 | 실행 방식 | GDS 하나마다 Calibre를 한 번씩 실행(800회, 모두 종료 코드 0) |
 | 입력 묶음 | `c2v2-mutations-800.tar.gz` sha256 `ecf0263db5aa2ff527d26d4a5b07b8aebb47360f5036e1e853dc8d402784d5a1` (안의 `manifest.json` sha256 `e6b839e1362786f1691d24a73cd360df6c70d273a09a338094ff87a699b07bdf`) |
-| 변형본 생성 | `scripts/asic/mutate_v2.py`, seed `20261129`. 원래 실행한 생성기 파일 sha256은 `meta.original_generator_sha256`(`05e5d01f…`) |
-| 원본 GDS | 표준셀 `NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_std.gds` `e42dc1fb4c9a31aaa669e8e4c3b93a4b0d6eea40a463f5eaef5dbd17b432618e`, GPIO `ETRI_NSPL_GPIO_250610.gds` `7d54a4948e775fc3a99faf157f91a3510a82c22cc134d677de83dd2214b6e971`(둘 다 공개 키트 `NSPL_05CMOS_PDK_260820.tar.gz` sha256 `2e49115a…af954` 안), 코어 `v_ternary8_top.gds` `fa6ab910b7f03fd4c966c9c19b2455fd7f26297614c1f20ccb221fed9b09ea93`(우리 오픈소스 흐름 결과, 저장소에 넣지 않음) |
+| 변형본 생성 | `scripts/asic/mutate_v2.py`, seed `20261129`. 원래 실행한 생성기 파일 sha256은 `meta.original_generator_sha256`(`05e5d01f6d5eec6da225445263fd072808db5414fd18f09ae5a6af953667f951`) |
+| 원본 GDS | 표준셀 `NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_std.gds` `e42dc1fb4c9a31aaa669e8e4c3b93a4b0d6eea40a463f5eaef5dbd17b432618e`, GPIO `ETRI_NSPL_GPIO_250610.gds` `7d54a4948e775fc3a99faf157f91a3510a82c22cc134d677de83dd2214b6e971`(둘 다 공개 키트 `NSPL_05CMOS_PDK_260820.tar.gz` sha256 `2e49115a08f6af96c1f8433130ad4316551b5eba9001a3133905b544166af954` 안), 코어 `v_ternary8_top.gds` `fa6ab910b7f03fd4c966c9c19b2455fd7f26297614c1f20ccb221fed9b09ea93`(우리 오픈소스 흐름 결과, 저장소에 넣지 않음) |
 | 형상 해시 계산 | KLayout `0.28.16` (`meta.klayout_version`) |
 
 서버 이름·주소·계정·경로와 원본 로그는 공개 저장소에 넣지 않는다(SPEC 0019).
@@ -30,7 +30,7 @@
 2026-11-28, KLayout 0.28.16에서 `mutate_v2.py generate`로 다시 만든 결과:
 
 - 키트만(`--kit`): 604개가 입력 묶음의 키트 셀 기록과 기록 내용·형상 해시·GDS 바이트까지 모두 같다. 키트 부분은 난수를 먼저 쓰므로 코어 GDS가 있든 없든 같다.
-- 키트 + 같은 코어 GDS(`--core-gds`, sha256 `fa6ab910…`): 800개 모두 같다.
+- 키트 + 같은 코어 GDS(`--core-gds`, sha256 `fa6ab910b7f03fd4c966c9c19b2455fd7f26297614c1f20ccb221fed9b09ea93`): 800개 모두 같다.
 
 ## 결과
 
@@ -46,7 +46,7 @@
 코어 GDS는 우리 RTL과 흐름으로 만든 결과라 저장소에 없고, RTL이 바뀌면 같은 파일이 나오지 않는다. 그래서:
 
 - `check-mutations --kit 키트폴더`는 키트 셀 604개만 다시 만들어 비교한다. 코어 창 196개는 `not_regenerated`(이번에 만들지 않음)로 세고 요약에 수와 이유를 적는다. 일치로도, 실패로도 세지 않는다.
-- `--core-gds 파일`을 주면 그 파일의 sha256이 golden의 `fa6ab910…`과 같을 때만 창도 만들어 비교한다. 다르면(다른 RTL·흐름) 역시 `not_regenerated`이며 이유에 두 해시를 적는다. sha256이 같은데 형상 해시가 다르면 실패다.
+- `--core-gds 파일`을 주면 그 파일의 sha256이 golden의 `fa6ab910b7f03fd4c966c9c19b2455fd7f26297614c1f20ccb221fed9b09ea93`과 같을 때만 창도 만들어 비교한다. 다르면(다른 RTL·흐름) 역시 `not_regenerated`이며 이유에 두 해시를 적는다. sha256이 같은데 형상 해시가 다르면 실패다.
 - 키트 원본 GDS의 sha256이 golden과 다르면 실행을 멈추고 실패한다. 키트 셀 기록의 형상 해시가 다르거나 GDS·KLayout 결과가 없으면 실패다.
 
 ## `golden.json` 형식

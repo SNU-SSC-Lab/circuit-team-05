@@ -38,8 +38,8 @@ python scripts/asic/reliability.py import --counts calibre_counts.csv --selftest
   --out verification/reliability/golden/drc-fixtures-20261128b/golden.json \
   --calibre-version v2023.4_17.10 \
   --deck-sha256 6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f \
-  --fixture-tarball-sha256 "c8-fixtures.tar.gz 15acbafe…6ff8ef (0427-0438); c9-fixtures.tar.gz 58c6e44f…97fb02 (0439-0450)" \
+  --fixture-tarball-sha256 "c8-fixtures.tar.gz 15acbafef6f71fbf0b4357a3bb1aa82e502347fce9dc3f4e0033d011646ff8ef (0427-0438); c9-fixtures.tar.gz 58c6e44f8ef30c79cf2641356cc7ba5ae5840d7359a712e20f54aa0a5597fb02 (0439-0450)" \
   --generator-commit 756b384 --run-date 2026-11-28
 ```
 
-(`--fixture-tarball-sha256`에는 위 표의 전체 해시 두 개를 그대로 넣었다.) `new_fixtures.json`에 `case_sha256`이 있으므로 해시는 기록에서 바로 가져왔다(`meta.case_sha256_from` = `selftest`). 형식은 첫 묶음 README의 `golden.json` 형식과 같다. Calibre가 거부한 fixture는 없다.
+(`--fixture-tarball-sha256` 값은 `golden.json`의 `meta.fixture_tarball_sha256`과 같다.) `new_fixtures.json`에 `case_sha256`이 있으므로 해시는 기록에서 바로 가져왔다(`meta.case_sha256_from` = `selftest`). 형식은 첫 묶음 README의 `golden.json` 형식과 같다. Calibre가 거부한 fixture는 없다.

@@ -67,7 +67,11 @@ def main():
     result = {'status': 'fail' if failures else 'pass', 'fixtures': len(records),
               'ported_rules': len(by_rule), 'failed_fixtures': failures,
               'wall_seconds': round(time.monotonic()-started, 3),
-              'golden_compared': False, 'records': records}
+              # Calibre agreement lives in verification/reliability (reliability.py check), not here;
+              # record the rule states drc-rules.json declares for the rules these fixtures test.
+              'rule_states': reliability.state_counts(
+                  json.loads(reliability.RULES_JSON.read_text(encoding='utf-8')), set(by_rule)),
+              'records': records}
     (out/'selftest.json').write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps({k:v for k,v in result.items() if k != 'records'}), flush=True)
     if failures:

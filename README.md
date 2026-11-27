@@ -9,7 +9,7 @@ MyChip 2026 4차(0.5 µm CMOS) 회로팀. 안내서 팀 3(3-A): 삼진 가중치
 | `src/` | 설계 원본 전부: RTL 모듈 10개 (`v_ternary8_top` 외) |
 | `mychip/` | 합성·배치배선·사인오프 결과 ([안내](mychip/README.md)) |
 | `docs/` | 문서 |
-| `.github/` | CI: `RTL CI`, `MyChip PDK`, `Physical checks`, `ASIC RTL to GDS`(실제 구현 실험·미확인 공정 항목 별도 표시) |
+| `.github/` | CI: `RTL CI`, `MyChip PDK`, `Physical checks`, `ASIC gate`(실제 GDS 생성·검사 `asic-gate`와 Calibre 대응표 대조 `reliability-table`), `Baseline guard`(기준 파일 변경 확인). 머지 게이트는 [SPEC 0019](docs/specs/0019-merge-gate.md) |
 | `scripts/` · `tests/` · `verification/` | 팀 PR 규칙 검사·RTL CI·PDK 검사 도구와 시험 (저장소 맨 위 경로를 전제로 동작) |
 | `.githooks/` · `.claude/` · `.codex/` · `AGENTS.md` · `CLAUDE.md` | 에이전트·Git 후킹과 작업 규칙 |
 | `requirements-ci.txt` | CI 파이썬 의존성 |

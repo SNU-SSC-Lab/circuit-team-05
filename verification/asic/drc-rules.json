@@ -30,7 +30,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -43,7 +43,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -56,7 +56,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -69,7 +69,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -82,7 +82,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -95,7 +95,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -108,7 +108,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -121,7 +121,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -134,7 +134,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -147,7 +147,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -160,7 +160,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -173,7 +173,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -186,7 +186,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -199,7 +199,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -225,7 +225,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -238,7 +238,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -251,7 +251,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -264,7 +264,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -277,7 +277,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -290,7 +290,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -303,7 +303,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -316,7 +316,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -329,7 +329,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -342,7 +342,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -355,7 +355,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -368,7 +368,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -381,7 +381,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -394,7 +394,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 6
@@ -407,7 +407,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -420,7 +420,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -433,7 +433,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -446,7 +446,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -459,7 +459,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -472,7 +472,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -485,7 +485,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -498,7 +498,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -511,7 +511,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -524,7 +524,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -537,7 +537,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -550,7 +550,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -563,7 +563,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -589,7 +589,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -628,7 +628,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -641,7 +641,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 2
@@ -693,7 +693,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -719,7 +719,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -732,7 +732,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -758,7 +758,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -771,7 +771,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -875,7 +875,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -888,7 +888,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -914,7 +914,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1005,7 +1005,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -1018,7 +1018,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -1031,7 +1031,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1044,7 +1044,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -1057,7 +1057,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1070,7 +1070,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1083,7 +1083,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1096,7 +1096,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -1109,7 +1109,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1122,7 +1122,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -1148,7 +1148,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1174,7 +1174,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1187,7 +1187,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -1213,7 +1213,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1239,7 +1239,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 7
@@ -1252,7 +1252,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
@@ -1265,7 +1265,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1304,7 +1304,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1356,7 +1356,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -1369,7 +1369,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 9
@@ -1382,7 +1382,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 8
@@ -1408,7 +1408,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 3
@@ -1421,7 +1421,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 12
@@ -1434,7 +1434,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 2
@@ -1447,7 +1447,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 6
@@ -1486,7 +1486,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -1499,7 +1499,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
@@ -1512,7 +1512,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
@@ -1590,7 +1590,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
@@ -1603,7 +1603,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 3
@@ -1616,7 +1616,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
@@ -1655,7 +1655,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -1668,7 +1668,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
@@ -1681,7 +1681,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
@@ -1759,7 +1759,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
@@ -1772,7 +1772,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "부분·추가 조건 있음",
       "fixture_definitions": 4
@@ -1785,7 +1785,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
@@ -1824,7 +1824,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -1863,7 +1863,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
@@ -1876,7 +1876,7 @@
       "implementation": "geometry_port",
       "assura_label": false,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
@@ -2019,7 +2019,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": true,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
@@ -2422,7 +2422,7 @@
       "implementation": "geometry_port",
       "assura_label": true,
       "converted_label": false,
-      "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
+      "remaining": "fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4

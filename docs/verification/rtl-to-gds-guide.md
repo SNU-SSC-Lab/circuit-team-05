@@ -74,13 +74,13 @@ python scripts/asic/selftest.py --out .policy-tmp/asic-selftest-new
 python scripts/run_asic.py --pdk "$HOME/ssc-asic-pdk/NSPL_05CMOS_PDK_260820" --openroad "$HOME/ssc-asic-tools/bin/openroad" --target chip --out .policy-tmp/asic-new
 ```
 
-현재 마지막 명령은 산출물을 만든 뒤에도 미확인 공정 항목 때문에 1로 종료한다. `result.json`에서 실제 실패와 미완료를 구분한다. 구현 실험에서만 `--experimental`을 붙이면 **지정한 공정 미확인 항목 외의 필수 검사를 전부 실행·통과한 경우**만 종료 코드 0을 허용한다. 검사 누락·미실행은 실험에서도 실패한다. 보고서의 `incomplete`와 `ready_for_submission: false`는 유지한다. `--target core`는 pad 조립을 생략하며 코어도 RC·전체 DRC가 미확인이므로 제출 통과가 아니다.
+옵션 없이 실행한 마지막 명령(strict)은 산출물을 만든 뒤에도 미확인 공정 항목 때문에 1로 종료한다. `result.json`에서 실제 실패와 미완료를 구분한다. 머지 게이트와 같은 판정은 `--gate`다. 미검증 목록 `verification/reliability/unverified.json`의 `allows_checks`에 적힌 검사만 `unsupported`로 남아도 0으로 끝나고, 그 밖의 실패·미실행은 1이다(SPEC 0019). 구현 실험에서만 `--experimental`을 붙이면 **지정한 공정 미확인 항목 외의 필수 검사를 전부 실행·통과한 경우**만 종료 코드 0을 허용한다. 검사 누락·미실행은 실험에서도 실패한다. 보고서의 `incomplete`와 `ready_for_submission: false`는 유지한다. `--target core`는 pad 조립을 생략하며 코어도 RC·전체 DRC가 미확인이므로 제출 통과가 아니다.
 
 OpenROAD 버전·URL·SHA-256은 [tools.json](../../verification/asic/tools.json), 표준셀 원본 해시는 [nspl.py](../../scripts/asic/nspl.py)에 있다. 다른 CPU·OS용 설치기로 사용하지 않는다. 캐시를 재사용해도 매번 해시를 검사한다. PDK 원본은 Git에 올리지 않는다.
 
 ## GitHub에서 받는 결과
 
-`ASIC RTL to GDS`는 PR·main push에서 기본 `asic (strict)`로 실행한다. 정상적으로 끝까지 실행해도 미확인 항목 때문에 **이 검사가 빨간색으로 남는다**. 11월 24일 첫 원격 실행은 그보다 앞선 실행기 할당 단계에서 계정 결제/사용 한도 안내로 차단되어 실제 ASIC 검사를 실행하지 못했다. 이를 성공으로 덮거나 자동 병합하지 않는다. 수동 실행의 `experimental` 선택은 구현 실험용이며 검사 이름에도 표시한다. workflow가 main에 반영된 뒤 Actions 화면에서 수동 실행할 수 있다.
+워크플로 이름은 `ASIC gate`(`.github/workflows/asic.yml`)이고 job은 `asic-gate`와 `reliability-table` 두 개다. `asic-gate`는 PR·main push에서 `run_asic.py --target chip --gate`로 실행한다. PR이 `src/`, `mychip/constraints/`, `scripts/`, `verification/`, `tests/asic|physical|rtl/`, `requirements-ci.txt`, `.github/workflows/asic.yml` 중 아무것도 바꾸지 않으면 합성·P&R·GDS·DRC·LVS를 건너뛰고 요약에 "물리 흐름 대상 변경 없음"을 쓴 뒤 통과한다. `reliability-table`은 KLayout DRC 판정을 Calibre golden과 다시 맞춘다. 두 job 모두 필수 체크이고 항상 보고된다(SPEC 0019). 수동 실행의 `experimental` 선택은 미검증 목록 대신 예전 고정 목록으로 판정하는 구현 실험용이다. 이전 이름 `ASIC RTL to GDS`의 `asic (strict)`는 미확인 항목 때문에 늘 빨간색이었고, 11월 24일 첫 원격 실행은 실행기 할당 단계에서 계정 결제/사용 한도 안내로 차단되었다.
 
 Summary에서 상태·시간을 읽고, `asic-실행ID-시도번호` artifact를 받는다. 보관 기간은 7일이다. 실패해도 만들어진 증거를 올린다. 설치 단계에서 실패하면 GDS가 없을 수 있으며 해당 로그를 먼저 확인한다.
 
@@ -108,6 +108,6 @@ Summary에서 상태·시간을 읽고, `asic-실행ID-시도번호` artifact를
 
 현재 추출/비교 경로에서 34종 셀 중 23종이 일치했고 11종은 미확인이다. [셀별 결과](../../verification/asic/cell-qualification.json)를 남기고 그 11종을 새 ASIC 합성에서 제외했다. 원본 PDK·RTL·기존 PDK 검사의 기본 매핑은 바꾸지 않았다. LVS 핀·W/L 검사는 유지한다.
 
-칩 간 공유 계약은 circuit-integration 야간 작업이 이 저장소를 읽어 검사한다. 이 저장소는 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 PR 검사 `MyChip integration`을 폐지했다([SPEC 0019](../specs/0019-merge-gate.md)). 이 야간 검사는 5팀 자체 구현·검증이나 모든 칩의 공동 물리 검사를 대신하지 않는다. branch protection은 추가하지 않으며 팀장이 미확인 항목과 제출 조건까지 보고 수동 병합한다.
+칩 간 공유 계약은 circuit-integration 야간 작업이 이 저장소를 읽어 검사한다. 이 저장소는 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 PR 검사 `MyChip integration`을 폐지했다([SPEC 0019](../specs/0019-merge-gate.md)). 이 야간 검사는 5팀 자체 구현·검증이나 모든 칩의 공동 물리 검사를 대신하지 않는다. 2026-11-28 SPEC 0019로 main에 저장소 ruleset을 걸어 필수 체크를 모두 통과해야 머지되게 하기로 했다(ruleset 적용은 그 PR 머지 뒤). 머지 전에 팀장이 미확인 항목과 제출 조건까지 보는 리뷰는 그대로다.
 
 공개 원본의 전체 규칙 대조와 추가 기하 시험은 [DRC 작업 기록](nspl-drc-rule-audit.md), 담당자에게 전달할 질문은 [자료·지원 요청문](pdk-support-request.md)에 따로 정리했다.

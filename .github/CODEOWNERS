@@ -1,0 +1,7 @@
+# SPEC 0019: baseline and gate files ask 도재겸 (Dojaegyum) for review.
+# This is a review request only; the main ruleset does not require code-owner approval.
+# Baseline PRs are merged by 도재겸 with the PR-only bypass after checking the evidence.
+verification/reliability/** @Dojaegyum
+scripts/asic/baseline_guard.py @Dojaegyum
+scripts/asic/reliability.py @Dojaegyum
+.github/workflows/** @Dojaegyum

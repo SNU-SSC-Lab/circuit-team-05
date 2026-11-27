@@ -157,7 +157,9 @@ def markdown(catalog):
              '| 원본 규칙 | 줄 | 이전 routing 검사 | 확장 검사 | Assura 동일 ID | 공개 변환본 동일 ID | 부족한 조건·다음 작업 |',
              '| --- | --- | --- | --- | --- | --- | --- |']
     for rule in catalog['rules']:
-        state = '기하 검사·교차대조 전' if rule['implementation'] == 'geometry_port' else '미구현'
+        # Same states as reliability.rule_state (SPEC 0019): unported -> ported -> verified.
+        state = ('미구현' if rule['implementation'] != 'geometry_port' else
+                 '기하 검사·Calibre 일치(verified)' if rule.get('golden_compared') else '기하 검사·Calibre 대조 전(ported)')
         lines.append(f'| {rule["id"]} | {rule["source_line"]} | {rule["legacy_coverage"]} | {state} | '
                      f'{rule["assura_label"]} | {rule["converted_label"]} | {rule["remaining"]} |')
     lines += ['', '원본 비활성: '+', '.join(catalog['disabled_rules']), '',
@@ -165,7 +167,9 @@ def markdown(catalog):
               '공개 변환본에서 다른 이름을 쓴 항목: '+', '.join(catalog['converted_unmatched_ids']), '',
               '아직 옮기지 않은 전역 입력 플래그: '+', '.join(catalog['global_flags_unported']), '',
               '동일 ID는 이름 대조이며 같은 식·조건의 증거가 아니다. 변환본에서 ID를 나누거나 바꾼 경우도 있다. '
-              'Calibre/Assura 결과와의 교차 대조는 아직 하지 않았다.', '']
+              'Calibre 결과와의 대조는 verification/reliability/(신뢰성 대응표)에 있다: verified 규칙은 fixture와 '
+              '실제 형상 변형본에서 KLayout 판정이 Calibre golden과 같다. Assura 결과와의 대조는 하지 않았다. '
+              'verified도 공정 전체 DRC 통과나 제출 승인이 아니다.', '']
     return '\n'.join(lines)
 
 def main():

@@ -6,7 +6,7 @@
 
 | 구분 | 확인한 범위 | 남은 일 |
 | --- | --- | --- |
-| DRC | 원본 활성 209개 대조, 구현한 기하 검사 96개에서 코어·패드 포함 GDS 오류 0건. 도형 시험 427개 통과 | 113개 규칙·전역 입력 플래그 이식, Calibre/Assura 결과 대조 |
+| DRC | 원본 활성 209개 대조, 구현한 기하 검사 96개에서 코어·패드 포함 GDS 오류 0건. 도형 시험 451개 통과, 96개 규칙의 판정이 Calibre golden과 일치(2026-11-28, `verification/reliability/`) | 113개 규칙·전역 입력 플래그·antenna 이식 |
 | LVS | 내적 코어의 실제 GDS 추출 회로와 독립 기준 CDL 일치 | GPIO·ESD를 포함한 전체 칩 LVS |
 | 기능 | 최종 netlist의 6개 시험·42,907작업 회귀 통과 | 실제 제작 칩·보드 시험 |
 | RC·PEX | 추정 배선 RC와 탐색용 SPEF 생성 | 공정에 맞춘 RC 모델·정밀 추출·정확도 대조 |
@@ -48,7 +48,7 @@ python scripts/asic/drc_catalog.py --pdk "$TEAM05_PDK" --out "$HOME/ssc-team05-r
 python scripts/asic/drc_selftest.py --out "$HOME/ssc-team05-runs/drc-tests-01"
 ```
 
-첫 명령은 원본 활성 209개 검사와 목록이 같은지 확인한다. 두 번째는 GDS로 저장·재반입한 정상/위반·수치 경계·계층 도형 427개를 시험한다. `selftest.json`의 `status: pass`는 **정상 도형을 통과시키고 의도한 오류를 잡았다는 뜻**이다. `golden_compared`는 false이며 원본 도구와의 동등성 검증은 아직이다.
+첫 명령은 원본 활성 209개 검사와 목록이 같은지 확인한다. 두 번째는 GDS로 저장·재반입한 정상/위반·수치 경계·계층 도형 451개를 시험한다. `selftest.json`의 `status: pass`는 **정상 도형을 통과시키고 의도한 오류를 잡았다는 뜻**이다. Calibre와의 대조는 이 명령이 아니라 `python scripts/asic/reliability.py check --selftest 그폴더/selftest.json --out 새폴더`가 한다. 2026-11-28 Calibre golden(`verification/reliability/golden/drc-fixtures-20261128/`, `…20261128b/`)과 비교해 451개 중 449개가 대상 규칙 발동 여부가 같고, 2개(0169·0170)는 Calibre가 입력을 거부해 사유가 붙은 제외다. `selftest.json`의 `rule_states`는 `verification/asic/drc-rules.json`이 정한 규칙 상태 수(지금 `verified` 96개)다.
 
 재실행할 때는 `-02`처럼 새 출력 폴더를 지정한다. 실행기는 이전 결과를 덮어쓰지 않는다.
 
@@ -62,7 +62,7 @@ python -m json.tool "$TEAM05_OUT/result.json"
 
 합성 → 배치·클록 트리·전원망·배선 → 실제 셀 GDS 병합 → GDS 소자 추출 → Netgen LVS → 최종 netlist 기능 회귀 순서다. 로컬 전체 실행은 약 3~4분대였지만 PC·도구 버전에 따라 달라진다.
 
-실험 재현을 위해 `--experimental`을 명시했다. 지정된 미확인 공정 항목 외의 필수 검사를 실행·통과해야 종료 코드 0을 허용한다. JSON의 전체 `status: incomplete`와 `ready_for_submission: false`는 유지한다. 옵션을 빼면 현재는 끝까지 산출물을 만들어도 미확인 항목 때문에 1로 종료한다. 실제 LVS 불일치나 미실행을 성공으로 바꾸는 옵션은 아니다.
+실험 재현을 위해 `--experimental`을 명시했다. 지정된 미확인 공정 항목 외의 필수 검사를 실행·통과해야 종료 코드 0을 허용한다. JSON의 전체 `status: incomplete`와 `ready_for_submission: false`는 유지한다. 옵션을 빼면 현재는 끝까지 산출물을 만들어도 미확인 항목 때문에 1로 종료한다. 실제 LVS 불일치나 미실행을 성공으로 바꾸는 옵션은 아니다. PR 머지 게이트(`asic-gate`)는 `--target chip --gate`로 실행하며 미검증 목록 `verification/reliability/unverified.json`의 `allows_checks`만 허용한다(SPEC 0019).
 
 | 파일·항목 | 읽는 방법 |
 | --- | --- |
@@ -178,7 +178,7 @@ python scripts/run_physical.py report --result "$HOME/ssc-team05-runs/magic-prac
 
 공개 키트에 Calibre·Assura 규칙 원본이 있다. 원본이 없어서 멈춘 작업이 아니다. 활성 209개 중 96개를 옮겼고, 나머지 113개와 전역 입력 플래그·별도 antenna deck 전체는 아직 지원하지 않는다. well의 전위·연결 조건, 넓은 금속의 조건부 간격, tap·guard ring·ESD 등은 단순 폭/간격 수치만 복사해서 구현할 수 없다.
 
-다음 실험은 [대조표](nspl-drc-rule-matrix.md)에서 미구현 규칙 하나를 골라 원본 식의 정상·위반·경계 예제를 만들고, KLayout 결과를 원본 도구 결과와 비교하는 것이다. 기존 427개 시험 통과는 우리가 정한 기대값과 구현이 맞았다는 근거다. Calibre/Assura와의 동등성은 아직 증명하지 못했다. `96/209`를 공정 검증률로 해석하지 않는다.
+다음 실험은 [대조표](nspl-drc-rule-matrix.md)에서 미구현 규칙 하나를 골라 원본 식의 정상·위반·경계 예제를 만들고, KLayout 결과를 원본 도구 결과와 비교하는 것이다. 옮긴 96개 규칙은 2026-11-28 Calibre golden과 판정이 같다(fixture 451개 중 449개 일치·2개 제외, 실제 형상 변형본 1차 609개·2차 798개에서 불일치 0, `verification/reliability/table.md`). 113개 미구현 규칙의 fixture Calibre 판정도 받아 두었다(`verification/reliability/golden/drc-unported-20261128/`). Assura와의 대조는 하지 않았다. `96/209`를 공정 검증률로 해석하지 않는다.
 
 원본끼리도 FVTN/FVTP, PAD 치수, antenna 활성 상태에 차이가 있다. 차이를 임의로 합치지 말고 [대조 기록](nspl-drc-rule-audit.md)의 해당 식을 기준으로 적용 규칙을 확인해야 한다.
 
@@ -204,7 +204,7 @@ PIC·POB4·PVDD·PVSS 중 작은 셀 하나부터 독립 기준 SPICE/CDL과 GDS
 
 ## 12. 지금 사용법에서 R&D를 시작하는 순서
 
-1. **3절의 427개 도형 시험, 4절의 코어 실행, 5절의 확장 DRC를 먼저 재현한다.** 기존 결과를 기준으로 보관한다. `--experimental`은 지정된 미확인 항목만 허용하며 실제 실패를 성공으로 바꾸지 않는다.
+1. **3절의 451개 도형 시험, 4절의 코어 실행, 5절의 확장 DRC를 먼저 재현한다.** 기존 결과를 기준으로 보관한다. `--experimental`은 지정된 미확인 항목만 허용하며 실제 실패를 성공으로 바꾸지 않는다.
 2. **연구 질문 하나를 고른다.** 예를 들어 미구현 DRC 한 규칙, GPIO 한 셀, MET1 배선 한 패턴으로 범위를 좁힌다. PEX 연구라면 8절의 설정·명령·입출력 예제를 함께 받으면 출발점을 비교하기 좋다.
 3. **입력과 비교 조건을 고정하고 차이를 기록한다.** PDK·설정·입력 해시, 도구 버전, 명령, corner·단위, 기대 결과의 출처, 실제 출력과 오차·미지원 조건을 한 실험 묶음으로 남긴다. 현재 추출기의 결과를 다시 정답으로 넣지 않는다.
 4. **해당 범위가 확인된 뒤 전체 흐름에 연결한다.** 작은 예제 통과를 전체 공정 지원으로 확대하지 않는다. DRC 목록·시험, 셀별 LVS, RC 대조 근거를 함께 늘린다.

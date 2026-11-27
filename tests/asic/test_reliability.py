@@ -39,7 +39,7 @@ class CaseHashTests(unittest.TestCase):
 
     def test_every_fixture_case_hashes(self):
         hashes = [reliability.case_sha256(c) for c in cases()]
-        self.assertEqual(len(hashes), 451)  # 427 with the 2026-11-28 golden + 24 enclosure fixtures pending Calibre
+        self.assertEqual(len(hashes), 451)  # 427 in golden/drc-fixtures-20261128 + 24 in golden/drc-fixtures-20261128b
 
 
 def golden(*fixtures):
@@ -234,6 +234,15 @@ class RuleStateTests(unittest.TestCase):
         self.assertEqual(reliability.rule_state({'implementation': 'geometry_port', 'golden_compared': False}), 'ported')
         self.assertEqual(reliability.rule_state({'implementation': 'geometry_port', 'golden_compared': True}), 'verified')
 
+    def test_state_counts_feed_selftest_and_audit_records(self):
+        catalog = {'rules': [{'id': 'A', 'implementation': 'unported'},
+                             {'id': 'B', 'implementation': 'geometry_port', 'golden_compared': False},
+                             {'id': 'C', 'implementation': 'geometry_port', 'golden_compared': True}]}
+        self.assertEqual(reliability.state_counts(catalog), {'unported': 1, 'ported': 1, 'verified': 1})
+        self.assertEqual(reliability.state_counts(catalog, {'B', 'C'}), {'unported': 0, 'ported': 1, 'verified': 1})
+        real = json.loads(RULES_JSON.read_text(encoding='utf-8'))
+        self.assertEqual(reliability.state_counts(real), {'unported': 113, 'ported': 0, 'verified': 96})
+
     def test_catalog_has_96_verified_and_113_unported(self):
         from drc_ports import PORTS
         catalog = json.loads(RULES_JSON.read_text(encoding='utf-8'))
@@ -309,11 +318,11 @@ class TableTests(unittest.TestCase):
     def test_row_verdicts_after_wave_2(self):
         rows = {r['id']: r for r in self.table['rows']}
         self.assertEqual([r['id'] for r in self.table['rows']], [
-            'drc-fixtures', 'drc-unported', 'drc-chip-v2', 'drc-chip-openflow', 'lvs-core', 'lvs-cells', 'lvs-chip',
+            'drc-fixtures', 'drc-mutations', 'drc-unported', 'drc-chip-v2', 'drc-chip-openflow', 'lvs-core', 'lvs-cells', 'lvs-chip',
             'spice', 'synth', 'pnr-sta', 'pex', 'antenna'])
         verdicts = {key: row['verdict'] for key, row in rows.items()}
         self.assertEqual(verdicts, {
-            'drc-fixtures': 'match', 'drc-unported': 'no_evidence', 'drc-chip-v2': 'match',
+            'drc-fixtures': 'match', 'drc-mutations': 'match', 'drc-unported': 'no_evidence', 'drc-chip-v2': 'match',
             'drc-chip-openflow': 'match', 'lvs-core': 'match', 'lvs-cells': 'mismatch', 'lvs-chip': 'match',
             'spice': 'match', 'synth': 'no_evidence', 'pnr-sta': 'match', 'pex': 'no_evidence',
             'antenna': 'no_evidence'})
@@ -323,7 +332,12 @@ class TableTests(unittest.TestCase):
         self.assertIn('estimated.spef는 RC 0', rows['pnr-sta']['scope'])
         self.assertIn('hold 최대 0.353 ns', rows['pnr-sta']['scope'])
         self.assertTrue(rows['pnr-sta']['scope'].startswith('STA 계산만:'))
-        self.assertIn('Task 7에서 CI 연결 예정', rows['drc-unported']['pr_check'])
+        self.assertIn('check-pending', rows['drc-unported']['pr_check'])
+        self.assertIn('451개 중 449개', rows['drc-fixtures']['note'])
+        self.assertIn('golden/drc-fixtures-20261128b/golden.json', rows['drc-fixtures']['evidence'])
+        self.assertEqual(rows['drc-mutations']['evidence'], ['golden/drc-mutations-20261128/golden.json',
+                                                             'golden/drc-mutations-20261128b/golden.json'])
+        self.assertEqual(len({r['stage'] for r in self.table['rows']}), len(self.table['rows']))  # labels tell rows apart
         self.assertIn('제외', rows['drc-unported']['note'])
         self.assertIn('std-cell-netgen-11', rows['lvs-cells']['unverified'])
         self.assertIn('wire-rc-zero', rows['pex']['unverified'])
