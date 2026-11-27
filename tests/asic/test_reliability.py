@@ -212,7 +212,7 @@ class CheckCliTests(unittest.TestCase):
                 self.assertEqual(self.run_check(records)[0], 1)
 
     def test_check_gates_only_verified_rules(self):
-        records = [('a.gds', 'R', 4, 'h1'), ('b.gds', 'P', 0, 'h7')]  # P has no golden yet
+        records = [('a.gds', 'R', 4, 'h1'), ('c.gds', 'R', 4, 'h3'), ('b.gds', 'P', 0, 'h7')]  # P has no golden yet
         code, result, summary = self.run_check(records, R='verified', P='ported')
         self.assertEqual(code, 0)
         self.assertEqual(result['gate']['rules'], ['R'])
@@ -226,6 +226,36 @@ class CheckCliTests(unittest.TestCase):
                 code, result, summary = self.run_check(records, **states)
                 self.assertEqual(code, 1)
                 self.assertIn('근거 없음', summary)
+
+
+    # Checks moved here from baseline-guard (Task 7 fix round 1): they need the fixture definitions,
+    # which only the unprivileged pull_request job may evaluate.
+    def test_golden_fixture_missing_from_selftest_fails(self):  # a verified rule loses evidence
+        code, result, summary = self.run_check([('a.gds', 'R', 4, 'h1')])  # golden also has c.gds (h3)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['gate']['failing'], ['R'])
+        self.assertEqual([f['gds'] for f in result['gate']['lost']], ['c.gds'])
+        self.assertIn('`c.gds`', summary)
+        self.assertIn('사라진', summary)
+
+    def test_changed_or_added_fixture_of_verified_rule_fails(self):
+        for records in ([('a.gds', 'R', 4, 'h9'), ('c.gds', 'R', 4, 'h3')],  # definition changed
+                        [('a.gds', 'R', 4, 'h1'), ('c.gds', 'R', 4, 'h3'), ('n.gds', 'R', 0, 'h8')]):  # added
+            with self.subTest(records=records):
+                code, result, summary = self.run_check(records)
+                self.assertEqual(code, 1)
+                self.assertIn('근거 없음', summary)
+
+    def test_only_refused_fixtures_left_fails(self):
+        code, result, summary = self.run_check([('c.gds', 'R', 4, 'h3')])
+        self.assertEqual(code, 1)
+        self.assertIn('Calibre가 거부한 제외 fixture만', summary)
+
+    def test_zero_verified_rules_fails(self):
+        code, result, summary = self.run_check([('a.gds', 'R', 4, 'h1'), ('c.gds', 'R', 4, 'h3')], R='ported')
+        self.assertEqual(code, 1)
+        self.assertEqual(result['gate']['status'], 'fail')
+        self.assertIn('verified 규칙이 하나도 없', summary)
 
 
 class RuleStateTests(unittest.TestCase):

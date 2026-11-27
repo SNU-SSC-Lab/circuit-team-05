@@ -1,8 +1,10 @@
 # SPEC 0019 baseline-guard: a PR may not move verification baselines (verification/reliability/**,
-# rule states in verification/asic/drc-rules.json, the guard and gate workflows) without 도재겸's
-# bypass merge. pull_request_target runs this file as it is on the base branch, so a PR cannot edit
-# the guard that judges it. The head checkout is data only: the base branch's baseline_guard.py and
-# reliability.py run against it with a read-only token, no cache and no secrets.
+# rule states in verification/asic/drc-rules.json, the guard, gate workflows and CODEOWNERS) without
+# 도재겸's bypass merge. The repository is public and pull_request_target runs for fork PRs too, with
+# this file as it is on the base branch. So NO PR code runs here: the guard and reliability.py come
+# from the workflow's own commit ($GITHUB_SHA) and read base and head only as git blobs (bytes/JSON).
+# Fixture checks that need drc_cases.py evaluated run in reliability-table (pull_request, asic.yml).
+# Read-only token, no cache, no secrets.
 name: Baseline guard
 
 on:
@@ -26,7 +28,7 @@ jobs:
     outputs:
       result: ${{ steps.guard.outputs.result }}
     steps:
-      - name: Check out the PR head as data
+      - name: Fetch base and PR head commits (files are read as data, never run)
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -35,28 +37,26 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: '3.12.3'
-      - name: baseline-guard (base branch copy of the guard)
+      - name: baseline-guard (guard from the workflow commit; PR read as data)
         id: guard
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           guard="$RUNNER_TEMP/baseline-guard"
           mkdir -p "$guard"
-          if git cat-file -e "$BASE_SHA:scripts/asic/baseline_guard.py" 2>/dev/null; then
-            # The head may have edited the guard; judge it with the base branch's copy.
-            git show "$BASE_SHA:scripts/asic/baseline_guard.py" > "$guard/baseline_guard.py"
-            git show "$BASE_SHA:scripts/asic/reliability.py" > "$guard/reliability.py"
-            copy=base
-          else
-            # First introduction: base has no guard yet, and with no baseline files nothing can move backward.
-            cp scripts/asic/baseline_guard.py scripts/asic/reliability.py "$guard/"
-            copy=head
-          fi
-          echo "검사 코드: ${copy} 쪽 \`baseline_guard.py\`·\`reliability.py\`, 기준 \`${BASE_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
+          # Never the head's copy: the guard code comes from the commit that holds this workflow file.
+          git show "$GITHUB_SHA:scripts/asic/baseline_guard.py" > "$guard/baseline_guard.py"
+          git show "$GITHUB_SHA:scripts/asic/reliability.py" > "$guard/reliability.py"
+          {
+            echo "검사 코드: 워크플로 커밋 \`${GITHUB_SHA}\`의 \`baseline_guard.py\`·\`reliability.py\`. PR 코드는 실행하지 않고 파일 내용만 읽습니다."
+            echo "기준 \`${BASE_SHA}\` ↔ PR head \`${HEAD_SHA}\`"
+            echo ''
+          } >> "$GITHUB_STEP_SUMMARY"
           status=0
-          # -E -s: ignore PYTHON* variables and user site-packages; the guard's own folder stays on sys.path.
-          python -E -s "$guard/baseline_guard.py" --base "$BASE_SHA" --root "$GITHUB_WORKSPACE" > "$guard/out.txt" || status=$?
+          # Run from the temp folder with -E -s: no PYTHON* variables, no user site, no PR files on sys.path.
+          (cd "$guard" && python -E -s baseline_guard.py --base "$BASE_SHA" --head "$HEAD_SHA" --root "$GITHUB_WORKSPACE") \
+            > "$guard/out.txt" || status=$?
           cat "$guard/out.txt"
           if [ "$status" -eq 0 ]; then
             result=clean

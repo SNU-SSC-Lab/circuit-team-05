@@ -1,28 +1,28 @@
 """Require a bypass for PRs that change verification baselines or the guard (SPEC 0019, check `baseline-guard`).
 
-Compares the working tree (head, `--root`) with a base ref. CI cannot tell real Calibre output from a
-hand-written file, so every change under `verification/reliability/` (new, edited or deleted file) and
-every rule promoted to verified is a violation; 도재겸 checks the evidence and bypass-merges the PR
-(SPEC 0019). Changes that do not touch evidence stay allowed (e.g. a rule moving unported -> ported).
-Specific messages also say what moved backward: lost fixtures, verdict regressions, new unverified items.
+Compares head (`--head REF`, or the working tree at `--root`) with a base ref as DATA: files are read
+as bytes (`git show` or the file system) and parsed as JSON; nothing from either tree is imported or
+executed. CI cannot tell real Calibre output from a hand-written file, so every change under
+`verification/reliability/` (new, edited or deleted file), every rule promoted to verified and every
+backward rule move in `verification/asic/drc-rules.json` is a violation; 도재겸 checks the evidence and
+bypass-merges the PR (SPEC 0019). Changes that do not touch evidence stay allowed (e.g. unported ->
+ported). Messages also say what moved backward: new or widened unverified items, table regressions.
 
-Guard from base: a PR can edit this file or `reliability.py` it imports, so the workflow runs the base
-ref's copy whenever base has one (`git show BASE:scripts/asic/baseline_guard.py` and
-`git show BASE:scripts/asic/reliability.py` into a temp directory, then
-`python TMP/baseline_guard.py --base BASE --root "$GITHUB_WORKSPACE"`). Changes to the guard and its
-workflows are violations too, once base has the guard. Base without reliability files (first
-introduction) yields no violations.
+Threat model: the repository is public and the workflow runs on `pull_request_target` (base branch's
+workflow file, write-capable event context) for any PR, including fork PRs. So the job must never run
+PR code. The workflow runs this file and `reliability.py` from the workflow's own commit
+(`git show "$GITHUB_SHA:scripts/asic/baseline_guard.py"` and `reliability.py` into a temp directory)
+with `--base BASE_SHA --head HEAD_SHA`. Changes to the guard, its workflows and CODEOWNERS are
+violations too, once base has the guard. Base without reliability files (first introduction) yields
+no violations.
 
-Fixture source: `drc_cases.py` (head and base) runs in a separate `python -I` child process with a
-temp working directory, an empty environment and a timeout. The child hashes the cases with the trusted
-`reliability.py` next to this file (never the one under `--root`) and prints JSON followed by a random
-sentinel line. The parent accepts the result only on exit 0 with the sentinel and complete JSON, so the
-source cannot reach the guard's own state, and a crash, early exit or hang of the child fails closed.
-An AST check (no imports, no escape names, no `_`-prefixed or frame attributes) runs first as defence
-in depth.
-
-Known limit: a file written to detect the guard environment could still present different cases; the
-threat model is careless edits, not an adversary.
+Fixture checks that need `drc_cases.py` evaluated (a verified rule losing or changing a golden fixture,
+a fixture added without golden, only refused fixtures left) run in `reliability.py check` inside the
+unprivileged `pull_request` job `reliability-table`. `--run-fixtures` (local use only, never on
+untrusted code) also evaluates both refs' `drc_cases.py` here: in a separate `python -I` child process
+with a temp working directory, an empty environment and a timeout, behind an AST check (no imports,
+escape names, `_`-prefixed or frame attributes, or match statements). Known limit of that local mode:
+the AST check is defence in depth, not a sandbox.
 """
 import argparse
 import ast
@@ -47,12 +47,15 @@ GOLDEN = BASELINE+'/golden'
 UNVERIFIED = BASELINE+'/unverified.json'
 TABLE = BASELINE+'/table.json'
 GUARD = ('scripts/asic/baseline_guard.py', 'scripts/asic/reliability.py',
-         '.github/workflows/baseline.yml', '.github/workflows/asic.yml')
+         '.github/workflows/baseline.yml', '.github/workflows/asic.yml', '.github/CODEOWNERS')
 RANK = {'unported': 0, 'ported': 1, 'verified': 2}
 BYPASS = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에서 우회 머지합니다(SPEC 0019).'
-# drc_cases.py runs inside the guard, so it may only define fixtures.
+# With --run-fixtures drc_cases.py runs inside the guard, so it may only define fixtures.
 FORBIDDEN_NAMES = {'__import__', '__builtins__', '__name__', 'exec', 'eval', 'compile', 'open', 'getattr',
                    'globals', 'locals', 'vars', 'SystemExit', 'quit', 'exit', 'breakpoint', 'input'}
+# Class patterns read attributes without an ast.Attribute node (`case type(__base__=o)`); fixtures need none.
+MATCH_NODES = (ast.Match, ast.MatchValue, ast.MatchSingleton, ast.MatchSequence, ast.MatchMapping,
+               ast.MatchClass, ast.MatchStar, ast.MatchAs, ast.MatchOr)
 FRAME_ATTRS = {'gi_frame', 'cr_frame', 'ag_frame', 'gi_code', 'f_back', 'f_globals', 'f_locals', 'f_builtins',
                'tb_frame'}
 CHILD_TIMEOUT = 60  # seconds; drc_cases.py takes well under one
@@ -73,9 +76,11 @@ sys.stdout.flush()
 
 
 def empty():
-    """Snapshot of a ref that has no reliability files yet (first introduction)."""
-    return {'rules': {}, 'unverified': None, 'unverified_checks': {}, 'golden': {}, 'fixtures': {},
-            'fixture_rules': {}, 'golden_fixtures': {}, 'table': None, 'baseline_files': {}, 'guard_files': {}}
+    """Snapshot of a ref that has no reliability files yet (first introduction).
+
+    `fixtures`/`fixture_rules` stay None unless drc_cases.py was evaluated (--run-fixtures)."""
+    return {'rules': {}, 'unverified': None, 'unverified_checks': {}, 'golden': {}, 'fixtures': None,
+            'fixture_rules': None, 'golden_fixtures': {}, 'table': None, 'baseline_files': {}, 'guard_files': {}}
 
 
 def _check_cases_source(source):
@@ -85,10 +90,10 @@ def _check_cases_source(source):
     except SyntaxError as error:
         raise ValueError(f'`{CASES}`을(를) 읽을 수 없습니다(문법 오류 {error.lineno}번째 줄).') from None
     for node in ast.walk(tree):
-        if (isinstance(node, (ast.Import, ast.ImportFrom))
+        if (isinstance(node, (ast.Import, ast.ImportFrom) + MATCH_NODES)
                 or isinstance(node, ast.Name) and node.id in FORBIDDEN_NAMES
                 or isinstance(node, ast.Attribute) and (node.attr.startswith('_') or node.attr in FRAME_ATTRS)):
-            raise ValueError(f'`{CASES}` {node.lineno}번째 줄에 import나 내부 기능 호출이 있습니다. '
+            raise ValueError(f'`{CASES}` {node.lineno}번째 줄에 import·match 문이나 내부 기능 호출이 있습니다. '
                              '기준 확인은 이 파일을 그대로 실행하므로 fixture 정의만 둘 수 있습니다.')
 
 
@@ -134,8 +139,10 @@ def _digest(data):
     return hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()
 
 
-def _build(read, baseline_paths):
-    """read(relpath) -> bytes or None; baseline_paths: repo-relative files under BASELINE."""
+def _build(read, baseline_paths, run_fixtures=False):
+    """read(relpath) -> bytes or None; baseline_paths: repo-relative files under BASELINE.
+
+    Only bytes and JSON are read. drc_cases.py is evaluated only when run_fixtures (local use)."""
     result = empty()
     for path in GUARD:
         data = read(path)
@@ -144,9 +151,11 @@ def _build(read, baseline_paths):
     text = read(RULES)
     if text is not None:
         result['rules'] = {rule['id']: reliability.rule_state(rule) for rule in json.loads(text)['rules']}
-    text = read(CASES)
+    text = read(CASES) if run_fixtures else None
     if text is not None:
         result['fixtures'], result['fixture_rules'] = fixtures_from_source(text.decode('utf-8'), result['rules'])
+    elif run_fixtures:
+        result['fixtures'], result['fixture_rules'] = {}, {}
     for path in sorted(baseline_paths):
         data = read(path)
         result['baseline_files'][path] = _digest(data)
@@ -172,8 +181,8 @@ def _build(read, baseline_paths):
     return result
 
 
-def snapshot(root):
-    """Snapshot of the working tree at root."""
+def snapshot(root, run_fixtures=False):
+    """Snapshot of the working tree at root (bytes and JSON only unless run_fixtures)."""
     root = Path(root)
 
     def read(relpath):
@@ -181,11 +190,11 @@ def snapshot(root):
         return path.read_bytes() if path.is_file() else None
     folder = root/BASELINE
     paths = [p.relative_to(root).as_posix() for p in folder.rglob('*') if p.is_file()] if folder.is_dir() else []
-    return _build(read, [p for p in paths if '/__pycache__/' not in p])
+    return _build(read, [p for p in paths if '/__pycache__/' not in p], run_fixtures)
 
 
-def snapshot_at(ref, root=ROOT):
-    """Snapshot of a git ref (`git show ref:path`); missing files read as absent."""
+def snapshot_at(ref, root=ROOT, run_fixtures=False):
+    """Snapshot of a git ref (`git show ref:path` blobs); missing files read as absent."""
     git = ['git', '-C', str(root)]
     found = subprocess.run(git+['rev-parse', '--verify', '--quiet', ref+'^{commit}'], capture_output=True, text=True)
     if found.returncode:
@@ -198,7 +207,7 @@ def snapshot_at(ref, root=ROOT):
         return shown.stdout if shown.returncode == 0 else None
     listed = subprocess.run(git+['ls-tree', '-r', '-z', '--name-only', commit, '--', BASELINE],
                             check=True, capture_output=True)
-    return _build(read, [p.decode('utf-8') for p in listed.stdout.split(b'\0') if p])
+    return _build(read, [p.decode('utf-8') for p in listed.stdout.split(b'\0') if p], run_fixtures)
 
 
 def _evidence_problems(snap):
@@ -262,8 +271,9 @@ def violations(base, head):
     count = sum(state == 'verified' for state in base['rules'].values())
     if count and not any(state == 'verified' for state in head['rules'].values()):
         found.append(f'verified 규칙이 하나도 남지 않았습니다(이전 {count}개). 게이트가 아무 규칙도 확인하지 않게 됩니다.')
-    known = _evidence_problems(base)
-    found += [text for key, text in _evidence_problems(head).items() if key not in known]
+    if base['fixtures'] is not None and head['fixtures'] is not None:  # only with --run-fixtures
+        known = _evidence_problems(base)
+        found += [text for key, text in _evidence_problems(head).items() if key not in known]
     if introduced:
         found += _file_changes(base_files, head_files, '기준 파일')
     if 'scripts/asic/baseline_guard.py' in base['guard_files']:
@@ -307,10 +317,15 @@ def report(base_ref, found):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--base', required=True, help='git ref to compare with, e.g. origin/main')
-    parser.add_argument('--root', type=Path, default=ROOT, help='checkout to check (default: this repository)')
+    parser.add_argument('--root', type=Path, default=ROOT, help='git repository / checkout (default: this repository)')
+    parser.add_argument('--head', help='git ref of the PR head, read with git show (default: the working tree at --root)')
+    parser.add_argument('--run-fixtures', action='store_true',
+                        help='local only: also evaluate both drc_cases.py files; never use on untrusted code')
     args = parser.parse_args(argv)
     try:
-        found = violations(snapshot_at(args.base, args.root), snapshot(args.root))
+        head = (snapshot_at(args.head, args.root, args.run_fixtures) if args.head
+                else snapshot(args.root, args.run_fixtures))
+        found = violations(snapshot_at(args.base, args.root, args.run_fixtures), head)
     except BaseException as error:  # fail closed: a guard that cannot read the baseline must not pass
         found = None
         why = str(error) if isinstance(error, ValueError) else (

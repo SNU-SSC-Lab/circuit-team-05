@@ -5,3 +5,5 @@ verification/reliability/** @Dojaegyum
 scripts/asic/baseline_guard.py @Dojaegyum
 scripts/asic/reliability.py @Dojaegyum
 .github/workflows/** @Dojaegyum
+verification/asic/drc-rules.json @Dojaegyum
+.github/CODEOWNERS @Dojaegyum

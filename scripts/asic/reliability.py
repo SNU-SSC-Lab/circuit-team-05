@@ -248,13 +248,27 @@ def summary_markdown(result):
         rules = sum(v == verdict for v in result['rules'].values()) if verdict != 'excluded' else '-'
         count = sum(f['verdict'] == verdict for f in result['fixtures'])
         lines.append(f'| {VERDICT_KO[verdict]} (`{verdict}`) | {rules} | {count} |')
+    if not gate['rules']:
+        lines += ['', '## verified 규칙이 하나도 없음', '',
+                  '`verification/asic/drc-rules.json`에 verified 규칙이 하나도 없습니다. 이대로면 이 검사는 아무 규칙도 '
+                  'Calibre와 맞춰 보지 않으므로 실패로 둡니다.']
+    lost_rules = {entry['rule'] for entry in gate.get('lost', [])}
     if gate['failing']:
         lines += ['', '## 일치하지 않는 규칙', '']
         for rule in gate['failing']:
             verdicts = [f['verdict'] for f in result['fixtures'] if f['rule'] == rule]
             why = (' (fixture 없음)' if not verdicts else
                    ' (Calibre가 거부한 제외 fixture만 있음)' if set(verdicts) == {'excluded'} else '')
-            lines.append(f'- `{rule}`: {VERDICT_KO[result["rules"].get(rule, "no_golden")]}{why}')
+            verdict = result['rules'].get(rule, 'no_golden')
+            if rule in lost_rules and verdict == 'match':
+                lines.append(f'- `{rule}`: golden에 있던 fixture가 사라짐')
+            else:
+                lines.append(f'- `{rule}`: {VERDICT_KO[verdict]}{why}')
+    if gate.get('lost'):
+        lines += ['', '## golden에 있는데 이번 fixture에서 사라진 것', '',
+                  '`scripts/asic/drc_cases.py`에서 지웠거나 정의를 바꿔 해시가 달라진 fixture입니다. '
+                  'verified 규칙의 근거가 줄어듭니다. 정의를 되돌리거나, 기준점에서 Calibre golden을 새로 받아야 합니다.', '']
+        lines += [f'- `{entry["gds"]}` (`{entry["rule"]}`, Calibre {entry["calibre"]})' for entry in gate['lost']]
     problems = [f for f in result['fixtures'] if f['verdict'] in ('mismatch', 'no_golden')]
     if problems:
         lines += ['', '## 불일치·근거 없음 fixture', '']
@@ -275,18 +289,31 @@ def summary_markdown(result):
 def check(selftest, golden_dir, out, rules_json=RULES_JSON):
     """Write result.json and summary.md; return 1 when a verified rule is not match."""
     golden = load_golden(golden_dir)
-    result = compare(golden, json.loads(Path(selftest).read_text(encoding='utf-8')))
-    # Only verified rules gate; a verified rule with no usable fixture reads as no_golden and fails.
+    records = json.loads(Path(selftest).read_text(encoding='utf-8'))
+    result = compare(golden, records)
+    # Only verified rules gate. In both directions the golden is the reference set (SPEC 0019 3절):
+    # a selftest fixture of a verified rule without golden (changed or added definition) reads as
+    # no_golden; a golden fixture of a verified rule missing from selftest is lost evidence. A rule
+    # left with only Calibre-refused fixtures reads as no_golden too. No verified rule at all fails.
     targets = verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8')))
-    failing = [rule for rule in targets if result['rules'].get(rule, 'no_golden') != 'match']
+    present = {record.get('case_sha256') for record in records['records']}
+    lost, seen = [], set()
+    for entry in sorted(golden['fixtures'], key=lambda e: (e['rule'], e['gds'])):
+        if entry['rule'] in targets and entry['case_sha256'] not in present and entry['case_sha256'] not in seen:
+            seen.add(entry['case_sha256'])
+            lost.append({'gds': entry['gds'], 'rule': entry['rule'], 'case_sha256': entry['case_sha256'],
+                         'calibre': entry['calibre']})
+    failing = sorted({rule for rule in targets if result['rules'].get(rule, 'no_golden') != 'match'}
+                     | {entry['rule'] for entry in lost})
     result['golden'] = golden['sources']
-    result['gate'] = {'status': 'fail' if failing else 'pass', 'rules': targets, 'failing': failing}
+    result['gate'] = {'status': 'fail' if failing or not targets else 'pass', 'rules': targets,
+                      'failing': failing, 'lost': lost}
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     # LF on every platform so the same result gives the same bytes.
     (out/'result.json').write_text(json.dumps(result, indent=2, ensure_ascii=False)+'\n', encoding='utf-8', newline='\n')
     (out/'summary.md').write_text(summary_markdown(result), encoding='utf-8', newline='\n')
-    return 1 if failing else 0
+    return 1 if result['gate']['status'] == 'fail' else 0
 
 
 # klayout_version: the KLayout that computed geometry_sha256 (hashes are only compared under it).

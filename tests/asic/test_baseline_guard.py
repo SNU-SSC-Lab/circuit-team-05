@@ -18,6 +18,11 @@ import baseline_guard
 WALK = 'def g():\n    yield me.gi_frame.f_back\nme = g()\ntop = next(me)\n'
 FRAME_EXIT = WALK+"top.f_back.f_globals['os']._exit(0)\ndef cases():\n    return []\n"
 FRAME_PATCH = WALK+"top.f_back.f_globals['violations'] = lambda base, head: []\ndef cases():\n    return []\n"
+# Review PoC: class patterns read dunder attributes without any Attribute node.
+MATCH_ESCAPE = ("def cases():\n    match ():\n        case tuple(__class__=t):\n            pass\n"
+                "    match t:\n        case type(__base__=o):\n            pass\n"
+                "    match o:\n        case type(__subclasses__=s):\n            pass\n"
+                "    return [{'rule': 'LEAK', 'n': len(s())}]\n")
 LAST_LINE = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에서 우회 머지합니다(SPEC 0019).'
 
 
@@ -251,7 +256,7 @@ class GuardFileTests(unittest.TestCase):
 
 class SnapshotTests(unittest.TestCase):
     def test_working_tree_snapshot(self):
-        head = baseline_guard.snapshot(ROOT)
+        head = baseline_guard.snapshot(ROOT, run_fixtures=True)
         verified = [r for r, s in head['rules'].items() if s == 'verified']
         self.assertEqual(len(verified), 96)
         self.assertEqual(len(head['fixtures']), 451)
@@ -271,11 +276,14 @@ class SnapshotTests(unittest.TestCase):
 
     def test_first_introduction_against_working_tree(self):
         self.assertEqual(baseline_guard.violations(baseline_guard.empty(), baseline_guard.snapshot(ROOT)), [])
+        self.assertEqual(baseline_guard.violations(baseline_guard.empty(),
+                                                   baseline_guard.snapshot(ROOT, run_fixtures=True)), [])
 
     def test_snapshot_at_reads_git(self):
-        at = baseline_guard.snapshot_at('HEAD', ROOT)
+        at = baseline_guard.snapshot_at('HEAD', ROOT, run_fixtures=True)
         self.assertEqual(at['rules'], baseline_guard.snapshot(ROOT)['rules'])
         self.assertEqual(len(at['fixtures']), 451)
+        self.assertIsNone(baseline_guard.snapshot_at('HEAD', ROOT)['fixtures'])  # data only by default
         with self.assertRaises(ValueError):
             baseline_guard.snapshot_at('no-such-ref-0019', ROOT)
 
@@ -296,7 +304,7 @@ class SnapshotTests(unittest.TestCase):
                        'def cases():\n    exit(0)\n',
                        'if __name__ == "drc_cases_snapshot":\n    pass\ndef cases():\n    return []\n',
                        'def cases():\n    return [x._fields for x in []]\n',
-                       FRAME_EXIT, FRAME_PATCH):
+                       FRAME_EXIT, FRAME_PATCH, MATCH_ESCAPE):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'drc_cases.py'):
                 baseline_guard.fixtures_from_source(source, {})
 
@@ -312,6 +320,59 @@ class SnapshotTests(unittest.TestCase):
             source = 'def cases():\n    return [dict(rule="B", label=str(globals().get("__name__")), shapes=[])]\n'
             fixtures, _ = baseline_guard.fixtures_from_source(source, {'B': 'verified'})
         self.assertEqual(list(fixtures), ['0000-B-None.gds'])
+
+
+class DataOnlyTests(unittest.TestCase):
+    """baseline-guard runs on pull_request_target: it must never run PR code (Task 7 fix round 1)."""
+
+    def head_root(self, tmp, marker):
+        # A head drc_cases.py that would leave a marker file if anything executed it.
+        source = f'open({str(marker)!r}, "w").write("ran")\ndef cases():\n    return []\n'
+        for relpath, text in ((baseline_guard.CASES, source), (baseline_guard.RULES, '{"rules": []}')):
+            (Path(tmp)/relpath).parent.mkdir(parents=True, exist_ok=True)
+            (Path(tmp)/relpath).write_text(text, encoding='utf-8')
+
+    def test_default_run_never_executes_head_cases(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as away:
+            marker = Path(away)/'marker'
+            self.head_root(tmp, marker)
+            out = io.StringIO()
+            with mock.patch.object(baseline_guard, '_check_cases_source'),                  mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()),                  mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+                code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
+            self.assertEqual(code, 0, out.getvalue())
+            self.assertFalse(marker.exists())
+            # The same head file does run when fixtures are asked for, so the marker would have shown it.
+            with mock.patch.object(baseline_guard, '_check_cases_source'),                  mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()),                  mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(io.StringIO()):
+                baseline_guard.main(['--base', 'origin/main', '--root', tmp, '--run-fixtures'])
+            self.assertTrue(marker.exists())
+
+    def test_git_refs_are_read_as_data(self):
+        with mock.patch.object(baseline_guard, '_run_cases', side_effect=AssertionError('executed PR code')):
+            at = baseline_guard.snapshot_at('HEAD', ROOT)
+            self.assertIsNone(at['fixtures'])
+            self.assertEqual(baseline_guard.violations(at, at), [])
+            out = io.StringIO()
+            with mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+                self.assertEqual(baseline_guard.main(['--base', 'HEAD', '--head', 'HEAD']), 0, out.getvalue())
+
+    def test_data_only_skips_fixture_evidence_but_keeps_file_checks(self):
+        base = dict(backed(), fixtures=None, fixture_rules=None)
+        head = dict(backed(golden={'verification/reliability/golden/g/golden.json': 'edited'}),
+                    fixtures=None, fixture_rules=None)
+        found = baseline_guard.violations(base, head)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('golden.json', found[0])
+
+    def test_match_patterns_are_rejected_before_running(self):  # review PoC reached object.__subclasses__
+        with self.assertRaisesRegex(ValueError, 'drc_cases.py'):
+            baseline_guard._check_cases_source(MATCH_ESCAPE)
+        for source in ('def cases():\n    match 1:\n        case 1:\n            pass\n    return []\n',
+                       'def cases():\n    match {}:\n        case {**rest}:\n            pass\n    return []\n'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'drc_cases.py'):
+                baseline_guard._check_cases_source(source)
+
+    def test_codeowners_is_a_guard_file(self):
+        self.assertIn('.github/CODEOWNERS', baseline_guard.GUARD)
 
 
 class CliTests(unittest.TestCase):
@@ -360,7 +421,7 @@ class CliTests(unittest.TestCase):
                         else mock.patch.object(baseline_guard, '_check_cases_source'))
                 with skip, mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()), \
                      mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
-                    code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
+                    code = baseline_guard.main(['--base', 'origin/main', '--root', tmp, '--run-fixtures'])
                 self.assertEqual(code, 1, out.getvalue())
                 self.assertIn('실행 실패', out.getvalue())
 
@@ -375,7 +436,7 @@ class CliTests(unittest.TestCase):
                     else mock.patch.object(baseline_guard, '_check_cases_source'))
             with skip, mock.patch.object(baseline_guard, 'snapshot_at', return_value=base), \
                  mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
-                code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
+                code = baseline_guard.main(['--base', 'origin/main', '--root', tmp, '--run-fixtures'])
         return code, out.getvalue()
 
     def test_frame_walk_exit_fails_closed(self):  # os._exit(0) ends only the child
