@@ -16,7 +16,7 @@
 
 - 실행: 프로젝트 담당자 승인 하에 사람이 수동으로 한다. 에이전트가 상용 도구를 스스로 실행하지 않는다.
 - 학교 서버: 계정 주인의 동의와 상용 도구 실행 창구가 있을 때만 쓴다. 학교 서버는 우리 것이 아니고 계정도 빌린 것이다.
-- 기준점 PR 승인: 도재겸 한 명이 근거를 확인한 뒤 PR 화면에서 우회 머지한다(ruleset의 `bypass_mode: pull_request`). 근거 파일·미검증 목록·규칙 상태를 바꾸는 PR은 필수 체크 `baseline-guard`가 일부러 실패하므로 우회 머지가 기록으로 남는다. 같은 PR에는 `baseline-label` job이 `baseline-change` 라벨을 붙이고, `.github/CODEOWNERS`가 도재겸에게 리뷰를 요청한다(리뷰 요청일 뿐 필수 승인이 아니다). 에이전트는 머지하지 않는다.
+- 기준점 PR 승인: 도재겸 한 명이 근거를 확인한 뒤 PR 화면에서 우회 머지한다(ruleset의 `bypass_mode: pull_request`). 근거 파일·미검증 목록·규칙 상태를 바꾸는 PR은 필수 체크 `baseline-guard`가 일부러 실패하므로 우회 머지가 기록으로 남는다. 같은 PR에는 `baseline-label` job이 `baseline-change` 라벨을 붙이고, `.github/CODEOWNERS`가 도재겸에게 리뷰를 요청한다(리뷰 요청일 뿐 필수 승인이 아니다). 우회 머지는 `baseline-guard`만 실패하고 나머지 필수 체크가 모두 통과한 PR에만 한다. 에이전트는 머지하지 않는다.
 - RFC나 정답 모델도 함께 바꾸는 PR은 RFC 0002 PR01에 따라 팀장(김령교)의 승인을 받은 뒤 병합한다. golden만 추가·갱신하는 기준점 PR은 이 조항의 대상이 아니다.
 
 ## 3. 방법
@@ -90,7 +90,7 @@ KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fi
 
 2026-11-28 실행이 첫 기준점이다. Calibre `v2023.4_17.10`, 키트 deck 무수정으로 다음을 받았다.
 
-- DRC fixture 427개: 425 일치, 2개 Calibre 거부(dbu). 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
+- DRC fixture 427개(첫 묶음 기록): 425 일치, 2개 Calibre 거부(dbu). 지금 숫자는 아래 둘러싸기 묶음과 합친 451개 중 449개 일치, 2개 제외. 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
 - 둘러싸기 경계 fixture 24개(`0427`~`0450`): 24개 모두 정의의 기대값과 같음 → `golden/drc-fixtures-20261128b/`. 두 묶음을 합쳐 fixture 451개 중 449개 일치, 2개 제외
 - 키트 셀 변형본 695개(1차, `mutate.py`): 81개 Calibre 거부(자기 교차) → `golden/drc-mutations-20261128/`
 - 키트 셀 604개 + 코어 창 196개 변형본 800개(2차, `mutate_v2.py`): Calibre 거부 0 → `golden/drc-mutations-20261128b/`

@@ -64,8 +64,11 @@ BASELINE = 'verification/reliability'
 GOLDEN = BASELINE+'/golden'
 UNVERIFIED = BASELINE+'/unverified.json'
 TABLE = BASELINE+'/table.json'
+# The guard, its library, and the workflows that make the required checks (ci.yml: pr-policy,
+# policy-unit, rtl; pdk.yml: pdk (pr); asic.yml: asic-gate, reliability-table; baseline.yml).
 GUARD = ('scripts/asic/baseline_guard.py', 'scripts/asic/reliability.py',
-         '.github/workflows/baseline.yml', '.github/workflows/asic.yml', '.github/CODEOWNERS')
+         '.github/workflows/baseline.yml', '.github/workflows/asic.yml', '.github/workflows/ci.yml',
+         '.github/workflows/pdk.yml', '.github/CODEOWNERS')
 RANK = {'unported': 0, 'ported': 1, 'verified': 2}
 BYPASS = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에서 우회 머지합니다(SPEC 0019).'
 # With --run-fixtures drc_cases.py runs inside the guard, so it may only define fixtures.
@@ -93,7 +96,11 @@ REGULAR = {'100644', '100755'}
 # and every name the file does not bind is a violation; binding a builtin name does not make it allowed
 # (the scan does not follow scopes). FORBIDDEN_NAMES above stays as the documented worst cases.
 ALLOWED_BUILTINS = frozenset({'ValueError', 'all', 'any', 'dict', 'enumerate', 'int', 'isinstance', 'len', 'list',
-                              'map', 'max', 'min', 'print', 'range', 'round', 'set', 'sorted', 'str', 'tuple'})
+                              'map', 'max', 'min', 'print', 'range', 'round', 'set', 'sorted', 'str', 'tuple',
+                              # pure value builtins, for future fixture code
+                              'abs', 'zip', 'sum', 'float', 'bool', 'reversed', 'divmod', 'pow'})
+# Added to builtins by the `site` module, so missing from dir(builtins) under `python -S`: always reported.
+SITE_NAMES = frozenset({'help', 'exit', 'quit', 'license', 'credits', 'copyright'})
 BUILTIN_NAMES = frozenset(dir(builtins))
 # The only attributes a pending file may read from another pending module.
 PENDING_MODULE_ATTRS = {'cases', 'records', 'cases_with_meta'}
@@ -162,7 +169,7 @@ def _node_problem(node, strict, parents, aliases, pending_modules, bound, own):
             return f'밑줄로 시작하는 이름 {node.id}'
         if node.id == '__name__' and not strict:
             return None
-        if node.id in BUILTIN_NAMES and node.id not in ALLOWED_BUILTINS:
+        if (node.id in BUILTIN_NAMES or node.id in SITE_NAMES) and node.id not in ALLOWED_BUILTINS:
             return f'허용 목록 밖의 이름 {node.id}'
         if node.id not in bound and node.id not in ALLOWED_BUILTINS:
             return f'파일 안에서 정의하지 않은 이름 {node.id}'
@@ -237,10 +244,10 @@ def source_problems(relpath, data, pending_modules=None):
         own = relpath.rsplit('/', 1)[-1].removesuffix('.py')
         for node in ast.walk(tree):
             # A bound builtin name (`def f(help)`) is still reported: the scan does not follow scopes.
-            if isinstance(node, ast.arg) and node.arg in BUILTIN_NAMES - ALLOWED_BUILTINS:
+            if isinstance(node, ast.arg) and node.arg in (BUILTIN_NAMES | SITE_NAMES) - ALLOWED_BUILTINS:
                 problems.append(f'{node.lineno}번째 줄: 허용 목록 밖의 이름 {node.arg}')
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) \
-                    and node.name in BUILTIN_NAMES - ALLOWED_BUILTINS:
+                    and node.name in (BUILTIN_NAMES | SITE_NAMES) - ALLOWED_BUILTINS:
                 problems.append(f'{node.lineno}번째 줄: 허용 목록 밖의 이름 {node.name}')
             why = _node_problem(node, strict, parents, aliases, pending_modules, bound, own)
             if why:
@@ -279,7 +286,7 @@ def _run_cases(source):
     tail = 'fixture 정의를 끝까지 읽지 못하면 기준 확인을 통과시키지 않습니다.'
     with tempfile.TemporaryDirectory() as tmp:
         try:
-            done = subprocess.run([sys.executable, '-I', '-c', CHILD, str(HERE), sentinel], input=source,
+            done = subprocess.run([sys.executable, '-X', 'utf8', '-I', '-c', CHILD, str(HERE), sentinel], input=source,
                                   capture_output=True, text=True, encoding='utf-8', errors='replace',
                                   cwd=tmp, env=env, timeout=CHILD_TIMEOUT)
         except subprocess.TimeoutExpired:
@@ -382,6 +389,18 @@ def snapshot(root, run_fixtures=False):
     return _build(read, [p for p in paths if '/__pycache__/' not in p], run_fixtures, entries)
 
 
+def _show(git, commit, relpath, present):
+    """Bytes of relpath at commit; None only when the tree has no such file. A git error fails closed."""
+    if not present:
+        return None
+    shown = subprocess.run(git+['show', f'{commit}:{relpath}'], capture_output=True)
+    if shown.returncode:
+        why = shown.stderr.decode('utf-8', 'replace').strip().splitlines()[-1:] or ['출력 없음']
+        raise ValueError(f'git이 `{commit}:{relpath}`을(를) 읽지 못했습니다({why[0][:200]}). '
+                         '읽지 못한 기준으로는 통과시키지 않습니다.')
+    return shown.stdout
+
+
 def snapshot_at(ref, root=ROOT, run_fixtures=False):
     """Snapshot of a git ref (`git show ref:path` blobs); missing files read as absent."""
     git = ['git', '-C', str(root)]
@@ -391,9 +410,11 @@ def snapshot_at(ref, root=ROOT, run_fixtures=False):
                          '먼저 가져와야 합니다(actions/checkout의 fetch-depth: 0).')
     commit = found.stdout.strip()
 
+    tree = subprocess.run(git+['ls-tree', '-r', '-z', '--name-only', commit], check=True, capture_output=True)
+    present = {p.decode('utf-8', 'replace') for p in tree.stdout.split(b'\0') if p}
+
     def read(relpath):
-        shown = subprocess.run(git+['show', f'{commit}:{relpath}'], capture_output=True)
-        return shown.stdout if shown.returncode == 0 else None
+        return _show(git, commit, relpath, relpath in present)
     listed = subprocess.run(git+['ls-tree', '-r', '-z', '--name-only', commit, '--', BASELINE],
                             check=True, capture_output=True)
     scripts = subprocess.run(git+['ls-tree', '-z', commit, '--', SCRIPTS+'/'], check=True, capture_output=True)

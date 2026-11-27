@@ -17,7 +17,7 @@ MyChip 2026 4차(0.5 µm CMOS) 회로팀. 안내서 팀 3(3-A): 삼진 가중치
 
 다섯 팀 저장소의 맨 위는 같은 모양입니다 (규칙: [contract/flow.toml](https://github.com/SNU-SSC-Lab/circuit-integration/blob/main/contract/flow.toml)). 새 폴더·파일은 `src/` 아래에 둡니다.
 
-칩 연결 검사는 circuit-integration 야간 작업이 이 저장소를 읽어 수행합니다. 이 저장소는 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 PR 검사 `MyChip integration`을 폐지했습니다 ([SPEC 0019](docs/specs/0019-merge-gate.md)).
+칩 연결 검사는 circuit-integration 야간 작업이 이 저장소를 읽어 수행합니다(이 야간 작업은 2026-11-26부터 결제 문제로 일시 중지되어 재개 전까지는 연결 검사가 없습니다. 재개 후 매일 실행). 이 저장소는 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 PR 검사 `MyChip integration`을 폐지했습니다 ([SPEC 0019](docs/specs/0019-merge-gate.md)).
 
 ## 팀 안내
 

@@ -177,7 +177,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          # check-mutations takes about half an hour, so a PR runs it only when DRC code or golden changes.
+          # check-mutations takes about 8-13 minutes on GitHub runners, so a PR runs it only when DRC code or golden changes.
           run=true
           if [ "$EVENT" = pull_request ]; then
             if changed=$(git diff --name-only "$BASE_SHA" HEAD); then
@@ -247,7 +247,7 @@ jobs:
             if [ "$MUTATIONS" != true ]; then
               echo '## 변형본 대조: 건너뜀'
               echo ''
-              echo '이 PR은 DRC 코드(`scripts/asic/drc*.py`, `scripts/asic/mutate*.py`, `scripts/asic/reliability.py`), golden(`verification/reliability/golden/`), `verification/asic/drc-rules.json`, `.github/workflows/asic.yml`을 바꾸지 않아 약 30분 걸리는 변형본 대조를 건너뛰었습니다. main push에서는 항상 실행합니다.'
+              echo '이 PR은 DRC 코드(`scripts/asic/drc*.py`, `scripts/asic/mutate*.py`, `scripts/asic/reliability.py`), golden(`verification/reliability/golden/`), `verification/asic/drc-rules.json`, `.github/workflows/asic.yml`을 바꾸지 않아 GitHub 실행기에서 약 8~13분 걸리는 변형본 대조를 건너뛰었습니다. main push에서는 항상 실행합니다.'
             elif [ -f "$RUNNER_TEMP/reliability-mutations/summary.md" ]; then
               cat "$RUNNER_TEMP/reliability-mutations/summary.md"
             else

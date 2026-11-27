@@ -656,6 +656,37 @@ class NormaliseTests(unittest.TestCase):
             self.assertEqual(record['run_case_sha256'], reliability.case_sha256(case))
 
 
+class FinalReviewTests(unittest.TestCase):
+    """Final whole-branch review fix wave."""
+
+    def test_required_check_workflows_are_guard_files(self):
+        for path in ('.github/workflows/ci.yml', '.github/workflows/pdk.yml'):
+            self.assertIn(path, baseline_guard.GUARD)
+
+    def test_pure_builtins_are_allowed(self):
+        for name in ('abs', 'zip', 'sum', 'float', 'bool', 'reversed', 'divmod', 'pow'):
+            self.assertIn(name, baseline_guard.ALLOWED_BUILTINS)
+        self.assertEqual(scan(CASES_PATH, 'def cases():\n    x = abs(sum([1.0])) + float(bool(1)) + pow(2, 2)\n'
+                                          '    y = list(zip(reversed([1]), [divmod(5, 2)]))\n    return [x, y]\n'), [])
+
+    def test_site_builtins_are_rejected_even_if_builtins_lack_them(self):  # python -S has no help/exit/...
+        with mock.patch.object(baseline_guard, 'BUILTIN_NAMES', frozenset()):
+            for name in ('help', 'exit', 'quit', 'license', 'credits', 'copyright'):
+                with self.subTest(name=name):
+                    self.assertTrue(scan(PENDING_PATH, f'{name} = 1\nx = {name}\n'))
+
+    def test_git_show_error_is_not_a_missing_file(self):  # base read failures must fail closed
+        git = ['git', '-C', str(ROOT)]
+        self.assertIsNone(baseline_guard._show(git, 'HEAD', 'no/such/file.json', present=False))
+        with self.assertRaisesRegex(ValueError, 'git'):
+            baseline_guard._show(git, '0'*40, CASES_PATH, present=True)
+
+    def test_fixture_child_reads_utf8_source(self):  # Korean text in drc_cases.py (cp949 consoles)
+        source = '# 한글 주석\ndef cases():\n    return [dict(rule="B", label="한", shapes=[])]\n'
+        fixtures, _ = baseline_guard.fixtures_from_source(source, {'B': 'verified'})
+        self.assertEqual(len(fixtures), 1)
+
+
 class DuplicateRuleTests(unittest.TestCase):
     def rules_json(self, *entries):
         return json.dumps({'rules': [{'id': rid, 'implementation': impl, 'golden_compared': gc}
@@ -738,6 +769,26 @@ class WorkflowTextTests(unittest.TestCase):
                     self.assertIn('python -I -E -s', code, line)
         self.assertIn('od -An -N16 -tx1 /dev/urandom', self.text)
         self.assertNotIn('import secrets', self.text)
+
+    def test_guard_folder_env_and_no_directory_changes(self):  # final review
+        self.assertIn('guard="$RUNNER_TEMP/baseline-guard"', self.text)
+        runs = '\n'.join(self.run_blocks())
+        for pattern in (r'cd\s+"?\$\{?repo', r'\bpushd\b', r'\bpopd\b'):
+            with self.subTest(pattern=pattern):
+                self.assertIsNone(re.search(pattern, runs), pattern)
+        lines = self.text.splitlines()
+        start = next(i for i, line in enumerate(lines) if line.strip() == 'id: guard')
+        env, inside = set(), False
+        for line in lines[start:]:
+            stripped = line.strip()
+            if stripped == 'env:':
+                inside = True
+                continue
+            if inside:
+                if stripped.startswith('run:'):
+                    break
+                env.add(stripped.split(':', 1)[0])
+        self.assertEqual(env, {'BASE_SHA', 'HEAD_SHA'})
 
     def test_exact_guard_invocation(self):  # round 4
         self.assertIn('working-directory: ${{ runner.temp }}', self.text)

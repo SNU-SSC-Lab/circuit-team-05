@@ -85,7 +85,7 @@ Ubuntu 패키지는 최신 PEX 명령과 차이가 있을 수 있다. 이 문서
 Windows의 기존 저장소는 WSL에서 아래 경로로 보인다. 저장소가 다른 곳에 있으면 첫 줄만 바꾼다. 인터넷에서 GDS나 PDK를 내려받지 않고, 실행기가 작은 연습용 NMOS 회로를 만든다.
 
 ```bash
-cd /mnt/c/Users/jgqet/asset/univ/SemiConductor/circuit-team-05
+cd <작업 폴더>/circuit-team-05
 python3 -m unittest discover -s tests/physical -v
 python3 scripts/run_physical.py selftest \
   --out /var/tmp/physical-practice-01
@@ -187,7 +187,7 @@ sha256 = "<이 파일의 SHA-256 64자>"
 저장소 폴더로 돌아와 실행한다. 입력이 준비되기 전에는 이 절차로 5팀 결과를 만들 수 없다.
 
 ```bash
-cd /mnt/c/Users/jgqet/asset/univ/SemiConductor/circuit-team-05
+cd <작업 폴더>/circuit-team-05
 python3 scripts/run_physical.py check \
   --manifest ~/ssc-physical/team05/rev01/run.toml \
   --out /var/tmp/team05-physical-rev01

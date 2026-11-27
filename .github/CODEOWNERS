@@ -14,3 +14,7 @@ scripts/asic/drc_selftest.py @Dojaegyum
 scripts/asic/drc_geometry.py @Dojaegyum
 scripts/asic/drc_ports.py @Dojaegyum
 scripts/asic/drc.py @Dojaegyum
+scripts/asic/flow.py @Dojaegyum
+scripts/run_asic.py @Dojaegyum
+scripts/asic/drc_audit.py @Dojaegyum
+scripts/asic/report.py @Dojaegyum

@@ -24,6 +24,6 @@
 
 - [0018 공개 NSPL DRC 대조·시험 확장](0018-nspl-drc-rules.md): 원본 전체 목록, 규칙별 구현·시험, 담당자 요청문
 
-- [0019 머지 게이트와 신뢰성 대응표](0019-merge-gate.md): main ruleset·필수 체크, Calibre 대응표·미검증 목록·기준점 절차, MyChip integration 폐지. 계획
+- [0019 머지 게이트와 신뢰성 대응표](0019-merge-gate.md): main ruleset·필수 체크, Calibre 대응표·미검증 목록·기준점 절차, MyChip integration 폐지. 구현(GitHub 실행 기록 있음, main ruleset 전)
 
 index.json은 검사 대상 파일과 확인한 규약의 버전을 기록한다. SHA256은 파일 내용으로 계산한 식별값이다. 사람이 읽는 설명은 각 SPEC의 RFC 확인 항목에 둔다.

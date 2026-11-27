@@ -1161,13 +1161,47 @@ class MutationRebuildTests(unittest.TestCase):
             self.rebuild(golden=golden)
         self.assertEqual(self.calls, [])
 
+    def wave_one(self):
+        return {'meta': {'generator': 'scripts/asic/mutate.py', 'seed': 20261128, 'per_cell': 6,
+                         'sources': [self.std_name, self.gpio_name]}}
+
     def test_wave_one_generator_is_called_with_its_seed(self):
         import mutate
-        golden = {'meta': {'generator': 'scripts/asic/mutate.py', 'seed': 20261128, 'per_cell': 6,
-                           'sources': [self.std_name, self.gpio_name]}}
-        with mock.patch.object(mutate, 'generate') as generate:
-            self.assertEqual(reliability._rebuild(golden, Path(self.tmp.name)/'c', self.kit, None, 'klayout'), {})
+        pinned = {self.std_name: sha(self.STD), self.gpio_name: sha(self.GPIO)}
+        with mock.patch.object(mutate, 'generate') as generate, \
+                mock.patch.object(reliability, 'KIT_SOURCE_SHA256', pinned):
+            self.assertEqual(reliability._rebuild(self.wave_one(), Path(self.tmp.name)/'c', self.kit, None,
+                                                  'klayout'), {})
         generate.assert_called_once_with(self.kit, Path(self.tmp.name)/'c', 20261128, 6, 'klayout')
+
+    def test_wave_one_checks_the_kit_before_generating(self):  # final review: same guard as wave 2
+        import mutate
+        self.assertEqual(reliability.KIT_SOURCE_SHA256[self.std_name], self.golden_v2_sha('std'))
+        with mock.patch.object(mutate, 'generate') as generate, self.assertRaises(reliability.SourceMismatch):
+            reliability._rebuild(self.wave_one(), Path(self.tmp.name)/'c', self.kit, None, 'klayout')
+        generate.assert_not_called()
+
+    def golden_v2_sha(self, which):
+        meta = json.loads((RELIABILITY/'golden'/'drc-mutations-20261128b'/'golden.json').read_text(
+            encoding='utf-8'))['meta']
+        return meta['sources'][self.std_name if which == 'std' else self.gpio_name]
+
+    def test_missing_core_gds_is_a_failure_not_a_traceback(self):
+        with self.assertRaises(reliability.CorpusError) as caught:
+            self.rebuild(Path(self.tmp.name)/'no-such-core.gds')
+        self.assertIn('--core-gds', str(caught.exception))
+        self.assertEqual(self.calls, [])
+
+    def test_golden_without_meta_keys_is_a_clear_error(self):
+        for key in ('seed', 'sources'):
+            meta = dict(self.golden['meta'])
+            del meta[key]
+            with self.subTest(key=key), self.assertRaises(reliability.CorpusError) as caught:
+                self.rebuild(golden={'meta': meta})
+            self.assertIn(key, str(caught.exception))
+        meta = dict(self.golden['meta'], sources={self.std_name: sha(self.STD)})
+        with self.assertRaises(reliability.CorpusError):
+            self.rebuild(golden={'meta': meta})
 
     def test_kit_mismatch_writes_a_failing_result_instead_of_a_traceback(self):
         (self.kit/self.mutate_v2.STD_GDS).write_bytes(b'another kit')

@@ -544,8 +544,28 @@ def _sha256(path):
     return digest.hexdigest()
 
 
-class SourceMismatch(ValueError):
+class CorpusError(ValueError):
+    """The corpus of a mutation golden cannot be rebuilt as recorded; check-mutations writes a failing result."""
+
+
+class SourceMismatch(CorpusError):
     """A kit source is not the file the golden was generated from; nothing can be compared."""
+
+
+# Kit GDS files the mutation corpora were generated from (public NSPL_05CMOS_PDK_260820.tar.gz, sha256
+# 2e49115a...af954); the wave-2 golden records the same values in meta.sources.
+KIT_SOURCE_SHA256 = {
+    'NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_std.gds':
+        'e42dc1fb4c9a31aaa669e8e4c3b93a4b0d6eea40a463f5eaef5dbd17b432618e',
+    'ETRI_NSPL_GPIO_250610.gds': '7d54a4948e775fc3a99faf157f91a3510a82c22cc134d677de83dd2214b6e971',
+}
+
+
+def _require(meta, *keys):
+    missing = [key for key in keys if key not in meta]
+    if missing:
+        raise CorpusError('변형본 golden의 meta에 '+', '.join(f'`{key}`' for key in missing)
+                          + '이(가) 없어 같은 변형본을 다시 만들 수 없습니다(실패).')
 
 
 def _kit_mismatch(source, digest, want):
@@ -559,18 +579,30 @@ def _rebuild(golden, corpus, kit, core_gds, klayout):
     Raises SourceMismatch when a kit source differs from the golden's (before generating, and again for
     the generated manifest), ValueError for an unknown generator."""
     meta = golden['meta']
+    _require(meta, 'generator')
     if meta['generator'] == 'scripts/asic/mutate.py':
         import mutate
+        _require(meta, 'seed', 'per_cell')
+        for relative in mutate.SOURCES:  # same guard as wave 2, before generating
+            source, path = Path(relative).name, Path(kit)/relative
+            digest = _sha256(path) if path.is_file() else 'missing'
+            if digest != KIT_SOURCE_SHA256[source]:
+                raise _kit_mismatch(source, digest, KIT_SOURCE_SHA256[source])
         mutate.generate(kit, corpus, meta['seed'], meta['per_cell'], klayout)
         return {}
     if meta['generator'] != 'scripts/asic/mutate_v2.py':
         raise ValueError('golden names an unknown generator: '+str(meta['generator']))
     import mutate_v2
+    _require(meta, 'seed', 'sources')
+    _require(meta['sources'], *[Path(relative).name for relative in (mutate_v2.STD_GDS, mutate_v2.GPIO_GDS)],
+             *meta.get('checkpoint_only_sources', []))
     for relative in (mutate_v2.STD_GDS, mutate_v2.GPIO_GDS):
         source, path = Path(relative).name, Path(kit)/relative
         digest = _sha256(path) if path.is_file() else 'missing'
         if digest != meta['sources'][source]:
             raise _kit_mismatch(source, digest, meta['sources'][source])
+    if core_gds is not None and not Path(core_gds).is_file():
+        raise CorpusError(f'`--core-gds`로 준 `{core_gds}` 파일이 없습니다. 코어 창 변형본을 비교할 수 없습니다(실패).')
     unavailable, core = {}, None
     for source in meta.get('checkpoint_only_sources', []):
         want = meta['sources'][source]
@@ -600,7 +632,7 @@ def check_mutations(golden_path, out, kit=None, gds_dir=None, rules_json=RULES_J
         gds_dir = out/'gds'
         try:
             unavailable = _rebuild(golden, gds_dir, kit, core_gds, klayout)
-        except SourceMismatch as error:
+        except CorpusError as error:
             return _write_mutation_result(out, golden, dict(
                 status='fail', error=str(error), rules=[], compared_gds=0, counts=dict(both=0, none=0, klayout_only=0,
                 calibre_only=0), disagreements=[], mutations=[]), started, version)
