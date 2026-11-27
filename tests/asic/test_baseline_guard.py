@@ -255,7 +255,7 @@ class SnapshotTests(unittest.TestCase):
         head = baseline_guard.snapshot(ROOT)
         verified = [r for r, s in head['rules'].items() if s == 'verified']
         self.assertEqual(len(verified), 96)
-        self.assertEqual(len(head['fixtures']), 439)
+        self.assertEqual(len(head['fixtures']), 451)
         self.assertEqual(set(head['fixture_rules'].values()), set(verified))
         self.assertEqual(len(head['golden_fixtures']), 427)  # the mutation golden has no fixtures
         self.assertIn('verification/reliability/golden/drc-mutations-20261128/golden.json', head['golden'])
@@ -269,17 +269,17 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(baseline_guard.violations(head, head), [])
 
     def test_first_introduction_against_working_tree(self):
-        # Only the 12 ENC OVERLAP fixtures (0427-0438) still wait for their Calibre golden.
+        # Only the 24 enclosure fixtures (0427-0450) still wait for their Calibre golden.
         found = baseline_guard.violations(baseline_guard.empty(), baseline_guard.snapshot(ROOT))
-        self.assertEqual(len(found), 12, found)
+        self.assertEqual(len(found), 24, found)
         self.assertTrue(all('Calibre golden이 없습니다' in text for text in found), found)
         numbers = sorted(int(re.search(r'`(\d{4})-', text)[1]) for text in found)
-        self.assertEqual(numbers, list(range(427, 439)))
+        self.assertEqual(numbers, list(range(427, 451)))
 
     def test_snapshot_at_reads_git(self):
         at = baseline_guard.snapshot_at('HEAD', ROOT)
         self.assertEqual(at['rules'], baseline_guard.snapshot(ROOT)['rules'])
-        self.assertEqual(len(at['fixtures']), 439)
+        self.assertEqual(len(at['fixtures']), 451)
         with self.assertRaises(ValueError):
             baseline_guard.snapshot_at('no-such-ref-0019', ROOT)
 

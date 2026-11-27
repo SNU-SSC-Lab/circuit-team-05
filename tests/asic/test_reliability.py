@@ -36,7 +36,7 @@ class CaseHashTests(unittest.TestCase):
 
     def test_every_fixture_case_hashes(self):
         hashes = [reliability.case_sha256(c) for c in cases()]
-        self.assertEqual(len(hashes), 439)  # 427 with the 2026-11-28 golden + 12 ENC OVERLAP fixtures
+        self.assertEqual(len(hashes), 451)  # 427 with the 2026-11-28 golden + 24 enclosure fixtures pending Calibre
 
 
 def golden(*fixtures):

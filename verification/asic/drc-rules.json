@@ -761,7 +761,7 @@
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
-      "fixture_definitions": 6
+      "fixture_definitions": 8
     },
     {
       "source_line": 569,
@@ -774,7 +774,7 @@
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
-      "fixture_definitions": 6
+      "fixture_definitions": 8
     },
     {
       "source_line": 574,
@@ -1359,7 +1359,7 @@
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
-      "fixture_definitions": 6
+      "fixture_definitions": 8
     },
     {
       "source_line": 864,
@@ -1372,7 +1372,7 @@
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
-      "fixture_definitions": 7
+      "fixture_definitions": 9
     },
     {
       "source_line": 869,
@@ -1385,7 +1385,7 @@
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
       "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
-      "fixture_definitions": 6
+      "fixture_definitions": 8
     },
     {
       "source_line": 874,
@@ -1866,7 +1866,7 @@
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
       "golden_compared": true,
       "legacy_coverage": "미실행",
-      "fixture_definitions": 6
+      "fixture_definitions": 8
     },
     {
       "source_line": 1134,

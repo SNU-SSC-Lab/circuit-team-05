@@ -150,4 +150,29 @@ def cases():
                 shapes += [rectangle(15, 0, 0, size, size), rectangle(12, .5, -1, 1.5, size+1)]
             if context == 'ntap': shapes += [rectangle(14, 0, 0, size, size)]
             emit(rule, label, shapes, fail)
+
+    # Enclosure edge cases with no Calibre evidence yet; expected values are a reading of the deck
+    # and stay uncertain until the Calibre run. outer-inside-inner: the outer shape lies wholly inside
+    # the inner one (for 13.PAD.E a hole in each metal under the PAD). No inner edge crosses an outer
+    # edge or faces its inside, so ENC ... OVERLAP is read as not firing. Exception 2.ACT.E3: NTAP is
+    # NACT AND NWELL, so NTAP equals the NWELL island and every edge coincides, which fired in Calibre
+    # for 0429 (coincident edge) -> expected to fire. near-outside: the inner shape is outside the outer
+    # one, closer than the rule value; facing outside edges are spacing, not enclosure -> expected not
+    # to fire. For 2.ACT.E3 NTAP is empty there (no NACT inside NWELL), so it is vacuous.
+    for rule, first, others, threshold, context in enclosures:
+        size = 80 if first == 37 else 2
+        margin = threshold+1
+        if first == 37:
+            low, high = -margin, size+margin
+            island = [[low, low, high, 30], [low, 50, high, high], [low, 30, 30, 50], [50, 30, high, 50]]
+        else:
+            island = [[size/4, size/4, size*3/4, size*3/4]]
+        gap = round(threshold-.2, 4)
+        for label, outers, fail in [('outer-inside-inner', island, context == 'ntap'),
+                                    ('near-outside', [[size+gap, -margin, 2*size+gap, size+margin]], False)]:
+            shapes = [rectangle(first, 0, 0, size, size)]+[[layer, box] for layer in others for box in outers]
+            if context == 'pmos':
+                shapes += [rectangle(15, 0, 0, size, size), rectangle(12, .5, -1, 1.5, size+1)]
+            if context == 'ntap': shapes += [rectangle(14, 0, 0, size, size)]
+            emit(rule, label, shapes, fail)
     return result
