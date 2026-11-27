@@ -13,9 +13,16 @@ ref's copy whenever base has one (`git show BASE:scripts/asic/baseline_guard.py`
 workflows are violations too, once base has the guard. Base without reliability files (first
 introduction) yields no violations.
 
-Known limit: the guard runs the head's `drc_cases.py` to hash fixtures. A file written to detect the guard
-could still present different cases; the threat model is careless edits, not an adversary, so the guard
-only rejects imports and escape hatches and fails closed on any early exit.
+Fixture source: `drc_cases.py` (head and base) runs in a separate `python -I` child process with a
+temp working directory, an empty environment and a timeout. The child hashes the cases with the trusted
+`reliability.py` next to this file (never the one under `--root`) and prints JSON followed by a random
+sentinel line. The parent accepts the result only on exit 0 with the sentinel and complete JSON, so the
+source cannot reach the guard's own state, and a crash, early exit or hang of the child fails closed.
+An AST check (no imports, no escape names, no `_`-prefixed or frame attributes) runs first as defence
+in depth.
+
+Known limit: a file written to detect the guard environment could still present different cases; the
+threat model is careless edits, not an adversary.
 """
 import argparse
 import ast
@@ -23,12 +30,15 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import secrets
 import subprocess
 import sys
+import tempfile
 
 import reliability
 
-ROOT = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent  # the trusted reliability.py the child imports
+ROOT = HERE.parents[1]
 
 RULES = 'verification/asic/drc-rules.json'
 CASES = 'scripts/asic/drc_cases.py'
@@ -43,6 +53,23 @@ BYPASS = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에서 
 # drc_cases.py runs inside the guard, so it may only define fixtures.
 FORBIDDEN_NAMES = {'__import__', '__builtins__', '__name__', 'exec', 'eval', 'compile', 'open', 'getattr',
                    'globals', 'locals', 'vars', 'SystemExit', 'quit', 'exit', 'breakpoint', 'input'}
+FRAME_ATTRS = {'gi_frame', 'cr_frame', 'ag_frame', 'gi_code', 'f_back', 'f_globals', 'f_locals', 'f_builtins',
+               'tb_frame'}
+CHILD_TIMEOUT = 60  # seconds; drc_cases.py takes well under one
+# Runs in the child: argv = [guard dir, sentinel], stdin = drc_cases.py source.
+CHILD = '''
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import reliability
+sentinel = sys.argv[2]
+source = sys.stdin.read()
+namespace = {}
+exec(compile(source, 'scripts/asic/drc_cases.py', 'exec'), namespace)
+rows = [[reliability.fixture_name(i, c)+'.gds', c['rule'], reliability.case_sha256(c)]
+        for i, c in enumerate(namespace['cases']())]
+sys.stdout.write(json.dumps(rows)+'\\n'+sentinel+'\\n')
+sys.stdout.flush()
+'''
 
 
 def empty():
@@ -60,7 +87,7 @@ def _check_cases_source(source):
     for node in ast.walk(tree):
         if (isinstance(node, (ast.Import, ast.ImportFrom))
                 or isinstance(node, ast.Name) and node.id in FORBIDDEN_NAMES
-                or isinstance(node, ast.Attribute) and node.attr.startswith('__')):
+                or isinstance(node, ast.Attribute) and (node.attr.startswith('_') or node.attr in FRAME_ATTRS)):
             raise ValueError(f'`{CASES}` {node.lineno}번째 줄에 import나 내부 기능 호출이 있습니다. '
                              '기준 확인은 이 파일을 그대로 실행하므로 fixture 정의만 둘 수 있습니다.')
 
@@ -68,20 +95,38 @@ def _check_cases_source(source):
 def fixtures_from_source(source, rules):
     """{gds: case_sha256} and {gds: rule} for fixtures of verified rules, from drc_cases.py text."""
     _check_cases_source(source)
-    namespace = {}  # no __name__ to recognise the guard by; kept out of sys.modules and this module
     fixtures, owners = {}, {}
-    try:
-        exec(compile(source, CASES, 'exec'), namespace)
-        for index, case in enumerate(namespace['cases']()):
-            if rules.get(case['rule']) != 'verified':
-                continue
-            gds = reliability.fixture_name(index, case)+'.gds'
-            fixtures[gds] = reliability.case_sha256(case)
-            owners[gds] = case['rule']
-    except BaseException as error:  # SystemExit/quit() must not end the guard with exit code 0
-        raise ValueError(f'`{CASES}`을(를) 실행하다 멈췄습니다({type(error).__name__}: {error}). '
-                         'fixture 정의를 끝까지 읽지 못하면 기준 확인을 통과시키지 않습니다.') from None
+    for gds, rule, digest in _run_cases(source):
+        if rules.get(rule) == 'verified':
+            fixtures[gds], owners[gds] = digest, rule
     return fixtures, owners
+
+
+def _run_cases(source):
+    """[[gds, rule, case_sha256], ...] from a `python -I` child; any other outcome is a ValueError."""
+    sentinel = 'baseline-guard-done-'+secrets.token_hex(16)
+    env = {key: os.environ[key] for key in ('SYSTEMROOT',) if key in os.environ}  # Windows needs SYSTEMROOT
+    stopped = f'`{CASES}`을(를) 별도 프로세스에서 실행하다 멈췄습니다'
+    tail = 'fixture 정의를 끝까지 읽지 못하면 기준 확인을 통과시키지 않습니다.'
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            done = subprocess.run([sys.executable, '-I', '-c', CHILD, str(HERE), sentinel], input=source,
+                                  capture_output=True, text=True, encoding='utf-8', errors='replace',
+                                  cwd=tmp, env=env, timeout=CHILD_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise ValueError(f'{stopped}({CHILD_TIMEOUT}초 시간 초과). {tail}') from None
+    lines = done.stdout.splitlines()
+    if done.returncode != 0 or len(lines) < 2 or lines[-1] != sentinel:
+        why = (done.stderr.strip().splitlines() or ['출력 없음'])[-1][:300]
+        raise ValueError(f'{stopped}(종료 코드 {done.returncode}, {why}). {tail}')
+    try:
+        rows = json.loads(lines[-2])
+        if not all(isinstance(row, list) and len(row) == 3 and all(isinstance(v, str) for v in row)
+                   for row in rows):
+            raise ValueError
+    except (ValueError, TypeError):
+        raise ValueError(f'{stopped}(결과 JSON이 온전하지 않음). {tail}') from None
+    return rows
 
 
 def _digest(data):

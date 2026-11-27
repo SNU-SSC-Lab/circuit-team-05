@@ -14,6 +14,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'scripts'/'asic'))
 import baseline_guard
 
+# Reviewer probes: walk from a generator frame into the guard's globals.
+WALK = 'def g():\n    yield me.gi_frame.f_back\nme = g()\ntop = next(me)\n'
+FRAME_EXIT = WALK+"top.f_back.f_globals['os']._exit(0)\ndef cases():\n    return []\n"
+FRAME_PATCH = WALK+"top.f_back.f_globals['violations'] = lambda base, head: []\ndef cases():\n    return []\n"
 LAST_LINE = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에서 우회 머지합니다(SPEC 0019).'
 
 
@@ -287,7 +291,9 @@ class SnapshotTests(unittest.TestCase):
                        'raise SystemExit(0)\ndef cases():\n    return []\n',
                        'def cases():\n    quit()\n',
                        'def cases():\n    exit(0)\n',
-                       'if __name__ == "drc_cases_snapshot":\n    pass\ndef cases():\n    return []\n'):
+                       'if __name__ == "drc_cases_snapshot":\n    pass\ndef cases():\n    return []\n',
+                       'def cases():\n    return [x._fields for x in []]\n',
+                       FRAME_EXIT, FRAME_PATCH):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'drc_cases.py'):
                 baseline_guard.fixtures_from_source(source, {})
 
@@ -354,6 +360,52 @@ class CliTests(unittest.TestCase):
                     code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
                 self.assertEqual(code, 1, out.getvalue())
                 self.assertIn('실행 실패', out.getvalue())
+
+    def run_head_cases(self, source, base, check=False):
+        """main() with head = a temp root holding only drc_cases.py and an empty drc-rules.json."""
+        with tempfile.TemporaryDirectory() as tmp:
+            for relpath, text in ((baseline_guard.CASES, source), (baseline_guard.RULES, '{"rules": []}')):
+                (Path(tmp)/relpath).parent.mkdir(parents=True, exist_ok=True)
+                (Path(tmp)/relpath).write_text(text, encoding='utf-8')
+            out = io.StringIO()
+            skip = (contextlib.nullcontext() if check
+                    else mock.patch.object(baseline_guard, '_check_cases_source'))
+            with skip, mock.patch.object(baseline_guard, 'snapshot_at', return_value=base), \
+                 mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+                code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
+        return code, out.getvalue()
+
+    def test_frame_walk_exit_fails_closed(self):  # os._exit(0) ends only the child
+        for check in (True, False):
+            with self.subTest(check=check):
+                code, text = self.run_head_cases(FRAME_EXIT, baseline_guard.empty(), check)
+                self.assertEqual(code, 1, text)
+                self.assertIn('실행 실패', text)
+
+    def test_frame_walk_patch_cannot_reach_the_guard(self):
+        real = baseline_guard.violations
+        base = snap(golden={'verification/reliability/golden/g/golden.json': 's'})
+        code, text = self.run_head_cases(FRAME_PATCH, base)
+        self.assertIs(baseline_guard.violations, real)
+        self.assertEqual(code, 1, text)
+        self.assertIn('`verification/reliability/golden/g/golden.json`', text)
+        self.assertEqual(text.rstrip('\n').splitlines()[-1], LAST_LINE)
+
+    def test_hanging_cases_time_out(self):
+        with mock.patch.object(baseline_guard, 'CHILD_TIMEOUT', 2):
+            code, text = self.run_head_cases('def cases():\n    while True:\n        pass\n', baseline_guard.empty())
+        self.assertEqual(code, 1, text)
+        self.assertIn('시간 초과', text)
+
+    def test_child_must_print_sentinel_and_json(self):
+        with mock.patch.object(baseline_guard, '_check_cases_source'):
+            for source in ('def cases():\n    print("[]")\n    raise SystemExit(0)\n',
+                           'def cases():\n    return [1]\n',
+                           'import os\ndef cases():\n    os._exit(0)\n'):
+                rows = None
+                with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'drc_cases.py'):
+                    rows = baseline_guard.fixtures_from_source(source, {})
+                self.assertIsNone(rows)
 
     def test_any_snapshot_exception_fails_closed(self):
         for error in (SystemExit(0), RuntimeError('boom'), KeyError('rules')):
