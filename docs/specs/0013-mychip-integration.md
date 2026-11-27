@@ -1,5 +1,7 @@
 # SPEC 0013 MyChip 통합 검사 연결
 
+> 폐지 메모(2026-11-28): `.github/workflows/integration.yml`(`MyChip integration`)을 삭제했다. 이 저장소는 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 PR 검사를 폐지했다. 칩 연결 검사는 circuit-integration 야간 작업이 이 저장소를 읽어 수행한다. 아래는 도입 당시 기록이다. 근거: [SPEC 0019](0019-merge-gate.md).
+
 - 상태: 동아리 회로팀 다섯 저장소에 같은 연결을 PR로 제안한다. 팀이 승인해야 적용된다.
 - 기준: `main` 위의 단일 PR. 기존 `RTL CI`(SPEC 0012)는 바꾸지 않는다.
 - 관련 규약: RFC 0001 HW01~HW06(현재 회로 계약), RFC 0002 PR01·AUTO01.

@@ -1,6 +1,6 @@
 # mychip/ — RTL 다음 단계 산출물
 
-합성·배치배선·사인오프 결과는 **이 폴더의 정해진 자리**에 둡니다. 이 저장소는 **`MyChip PDK`** 체크(`.github/workflows/pdk.yml`, 코드 `scripts/run_pdk.py`, 기준 `verification/pdk/`)가 PR마다 이 폴더를 단계별로 자동 검사합니다. 아직 안 한 단계는 ⬜로 표시되고 실패가 아닙니다. 올라온 단계는 맞아야 통과합니다. 칩끼리의 연결 계약은 `MyChip integration` 체크가 따로 봅니다.
+합성·배치배선·사인오프 결과는 **이 폴더의 정해진 자리**에 둡니다. 이 저장소는 **`MyChip PDK`** 체크(`.github/workflows/pdk.yml`, 코드 `scripts/run_pdk.py`, 기준 `verification/pdk/`)가 PR마다 이 폴더를 단계별로 자동 검사합니다. 아직 안 한 단계는 ⬜로 표시되고 실패가 아닙니다. 올라온 단계는 맞아야 통과합니다. 칩끼리의 연결 계약은 circuit-integration 야간 작업이 이 저장소를 읽어 따로 검사합니다. PR 검사 `MyChip integration`은 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 폐지했습니다 ([SPEC 0019](../docs/specs/0019-merge-gate.md)).
 
 이 칩의 top: **`v_ternary8_top`** (아래 `<top>` 자리에 그대로 씁니다)
 

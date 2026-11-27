@@ -9,13 +9,15 @@ MyChip 2026 4차(0.5 µm CMOS) 회로팀. 안내서 팀 3(3-A): 삼진 가중치
 | `src/` | 설계 원본 전부: RTL 모듈 10개 (`v_ternary8_top` 외) |
 | `mychip/` | 합성·배치배선·사인오프 결과 ([안내](mychip/README.md)) |
 | `docs/` | 문서 |
-| `.github/` | CI: `RTL CI`, `MyChip integration`, `MyChip PDK`, `Physical checks`, `ASIC RTL to GDS`(실제 구현 실험·미확인 공정 항목 별도 표시) |
+| `.github/` | CI: `RTL CI`, `MyChip PDK`, `Physical checks`, `ASIC RTL to GDS`(실제 구현 실험·미확인 공정 항목 별도 표시) |
 | `scripts/` · `tests/` · `verification/` | 팀 PR 규칙 검사·RTL CI·PDK 검사 도구와 시험 (저장소 맨 위 경로를 전제로 동작) |
 | `.githooks/` · `.claude/` · `.codex/` · `AGENTS.md` · `CLAUDE.md` | 에이전트·Git 후킹과 작업 규칙 |
 | `requirements-ci.txt` | CI 파이썬 의존성 |
 | `README.md` · `.gitignore` 등 | 저장소 안내와 Git 설정 |
 
-다섯 팀 저장소의 맨 위는 같은 모양입니다. 이 표에 없는 것이 맨 위에 생기면 `MyChip integration` 체크가 실패합니다 (규칙: [contract/flow.toml](https://github.com/SNU-SSC-Lab/circuit-integration/blob/main/contract/flow.toml)). 새 폴더·파일은 `src/` 아래에 둡니다.
+다섯 팀 저장소의 맨 위는 같은 모양입니다 (규칙: [contract/flow.toml](https://github.com/SNU-SSC-Lab/circuit-integration/blob/main/contract/flow.toml)). 새 폴더·파일은 `src/` 아래에 둡니다.
+
+칩 연결 검사는 circuit-integration 야간 작업이 이 저장소를 읽어 수행합니다. 이 저장소는 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 PR 검사 `MyChip integration`을 폐지했습니다 ([SPEC 0019](docs/specs/0019-merge-gate.md)).
 
 ## 팀 안내
 

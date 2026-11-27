@@ -108,6 +108,6 @@ Summary에서 상태·시간을 읽고, `asic-실행ID-시도번호` artifact를
 
 현재 추출/비교 경로에서 34종 셀 중 23종이 일치했고 11종은 미확인이다. [셀별 결과](../../verification/asic/cell-qualification.json)를 남기고 그 11종을 새 ASIC 합성에서 제외했다. 원본 PDK·RTL·기존 PDK 검사의 기본 매핑은 바꾸지 않았다. LVS 핀·W/L 검사는 유지한다.
 
-`MyChip integration`은 칩 간 공유 계약을 검사한다. 5팀 자체 구현·검증이나 모든 칩의 공동 물리 검사를 대신하지 않는다. branch protection은 추가하지 않으며 팀장이 미확인 항목과 제출 조건까지 보고 수동 병합한다.
+칩 간 공유 계약은 circuit-integration 야간 작업이 이 저장소를 읽어 검사한다. 이 저장소는 2026-11-28 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없어 PR 검사 `MyChip integration`을 폐지했다([SPEC 0019](../specs/0019-merge-gate.md)). 이 야간 검사는 5팀 자체 구현·검증이나 모든 칩의 공동 물리 검사를 대신하지 않는다. branch protection은 추가하지 않으며 팀장이 미확인 항목과 제출 조건까지 보고 수동 병합한다.
 
 공개 원본의 전체 규칙 대조와 추가 기하 시험은 [DRC 작업 기록](nspl-drc-rule-audit.md), 담당자에게 전달할 질문은 [자료·지원 요청문](pdk-support-request.md)에 따로 정리했다.

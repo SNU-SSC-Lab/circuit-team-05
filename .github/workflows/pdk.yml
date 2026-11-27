@@ -1,7 +1,7 @@
 # MyChip PDK 검사 (SPEC 0015). 이 저장소의 RTL을 4차 PDK 표준셀로 합성하고, 그 netlist에 팀의 top 시험
 # (tests/rtl/test_top.py)을 돌리고, 10 MHz 타이밍을 봅니다. mychip/에 올린 netlist·사인오프 결과와
 # 파일 종류도 검사하고, 심은 버그를 잡는지 자체 검사합니다. 코드는 모두 이 저장소에 있습니다
-# (scripts/run_pdk.py). 칩끼리의 연결 계약은 integration.yml(MyChip integration)이 따로 봅니다.
+# (scripts/run_pdk.py). 칩끼리의 연결 계약은 circuit-integration 야간 작업이 이 저장소를 읽어 따로 봅니다(SPEC 0019).
 name: MyChip PDK
 
 on:

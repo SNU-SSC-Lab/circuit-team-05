@@ -15,7 +15,7 @@
 - [0011-v-ternary8-top](0011-v-ternary8-top.md): 기존 RTL 역작성
 
 - [0012 RTL CI](0012-rtl-ci.md): PR 3의 문서·RTL 검증 CI 설계 초안
-- [0013 MyChip 통합 검사 연결](0013-mychip-integration.md): 동아리 통합 저장소의 공통 계약 검사를 PR마다 실행
+- [0013 MyChip 통합 검사 연결](0013-mychip-integration.md): 동아리 통합 저장소의 공통 계약 검사를 PR마다 실행. 2026-11-28 폐지(SPEC 0019)
 - [0014 MyChip PDK 검사](0014-mychip-pdk-checks.md): 4차 PDK 합성·게이트 수준·타이밍과 mychip/ 산출물 검사를 PR마다 실행
 - [0015 MyChip PDK 검사를 이 저장소로 옮기기](0015-own-pdk-checks.md): 같은 검사를 통합 저장소 없이 이 저장소의 scripts/로 실행, 게이트 수준은 팀 top 시험
 

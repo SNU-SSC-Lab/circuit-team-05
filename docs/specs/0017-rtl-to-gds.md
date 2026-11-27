@@ -16,7 +16,7 @@
 | 코어 | `v_ternary8_top`의 배선 완료 netlist·GDS와 해당 범위의 검사 결과 |
 | 전체 칩 | 안내서의 `MPW_PAD_28pin`·SOP28에 맞는 pad·전원·코어 연결, 전체 chip GDS와 검사 결과 |
 | 실행 기록 | 같은 RTL·PDK·제약에서 만든 파일의 해시, 도구 버전, 검사 결과, 소요 시간과 원본 보고서 |
-| GitHub | 5팀 자체 검사와 기존 `MyChip integration`의 상태를 별도로 보여 주고 팀장이 리뷰 후 수동 병합 |
+| GitHub | 5팀 자체 검사와 기존 `MyChip integration`의 상태를 별도로 보여 주고 팀장이 리뷰 후 수동 병합. `MyChip integration`은 2026-11-28 폐지: 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없음([SPEC 0019](0019-merge-gate.md)) |
 
 코어 GDS만 만들고 전체 칩 구현 완료라고 쓰지 않는다. 오픈소스 검사 통과와 제작 서비스의 최종 승인은 별도 항목이다. 안내서 3쪽은 SOP28·`MPW_PAD_28pin`을, 8쪽은 최종 DRC/LVS/PEX에 검증된 Calibre/Assura deck을 사용하고 다른 도구는 공정 지원을 확인하도록 설명한다. 오픈소스 경로의 공정 지원과 제출 인정 여부가 확인되기 전에는 제작 승인으로 표시하지 않는다.
 
@@ -154,7 +154,7 @@ flowchart TD
     STA --> REPORT["같은 버전의 리포트 · 산출물 · 추가"]
     GATE --> REPORT
     PHY --> REPORT
-    PR --> INT["MyChip integration · 유지"]
+    PR --> INT["MyChip integration · 2026-11-28 폐지(SPEC 0019)"]
     INT --> CONTRACT["공통 포트 · 프로토콜 · 정답 모델 · 보드 조건"]
     RTL --> REVIEW["필수 검사 확인 · 사람 리뷰"]
     REPORT --> REVIEW
@@ -162,7 +162,7 @@ flowchart TD
     REVIEW --> MERGE["팀장이 수동 병합"]
 ```
 
-기존 합성·게이트 시험·OpenSTA 코드는 재사용한다. 새 흐름 검증 후 중복 실행을 줄이는 시점과 기존 `MyChip PDK`의 역할을 별도 변경에 기록한다. `Physical checks`의 연습 회로는 도구 고장 검출용으로 남기며 실제 칩 검사와 이름을 구분한다. `MyChip integration`은 공유 계약 검사이며 모든 칩을 실제 연결한 공동 시뮬레이션이 이미 완성됐다고 가정하지 않는다.
+기존 합성·게이트 시험·OpenSTA 코드는 재사용한다. 새 흐름 검증 후 중복 실행을 줄이는 시점과 기존 `MyChip PDK`의 역할을 별도 변경에 기록한다. `Physical checks`의 연습 회로는 도구 고장 검출용으로 남기며 실제 칩 검사와 이름을 구분한다. `MyChip integration`은 공유 계약 검사이며 모든 칩을 실제 연결한 공동 시뮬레이션이 이미 완성됐다고 가정하지 않는다. 이 PR 검사는 2026-11-28 폐지했다. 공개 전환으로 비공개 재사용 워크플로를 호출할 수 없기 때문이며, 칩 연결 검사는 circuit-integration 야간 작업이 이 저장소를 읽어 맡는다([SPEC 0019](0019-merge-gate.md)).
 
 구현한 실행 차이는 다음과 같다. 기본 strict 실행은 남은 공정 항목이 미확인이면 산출물을 보관한 뒤 1로 종료한다.
 
