@@ -86,4 +86,6 @@ class CatalogTests(unittest.TestCase):
             self.assertTrue(any(not c['fail'] for c in applicable), name)
         for rule in catalog['rules']:
             self.assertEqual(rule['fixture_definitions'], sum(c['rule'] == rule['id'] for c in fixtures), rule['id'])
-        self.assertFalse(any(r['golden_compared'] for r in catalog['rules']))
+        # The 2026-11-28 Calibre golden matched every implemented rule; unported rules have none.
+        self.assertTrue(all(r['golden_compared'] == (r['implementation'] == 'geometry_port')
+                            for r in catalog['rules']))

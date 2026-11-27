@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "rows": [
+    {
+      "id": "drc-fixtures",
+      "stage": "DRC 규칙 판정",
+      "open_source": "KLayout 0.28.16 구현 규칙 96개",
+      "commercial": "Calibre v2023.4_17.10, 키트 DRC deck 무수정(sha256 6c012073…c4f0f)",
+      "verdict": "match",
+      "scope": "구현 96개 규칙의 fixture 427개",
+      "note": "427개 중 425개 대상 규칙 발동 여부 일치, 2개(0169·0170, dbu 시험)는 Calibre가 입력을 거부해 사유가 붙은 제외. 마커 수 차이 0242·0408은 기록만",
+      "pr_check": "fixture를 다시 만들어 verified 규칙의 KLayout 판정이 golden과 같은지(reliability.py check)",
+      "evidence": ["golden/drc-fixtures-20261128/golden.json"],
+      "unverified": [],
+      "updated": "2026-11-28"
+    },
+    {
+      "id": "drc-chip-v2",
+      "stage": "DRC 실제 칩",
+      "open_source": "KLayout 구현 규칙 96개",
+      "commercial": "Calibre v2023.4_17.10, 키트 DRC deck 무수정",
+      "verdict": "match",
+      "scope": "v2 칩 1건(Cadence 제작), seal ring 없는 판·있는 판, 구현 규칙 범위",
+      "note": "seal ring 없음: KLayout 0 ↔ Calibre 0. seal ring 있음: KLayout 0 ↔ Calibre 1(1.PWL.bad1, KLayout 미구현 규칙)",
+      "pr_check": "PR마다 확인하지 않음. v2 GDS는 저장소 밖에 두고 기준점에서만 다시 대조",
+      "evidence": ["golden/chip-v2-20261128/summary.json"],
+      "unverified": ["drc-unported-rules"],
+      "updated": "2026-11-28"
+    },
+    {
+      "id": "lvs-core",
+      "stage": "LVS 코어",
+      "open_source": "KLayout 추출 + Netgen",
+      "commercial": "Calibre LVS v2023.4_17.10, 키트 LVS deck 무수정",
+      "verdict": "match",
+      "scope": "오픈소스 흐름 코어 1건",
+      "note": "같은 GDS(v_ternary8_top)·같은 schematic.spice에서 Netgen 일치, Calibre CORRECT(ports 15/15, nets 2096/2096, MOS 1895/1895)",
+      "pr_check": "코어 LVS 일치는 ASIC gate가 PR마다 오픈소스로 확인. Calibre 대조는 기준점에서만",
+      "evidence": ["golden/chip-openflow-20261128/summary.json"],
+      "unverified": [],
+      "updated": "2026-11-28"
+    },
+    {
+      "id": "lvs-chip",
+      "stage": "LVS 칩·pad",
+      "open_source": "KLayout 추출 + Netgen (칩 단위 미구현, 연결성 검사만)",
+      "commercial": "Calibre LVS",
+      "verdict": "no_evidence",
+      "scope": "pad·GPIO를 포함한 칩",
+      "note": "v2 칩 Calibre CORRECT. 같은 칩 GDS의 오픈소스 LVS 없음. GPIO 원회로 CDL 확보, Calibre·오픈소스 대조 전",
+      "pr_check": "미검증 목록(asic-chip-lvs 미실행 허용)",
+      "evidence": ["golden/chip-v2-20261128/summary.json"],
+      "unverified": ["gpio-internal-lvs", "lvs-vs-calibre"],
+      "updated": "2026-11-28"
+    },
+    {
+      "id": "synth",
+      "stage": "합성",
+      "open_source": "Yosys",
+      "commercial": "Genus",
+      "verdict": "no_evidence",
+      "scope": "-",
+      "note": "Genus 325셀 결과 있음. 동치 미확인",
+      "pr_check": "미검증 목록",
+      "evidence": [],
+      "unverified": ["synth-vs-genus"],
+      "updated": "2026-11-28"
+    },
+    {
+      "id": "pnr-sta",
+      "stage": "P&R·STA",
+      "open_source": "OpenROAD + OpenSTA",
+      "commercial": "Innovus + Tempus",
+      "verdict": "no_evidence",
+      "scope": "-",
+      "note": "v2 코어 OpenSTA(SPEF) setup +38.4 / hold +1.41 ns. 같은 조건 비교 없음",
+      "pr_check": "미검증 목록(asic-chip-timing 미실행 허용)",
+      "evidence": [],
+      "unverified": ["pnr-sta-vs-innovus-tempus"],
+      "updated": "2026-11-28"
+    },
+    {
+      "id": "pex",
+      "stage": "PEX",
+      "open_source": "OpenRCX",
+      "commercial": "Quantus",
+      "verdict": "no_evidence",
+      "scope": "-",
+      "note": "없음. 현재 estimated.spef는 보정 전 전역 배선 추정",
+      "pr_check": "미검증 목록(asic-pex 미실행 허용)",
+      "evidence": [],
+      "unverified": ["pex"],
+      "updated": "2026-11-28"
+    },
+    {
+      "id": "antenna",
+      "stage": "antenna",
+      "open_source": "(미구현)",
+      "commercial": "Calibre ANT, 키트 ANT deck 무수정",
+      "verdict": "no_evidence",
+      "scope": "-",
+      "note": "Calibre ANT 0건: 오픈소스 흐름 코어·SOP28 칩, v2 칩. KLayout antenna 구현과 fixture가 없어 대조 불가",
+      "pr_check": "미검증 목록",
+      "evidence": ["golden/chip-openflow-20261128/summary.json", "golden/chip-v2-20261128/summary.json"],
+      "unverified": ["antenna"],
+      "updated": "2026-11-28"
+    }
+  ]
+}

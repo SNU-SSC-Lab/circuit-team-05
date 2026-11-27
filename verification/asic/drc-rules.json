@@ -31,7 +31,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -44,7 +44,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -57,7 +57,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -70,7 +70,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -83,7 +83,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -96,7 +96,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -109,7 +109,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -122,7 +122,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -135,7 +135,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -148,7 +148,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -161,7 +161,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -174,7 +174,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -187,7 +187,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -200,7 +200,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -213,7 +213,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "원본 본문은 FVTP를 검사함. Assura는 FVTN/FVTP를 각각 검사함. 의도 확인 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -226,7 +226,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -239,7 +239,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -252,7 +252,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -265,7 +265,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -278,7 +278,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -291,7 +291,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -304,7 +304,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -317,7 +317,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -330,7 +330,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -343,7 +343,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -356,7 +356,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -369,7 +369,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -382,7 +382,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -395,7 +395,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 6
     },
@@ -408,7 +408,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -421,7 +421,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -434,7 +434,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -447,7 +447,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -460,7 +460,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -473,7 +473,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -486,7 +486,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -499,7 +499,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -512,7 +512,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -525,7 +525,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -538,7 +538,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -551,7 +551,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -564,7 +564,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -590,7 +590,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -629,7 +629,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -642,7 +642,7 @@
       "assura_label": false,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 2
     },
@@ -694,7 +694,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
     },
@@ -720,7 +720,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
     },
@@ -733,7 +733,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -759,7 +759,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -772,7 +772,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -876,7 +876,7 @@
       "assura_label": false,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -889,7 +889,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -915,7 +915,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1006,7 +1006,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1019,7 +1019,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1032,7 +1032,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1045,7 +1045,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1058,7 +1058,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1071,7 +1071,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1084,7 +1084,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1097,7 +1097,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1110,7 +1110,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1123,7 +1123,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1149,7 +1149,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1175,7 +1175,7 @@
       "assura_label": false,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1188,7 +1188,7 @@
       "assura_label": false,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1214,7 +1214,7 @@
       "assura_label": false,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1240,7 +1240,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 7
     },
@@ -1253,7 +1253,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
     },
@@ -1266,7 +1266,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1305,7 +1305,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1357,7 +1357,7 @@
       "assura_label": false,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1370,7 +1370,7 @@
       "assura_label": false,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1383,7 +1383,7 @@
       "assura_label": false,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
     },
@@ -1409,7 +1409,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 3
     },
@@ -1422,7 +1422,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 12
     },
@@ -1435,7 +1435,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 2
     },
@@ -1448,7 +1448,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 6
     },
@@ -1487,7 +1487,7 @@
       "assura_label": false,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
     },
@@ -1500,7 +1500,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
     },
@@ -1513,7 +1513,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
     },
@@ -1591,7 +1591,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
     },
@@ -1604,7 +1604,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 3
     },
@@ -1617,7 +1617,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
     },
@@ -1656,7 +1656,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 8
     },
@@ -1669,7 +1669,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
     },
@@ -1682,7 +1682,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
     },
@@ -1760,7 +1760,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 5
     },
@@ -1773,7 +1773,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "부분·추가 조건 있음",
       "fixture_definitions": 4
     },
@@ -1786,7 +1786,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "routing 기하 검사",
       "fixture_definitions": 4
     },
@@ -1825,7 +1825,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1851,7 +1851,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "Calibre 본문은 최소 폭 검사. min/max라는 주석 및 Assura 사각 치수 검사와 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -1864,7 +1864,7 @@
       "assura_label": false,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -1877,7 +1877,7 @@
       "assura_label": false,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 5
     },
@@ -2020,7 +2020,7 @@
       "assura_label": true,
       "converted_label": true,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },
@@ -2423,7 +2423,7 @@
       "assura_label": true,
       "converted_label": false,
       "remaining": "정의한 도형 시험 실행·원본 도구 교차 대조 필요",
-      "golden_compared": false,
+      "golden_compared": true,
       "legacy_coverage": "미실행",
       "fixture_definitions": 4
     },

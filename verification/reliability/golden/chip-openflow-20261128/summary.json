@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "run_date": "2026-11-28",
+    "calibre_version": "v2023.4_17.10",
+    "pdk_tarball_sha256": "2e49115a08f6af96c1f8433130ad4316551b5eba9001a3133905b544166af954",
+    "decks_modified": false,
+    "deck_sha256": {
+      "drc": "6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f",
+      "ant": "80dc257e6778121ab9a61a444d0e82c79999dc785d8e6aa5a6a2a5318c7b94b5",
+      "lvs": "4cebfddc77ab6b4fb20e869281a895be9933a900670c98ff792ed5204c6366e0"
+    },
+    "rulechecks": {
+      "drc": 209,
+      "ant": 12
+    },
+    "header": "키트 drc_header.cal·ant_header.cal·lvs_header.cal에서 최상위 셀 이름만 바꿈. DRC MAXIMUM RESULTS ALL"
+  },
+  "designs": {
+    "v_ternary8_top": {
+      "role": "오픈소스 흐름(Yosys·OpenROAD·KLayout)이 만든 코어",
+      "gds_sha256": "fa6ab910b7f03fd4c966c9c19b2455fd7f26297614c1f20ccb221fed9b09ea93",
+      "lvs_source_sha256": {
+        "schematic.spice": "da41de1caf9ee1e08e06fb0fc9fafdc3c4dd64dfd014eb1efb3da7e92f57064c",
+        "cells.spice": "281efca41e93e7f88cf59e18e64159f9772111cfee1f86647cbd6ac3703e9f11"
+      },
+      "calibre": {
+        "drc": 0,
+        "ant": 0,
+        "lvs": {
+          "result": "CORRECT",
+          "ports": [15, 15],
+          "nets": [2096, 2096],
+          "mos": [1895, 1895]
+        }
+      },
+      "open_source": {
+        "lvs": "match",
+        "lvs_tool": "KLayout 추출 + Netgen (흐름의 asic-lvs, 같은 GDS·같은 schematic.spice)",
+        "drc_routing_subset_errors": 0
+      }
+    },
+    "ternary8_sop28": {
+      "role": "오픈소스 흐름이 조립한 SOP28 칩(검토 전 제안 핀맵)",
+      "gds_sha256": "967bcad67c0f3a4df18e2faec2c10df65c33b27f6da0fef8794ce6168c550fdb",
+      "calibre": {
+        "drc": 0,
+        "ant": 0
+      }
+    }
+  }
+}

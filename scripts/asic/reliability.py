@@ -8,10 +8,24 @@ import re
 import subprocess
 import sys
 
+ROOT = Path(__file__).resolve().parents[2]
+RULES_JSON = ROOT/'verification/asic/drc-rules.json'
 META_KEYS = ('calibre_version', 'deck_sha256', 'fixture_tarball_sha256', 'generator_commit', 'run_date')
 # Fields drc_fixture_test.py copies from a case into its selftest record.
 CASE_FIELDS = ('rule', 'label', 'fail', 'hierarchy', 'dbu', 'raises')
 VERDICT_KO = {'match': '일치', 'mismatch': '불일치', 'no_golden': '근거 없음', 'excluded': '제외'}
+TABLE_KO = {'match': '일치', 'mismatch': '불일치', 'no_evidence': '근거 없음(미검증)'}
+
+
+def rule_state(rule):
+    """DRC rule state in drc-rules.json: unported -> ported -> verified (SPEC 0019 3절)."""
+    if rule['implementation'] == 'unported':
+        return 'unported'
+    return 'verified' if rule.get('golden_compared') else 'ported'
+
+
+def verified_rules(catalog):
+    return sorted(rule['id'] for rule in catalog['rules'] if rule_state(rule) == 'verified')
 
 
 def case_sha256(case):
@@ -136,8 +150,8 @@ def compare(golden, selftest):
     for rule, verdicts in by_rule.items():
         if 'mismatch' in verdicts:
             rules[rule] = 'mismatch'
-        elif all(v in ('match', 'excluded') for v in verdicts):
-            rules[rule] = 'match'
+        elif 'match' in verdicts and all(v in ('match', 'excluded') for v in verdicts):
+            rules[rule] = 'match'  # excluded fixtures alone are not evidence
         else:
             rules[rule] = 'no_golden'
     return {'fixtures': fixtures, 'rules': rules}
@@ -161,8 +175,10 @@ def summary_markdown(result):
     gate = result['gate']
     lines = ['# DRC fixture 신뢰성 대조 (KLayout ↔ Calibre golden)', '',
              f'- 판정: **{"통과" if gate["status"] == "pass" else "실패"}** '
-             f'(대상 규칙 {len(gate["rules"])}개, 일치하지 않는 규칙 {len(gate["failing"])}개)',
-             '- 기준: fixture마다 대상 규칙이 위반을 냈는지(있음/없음)만 비교한다. 마커 수와 대상 밖 규칙 발동은 기록만 한다.']
+             f'(게이트 대상 `verified` 규칙 {len(gate["rules"])}개, 일치하지 않는 규칙 {len(gate["failing"])}개)',
+             '- 기준: fixture마다 대상 규칙이 위반을 냈는지(있음/없음)만 비교한다. 마커 수와 대상 밖 규칙 발동은 기록만 한다.',
+             '- 게이트는 `verification/asic/drc-rules.json`에서 `verified`인 규칙만 본다. '
+             '그 밖의 규칙 판정은 아래 표에 기록만 한다.']
     for source in result['golden']:
         lines.append(f'- golden `{source["path"]}`: Calibre {source.get("calibre_version")}, '
                      f'deck sha256 `{source.get("deck_sha256")}`, 실행일 {source.get("run_date")}')
@@ -173,7 +189,11 @@ def summary_markdown(result):
         lines.append(f'| {VERDICT_KO[verdict]} (`{verdict}`) | {rules} | {count} |')
     if gate['failing']:
         lines += ['', '## 일치하지 않는 규칙', '']
-        lines += [f'- `{rule}`: {VERDICT_KO[result["rules"].get(rule, "no_golden")]}' for rule in gate['failing']]
+        for rule in gate['failing']:
+            verdicts = [f['verdict'] for f in result['fixtures'] if f['rule'] == rule]
+            why = (' (fixture 없음)' if not verdicts else
+                   ' (Calibre가 거부한 제외 fixture만 있음)' if set(verdicts) == {'excluded'} else '')
+            lines.append(f'- `{rule}`: {VERDICT_KO[result["rules"].get(rule, "no_golden")]}{why}')
     problems = [f for f in result['fixtures'] if f['verdict'] in ('mismatch', 'no_golden')]
     if problems:
         lines += ['', '## 불일치·근거 없음 fixture', '']
@@ -191,12 +211,12 @@ def summary_markdown(result):
     return '\n'.join(lines)+'\n'
 
 
-def check(selftest, golden_dir, out, rules=None):
-    """Write result.json and summary.md; return 1 when a gated rule is not match."""
+def check(selftest, golden_dir, out, rules_json=RULES_JSON):
+    """Write result.json and summary.md; return 1 when a verified rule is not match."""
     golden = load_golden(golden_dir)
     result = compare(golden, json.loads(Path(selftest).read_text(encoding='utf-8')))
-    # Until rule states exist (verified list), every rule the selftest implements is gated.
-    targets = sorted(result['rules'] if rules is None else rules)
+    # Only verified rules gate; a verified rule with no usable fixture reads as no_golden and fails.
+    targets = verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8')))
     failing = [rule for rule in targets if result['rules'].get(rule, 'no_golden') != 'match']
     result['golden'] = golden['sources']
     result['gate'] = {'status': 'fail' if failing else 'pass', 'rules': targets, 'failing': failing}
@@ -208,10 +228,33 @@ def check(selftest, golden_dir, out, rules=None):
     return 1 if failing else 0
 
 
+def _cell(text):
+    return str(text).replace('|', '\\|').replace('\n', ' ')
+
+
+def render(table):
+    """table.md body; table.json is the source and CI compares the two."""
+    lines = ['# 신뢰성 대응표', '',
+             '오픈소스 도구 판정과 상용 도구 판정을 단계별로 맞춰 본 근거다(SPEC 0019 2절). '
+             '이 파일은 `table.json`에서 만든다. 손으로 고치지 말고 `table.json`을 고친 뒤 '
+             '`python scripts/asic/reliability.py render --table verification/reliability/table.json '
+             '--out verification/reliability/table.md`를 실행한다.', '',
+             '- 판정: 일치(`match`) · 불일치(`mismatch`) · 근거 없음(`no_evidence`, 미검증 목록에 있음).',
+             '- 근거 경로는 `verification/reliability/` 기준이다. 근거 없음 칸은 `unverified.json`의 항목 id를 적는다.',
+             '- 수치 차이(마커 수·타이밍 등)는 기록만 하고 판정 조건으로 쓰지 않는다.', '',
+             '| 단계 | 오픈소스 (PR마다) | 상용 기준 (기준점) | 판정 | 범위 | 현재 근거 | CI가 PR마다 확인하는 것 | 근거 파일·미검증 항목 | 갱신일 |',
+             '| --- | --- | --- | --- | --- | --- | --- | --- | --- |']
+    for row in table['rows']:
+        refs = [f'`{path}`' for path in row['evidence']] + [f'미검증 `{item}`' for item in row['unverified']]
+        cells = [row['stage'], row['open_source'], row['commercial'], f'**{TABLE_KO[row["verdict"]]}**',
+                 row['scope'], row['note'], row['pr_check'], '<br>'.join(refs), row['updated']]
+        lines.append('| '+' | '.join(_cell(c) for c in cells)+' |')
+    return '\n'.join(lines)+'\n'
+
+
 def _case_commit(generator_commit):
     """Commit whose drc_cases.py hashed the fixtures; it must equal the generator's."""
-    root = Path(__file__).resolve().parents[2]
-    git = ['git', '-C', str(root)]
+    git = ['git', '-C', str(ROOT)]
     if subprocess.run(git+['diff', '--quiet', generator_commit, '--', 'scripts/asic/drc_cases.py']).returncode:
         raise ValueError(f'scripts/asic/drc_cases.py differs from {generator_commit}; hashes would not match the batch')
     return subprocess.run(git+['rev-parse', '--short', 'HEAD'], check=True, capture_output=True, text=True).stdout.strip()
@@ -224,6 +267,10 @@ def main(argv=None):
     checker.add_argument('--selftest', type=Path, required=True)
     checker.add_argument('--golden', type=Path, required=True)
     checker.add_argument('--out', type=Path, required=True)
+    checker.add_argument('--rules', type=Path, default=RULES_JSON, help='drc-rules.json that names verified rules')
+    renderer = commands.add_parser('render', help='write table.md from table.json')
+    renderer.add_argument('--table', type=Path, required=True)
+    renderer.add_argument('--out', type=Path, required=True)
     importer = commands.add_parser('import', help='write golden.json from one Calibre batch')
     importer.add_argument('--counts', type=Path, required=True)
     importer.add_argument('--selftest', type=Path, required=True)
@@ -233,11 +280,15 @@ def main(argv=None):
         importer.add_argument('--'+key.replace('_', '-'), required=True)
     args = parser.parse_args(argv)
     if args.command == 'check':
-        code = check(args.selftest, args.golden, args.out)
+        code = check(args.selftest, args.golden, args.out, args.rules)
         if hasattr(sys.stdout, 'reconfigure'):  # a non-UTF-8 console must not fail the check
             sys.stdout.reconfigure(errors='replace')
         print((args.out/'summary.md').read_text(encoding='utf-8'))
         return code
+    if args.command == 'render':
+        table = json.loads(args.table.read_text(encoding='utf-8'))
+        args.out.write_text(render(table), encoding='utf-8', newline='\n')
+        return 0
     if args.out.exists():
         parser.error(f'{args.out} exists; golden files are written once and never overwritten')
     meta = {key: getattr(args, key) for key in META_KEYS}
