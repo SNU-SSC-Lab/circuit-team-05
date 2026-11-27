@@ -91,7 +91,7 @@ SPEC 0017·0018로 실제 5팀 코어와 제안 SOP28 GDS를 만들고 검사하
 flowchart TD
     PR["기준 파일을 바꾸는 PR<br>verification/reliability/** · drc-rules.json 상태 · 검사 코드"] --> T["baseline.yml (pull_request_target)<br>base 브랜치의 워크플로로 실행"]
     T --> G["baseline-guard<br>contents: read · 캐시 없음 · 비밀값 없음"]
-    G --> CO["base·head 커밋을 가져옴<br>(head.sha, fetch-depth 0, persist-credentials: false)"]
+    G --> CO["base·head 커밋을 가져옴<br>(head.sha → head/ 하위 폴더, fetch-depth 0, persist-credentials: false)"]
     CO --> COPY["git show GITHUB_SHA:baseline_guard.py · reliability.py → 임시 폴더<br>(워크플로가 있는 커밋의 사본만 실행)"]
     COPY --> DIFF["--base BASE SHA --head HEAD SHA<br>두 커밋의 파일을 git blob(바이트·JSON)으로만 비교"]
     DIFF --> V{"위반?"}
@@ -102,14 +102,14 @@ flowchart TD
     PR2["같은 PR"] --> REL["reliability-table (pull_request, 권한 없음)<br>drc_cases.py로 fixture를 만들어 golden과 대조"]
 ```
 
-- **위협 모형.** 저장소는 공개이고 fork PR도 열 수 있다. `pull_request_target`은 base 브랜치의 워크플로 파일로, base 저장소 문맥에서 실행된다. 이 job에서 PR 코드가 한 줄이라도 돌면 실행기에서 권한을 얻어 캐시를 오염시키는 등 다른 필수 체크를 속일 수 있다(2026-11-28 리뷰에서 `drc_cases.py`의 `match` 패턴으로 AST 검사를 우회하는 방법이 확인됨). 그래서 `baseline-guard`는 **PR 코드를 실행하지 않는다.** guard와 `reliability.py`는 워크플로가 있는 커밋(`$GITHUB_SHA`, base 브랜치 끝)에서 꺼내 임시 폴더에서 실행하고, base와 head는 `git show`로 읽은 파일 내용(바이트·JSON)으로만 비교한다. head의 guard로 대신 실행하는 경로는 없다.
+- **위협 모형.** 저장소는 공개이고 fork PR도 열 수 있다. `pull_request_target`은 base 브랜치의 워크플로 파일로, base 저장소 문맥에서 실행된다. 이 job에서 PR 코드가 한 줄이라도 돌면 실행기에서 권한을 얻어 캐시를 오염시키는 등 다른 필수 체크를 속일 수 있다(2026-11-28 리뷰에서 `drc_cases.py`의 `match` 패턴으로 AST 검사를 우회하는 방법이 확인됨). 그래서 `baseline-guard`는 **PR 코드를 실행하지 않는다.** head는 작업 폴더가 아닌 `head/` 하위 폴더로 checkout하고, guard 단계의 모든 명령은 임시 폴더에서 실행한다(작업 폴더가 PR 트리면 `python`이 PR의 `secrets.py` 같은 파일을 먼저 불러온다. 2026-11-28 재검토에서 확인). guard와 `reliability.py`는 워크플로가 있는 커밋(`$GITHUB_SHA`, base 브랜치 끝)에서 꺼내 `python -I -E -s`로 실행하고, base와 head는 `git show`·`git ls-tree`로 읽은 내용(바이트·JSON·파일 목록)으로만 비교한다. 출력의 workflow 명령을 막는 토큰도 Python 없이 `/dev/urandom`에서 만든다. head의 guard로 대신 실행하는 경로는 없다.
 - guard가 데이터로 보는 것: `verification/reliability/` 아래 모든 파일, `verification/asic/drc-rules.json`의 규칙 상태(`unported → ported`만 허용, `verified`로 올리거나 뒤로 가면 위반), 미검증 목록·대응표 판정, 그리고 base에 guard가 있으면 `baseline_guard.py`·`reliability.py`·`asic.yml`·`baseline.yml`·`.github/CODEOWNERS`의 해시. base에 기준 파일이 없으면(최초 도입) 아무것도 실행하지 않고 위반 없음으로 본다.
-- **fixture 정의 파일은 실행하지 않고 문법 트리로만 본다.** `reliability-table`에서 `drc_fixture_test.py`는 `drc_cases.py`를, `check-pending`은 `drc_cases_pending*.py`를 `reliability.py`와 같은 프로세스로 불러온다. 그래서 PR이 이 파일에서 `reliability.case_sha256` 같은 함수를 바꿔치면 아래 fixture 검사가 눈을 가린다(2026-11-28 재검토에서 확인). `baseline-guard`는 이 파일들을 `ast.parse`로만 읽고(실행·컴파일 없음), 새로 생기거나 바뀐 파일에 import(pending 파일은 `math`·`collections`·`reliability`·`drc_cases_pending*`만 허용), `match` 문, 밑줄로 시작하는 이름(pending 파일은 `__name__` 말고 `__`로 시작하는 이름), 밑줄·frame 속성, 속성 대입·삭제, `exec`·`open`·`setattr` 같은 내부 기능이 있거나 문법·UTF-8 오류, 512 KiB 초과면 위반으로 본다. `drc-rules.json`에 같은 규칙 id가 두 번 있어도 위반이다(`reliability.py`도 오류로 멈춘다).
+- **fixture 정의 파일과 `scripts/asic/` 목록은 실행하지 않고 데이터로만 본다(보조 장치).** `reliability-table`은 설계상 PR 코드를 실행한다. `drc_fixture_test.py`가 `drc_cases.py`를, `check-pending`이 `drc_cases_pending*.py`를 `reliability.py`와 같은 프로세스로 불러오고, DRC 시험 도구(`drc_fixture_test.py`·`drc_geometry.py`·`drc_ports.py`·`drc.py`)도 PR 쪽 파일이다. 그래서 시험 도구를 고친 PR은 그 job 안에서 자기 결과를 꾸밀 수 있다. 이것은 받아들인 남은 위험이며, CODEOWNERS가 해당 파일 변경에 도재겸 리뷰를 요청한다. 보조 장치로 `baseline-guard`는 fixture 정의 파일을 `ast.parse`로 바이트 그대로만 읽어(실행·컴파일 없음) 새로 생기거나 바뀐 파일이 fixture 정의 밖의 일을 하면 위반으로 본다: UTF-8이 아닌 인코딩 선언, import(pending 파일은 `math`·`collections`·`json`·`reliability`와 같은 커밋의 pending 파일만), pending 파일에서 그 모듈을 허용한 속성(`reliability.case_sha256`·`fixture_name`, `math.floor`·`sqrt`, `collections.Counter`, `json.loads`·`dumps`) 밖으로 쓰는 것, `match`·`class`·`lambda`·`global`(drc_cases.py), 밑줄로 시작하는 이름, `type`, 내부 속성, 속성 대입·삭제, `exec`·`open`·`setattr` 같은 내부 기능, 문법 오류, 512 KiB 초과. 또 `git ls-tree`로 `scripts/asic/` 바로 아래에 새로 생긴 폴더(패키지)·심볼릭 링크·`__pycache__`·컴파일된 모듈·표준 라이브러리나 `pya`와 같은 이름의 `.py`를 위반으로 본다. 같은 폴더의 `import`가 다른 코드를 읽게 되기 때문이다. `drc_fixture_test.py`와 pending `records()`는 fixture를 JSON으로 한 번 바꿔(`json.loads(json.dumps(...))`) 해시와 GDS가 같은 값을 보게 한다. `drc-rules.json`에 같은 규칙 id가 두 번 있어도 위반이다(`reliability.py`도 오류로 멈춘다).
 - 메시지에 들어가는 파일 이름·id는 PR이 정한 값이라 줄바꿈·제어 문자를 이스케이프하고 역따옴표를 바꾼다. 워크플로는 결과를 `::stop-commands::` 사이에서 출력해 워크플로 명령으로 해석되지 않게 한다.
 - fixture 정의를 실행해야 알 수 있는 검사(verified 규칙의 golden fixture가 사라짐, 정의가 바뀌거나 golden 없이 fixture가 더해짐, Calibre가 거부한 fixture만 남음, verified 규칙이 0개)는 권한 없는 `pull_request` job `reliability-table`의 `reliability.py check`가 맡는다. golden을 기준 집합으로 삼아, verified 규칙의 golden fixture 해시는 모두 이번 `selftest.json`에 있어야 하고 이번 fixture는 모두 golden이 있어야 한다.
 - `--base`는 이벤트가 준 base 브랜치 끝 커밋(`pull_request.base.sha`)이다. 그 뒤 base가 더 나아갔으면 ruleset의 "브랜치 최신 상태 필수"가 PR을 다시 맞추게 하므로 오래된 기준과의 비교로 머지되지 않는다.
 - `baseline-label` job(필수 아님)은 `pull-requests: write` 권한만 갖고 PR 코드를 checkout·실행하지 않는다. guard 결과가 위반이면 `baseline-change` 라벨을 붙이고(라벨이 없으면 먼저 만든다), 위반이 없으면 뗀다. 실행 실패면 라벨을 그대로 둔다. fork PR 등에서 실패해도 `continue-on-error`라 체크를 막지 않는다.
-- `.github/CODEOWNERS`는 `verification/reliability/**`, `verification/asic/drc-rules.json`, `scripts/asic/baseline_guard.py`, `scripts/asic/reliability.py`, `scripts/asic/drc_cases.py`, `scripts/asic/drc_cases_pending*.py`, `scripts/asic/drc_fixture_test.py`, `scripts/asic/drc_selftest.py`, `.github/workflows/**`, `.github/CODEOWNERS`를 바꾸는 PR에 도재겸(`Dojaegyum`) 리뷰를 요청한다. ruleset은 code owner 승인을 요구하지 않는다. 리뷰 요청일 뿐이다.
+- `.github/CODEOWNERS`는 `verification/reliability/**`, `verification/asic/drc-rules.json`, `scripts/asic/baseline_guard.py`, `scripts/asic/reliability.py`, `scripts/asic/drc_cases.py`, `scripts/asic/drc_cases_pending*.py`, `scripts/asic/drc_fixture_test.py`, `scripts/asic/drc_selftest.py`, `scripts/asic/drc_geometry.py`, `scripts/asic/drc_ports.py`, `scripts/asic/drc.py`, `.github/workflows/**`, `.github/CODEOWNERS`를 바꾸는 PR에 도재겸(`Dojaegyum`) 리뷰를 요청한다. ruleset은 code owner 승인을 요구하지 않는다. 리뷰 요청일 뿐이다.
 - 최초 도입 PR(이 작업)은 base에 `baseline.yml`이 없어 `pull_request_target` 워크플로가 PR에서 돌지 않는다. `baseline-guard`는 이 작업이 기준 브랜치에 들어간 뒤의 PR부터 보고된다. (구현자 판단, 사실 확인은 GitHub 실행에서)
 - `--run-fixtures`는 로컬 전용 옵션이다. 믿을 수 있는 작업 사본에서만 두 커밋의 `drc_cases.py`를 별도 프로세스(`python -I`, 빈 환경, 시간 제한)로 실행해 fixture 비교까지 한다. 그 앞의 AST 검사(import·`match` 문·`_`로 시작하는 속성·frame 속성 금지)는 보조 장치이며 샌드박스가 아니다. CI는 이 옵션을 쓰지 않는다.
 
@@ -247,7 +247,7 @@ flowchart TD
 + python scripts/asic/reliability.py check-pending --golden verification/reliability/golden
 + python scripts/asic/reliability.py check-mutations --kit NSPL키트경로 --out 새폴더5  # 경로 필터·main push, golden/drc-mutations-*/ 전부
 + # baseline-guard (pull_request_target, 워크플로 커밋의 사본, PR은 데이터로만)
-+ (cd 임시폴더 && python -E -s baseline_guard.py --base 기준SHA --head PR_head_SHA --root 작업폴더)
++ (cd 임시폴더 && python -I -E -s 임시폴더/baseline_guard.py --base 기준SHA --head PR_head_SHA --root 작업폴더/head)
 ```
 
 ```diff

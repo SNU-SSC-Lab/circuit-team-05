@@ -15,7 +15,9 @@ import reliability
 
 def main():
     out = Path(os.environ['SSC_DRC_TEST_OUT'])
-    fixtures = cases()
+    # A JSON round trip gives plain lists and dicts: the builder below sees exactly what case_sha256
+    # hashes, so a list or dict subclass in drc_cases.py cannot show the hash one shape and KLayout another.
+    fixtures = json.loads(json.dumps(cases()))
     if {case['rule'] for case in fixtures} != set(PORTS):
         raise ValueError('a geometry port has no fixture or a fixture names an unknown check')
     by_rule, records, failures = {}, [], []

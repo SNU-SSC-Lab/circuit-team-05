@@ -28,10 +28,11 @@ jobs:
     outputs:
       result: ${{ steps.guard.outputs.result }}
     steps:
-      - name: Fetch base and PR head commits (files are read as data, never run)
+      - name: Fetch base and PR head commits into head/ (files are read as data, never run)
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          path: head
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
@@ -39,32 +40,37 @@ jobs:
           python-version: '3.12.3'
       - name: baseline-guard (guard from the workflow commit; PR read as data)
         id: guard
+        # Never the PR tree as working directory: `python` would put it first on sys.path (a PR
+        # secrets.py, json.py ... would run). Every command runs from the guard's temp folder.
+        working-directory: ${{ runner.temp }}
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           guard="$RUNNER_TEMP/baseline-guard"
+          repo="$GITHUB_WORKSPACE/head"
           mkdir -p "$guard"
+          cd "$guard"
           # Never the head's copy: the guard code comes from the commit that holds this workflow file.
-          git show "$GITHUB_SHA:scripts/asic/baseline_guard.py" > "$guard/baseline_guard.py"
-          git show "$GITHUB_SHA:scripts/asic/reliability.py" > "$guard/reliability.py"
+          git -C "$repo" show "$GITHUB_SHA:scripts/asic/baseline_guard.py" > baseline_guard.py
+          git -C "$repo" show "$GITHUB_SHA:scripts/asic/reliability.py" > reliability.py
           {
             echo "검사 코드: 워크플로 커밋 \`${GITHUB_SHA}\`의 \`baseline_guard.py\`·\`reliability.py\`. PR 코드는 실행하지 않고 파일 내용만 읽습니다."
             echo "기준 \`${BASE_SHA}\` ↔ PR head \`${HEAD_SHA}\`"
             echo ''
           } >> "$GITHUB_STEP_SUMMARY"
           status=0
-          # Run from the temp folder with -E -s: no PYTHON* variables, no user site, no PR files on sys.path.
-          (cd "$guard" && python -E -s baseline_guard.py --base "$BASE_SHA" --head "$HEAD_SHA" --root "$GITHUB_WORKSPACE") \
-            > "$guard/out.txt" || status=$?
+          # -I: isolated (no script or working folder on sys.path, no PYTHON* variables, no user site).
+          python -I -E -s "$guard/baseline_guard.py" --base "$BASE_SHA" --head "$HEAD_SHA" --root "$repo" \
+            > out.txt || status=$?
           # Messages quote PR file names and ids; pause workflow commands while printing them.
-          token="guard-$(python -c 'import secrets; print(secrets.token_hex(16))')"
+          token="guard-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
           echo "::stop-commands::${token}"
-          cat "$guard/out.txt"
+          cat out.txt
           echo "::${token}::"
           if [ "$status" -eq 0 ]; then
             result=clean
-          elif head -n 1 "$guard/out.txt" | grep -qx '# 기준 파일 확인: 실패'; then
+          elif head -n 1 out.txt | grep -qx '# 기준 파일 확인: 실패'; then
             result=violations
           else
             result=error

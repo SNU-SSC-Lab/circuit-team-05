@@ -17,6 +17,8 @@ drc_cases.py, and the golden marks those two `refused` with Calibre's reason (ex
 These fixtures are not in `drc_cases.py`: `drc_fixture_test.py` requires every fixture rule to be a KLayout
 port. When a rule is ported, move its fixtures to `drc_cases.py` and its golden entries with them.
 """
+import json
+
 import reliability
 import drc_cases_pending_c1a as c1a
 import drc_cases_pending_c1b as c1b
@@ -43,7 +45,8 @@ def records():
     """One dict per fixture: group, index (in its group), gds, deck, case, run_case_sha256, correction."""
     result, used = [], set()
     for group, module in (('C1a', c1a), ('C1b', c1b), ('C1c', c1c)):
-        group_cases, decks = module.cases(), _decks(group)
+        # JSON round trip: plain lists and dicts, so the hash and the GDS see the same shapes.
+        group_cases, decks = json.loads(json.dumps(module.cases())), _decks(group)
         for index, case in enumerate(group_cases):
             gds = reliability.fixture_name(index, case)+'.gds'
             change, why = CORRECTIONS.get((group, gds), ({}, None))

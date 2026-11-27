@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -458,6 +459,140 @@ class SourceScanTests(unittest.TestCase):
                 baseline_guard._check_cases_source(source)
 
 
+# Round-3 probes (re-review of 306fe8a), as data.
+UTF7 = b'# coding: utf-7\ndef cases():\n    return []\n#+AAo-import reliability+AAo-reliability.case+AF8-sha256 = len\n'
+UNICODE_ESCAPE = b'# coding: unicode_escape\ndef cases():\n    return []\n# \\nimport reliability\n'
+OBJTRICK = ('def cases():\n    return []\n\n\nclass Shapes(list):\n    def __iter__(self):\n        return iter([])\n\n\n'
+            'real = cases\n\n\ndef cases():\n    out = real()\n    for case in out:\n'
+            '        case["shapes"] = Shapes(case["shapes"])\n    return out\n')
+PENDEXEC = ('import math\nimport reliability\n\n\ndef cases():\n    return []\n\n\n'
+            'reliability.subprocess.run(["sh", "-c", "echo pwned"])\nreliability.sys.modules["json"] = None\n')
+PEND_SETATTR = ("import reliability\nB = reliability.sys.modules['builtins']\nold = reliability.case_sha256\n"
+                "B.setattr(reliability, 'case_sha256', lambda case: old(case))\n")
+
+
+class Round3ScanTests(unittest.TestCase):
+    def test_coding_other_than_utf8_is_rejected(self):  # UTF-7 cookie hid code from a str-based scan
+        for data in (UTF7, UNICODE_ESCAPE, b'# -*- coding: latin-1 -*-\ndef cases():\n    return []\n'):
+            with self.subTest(data=data[:30]):
+                self.assertTrue(scan(CASES_PATH, data))
+        self.assertEqual(scan(CASES_PATH, b'# coding: utf-8\ndef cases():\n    return []\n'), [])
+
+    def test_strict_rejects_classes_lambdas_scopes_private_defs_and_type(self):
+        for source in (OBJTRICK, 'def cases():\n    return list(map(lambda c: c, []))\n',
+                       'X = 1\ndef cases():\n    global X\n    return []\n', 'def _h():\n    return []\n',
+                       'def cases():\n    return [type(1)]\n', 'def cases():\n    return [[].open]\n'):
+            with self.subTest(source=source):
+                self.assertTrue(scan(CASES_PATH, source), source)
+
+    def test_pending_modules_are_reached_only_through_allowed_attributes(self):
+        for source in (PENDEXEC, PEND_SETATTR, 'import reliability\nr = reliability\n',
+                       'import drc_cases_pending_c1b as b\nx = b.reliability\n', 'import math\nx = math.pi.real\n'):
+            with self.subTest(source=source):
+                self.assertTrue(scan(PENDING_PATH, source), source)
+        ok = ('import math\nimport collections\nimport reliability\nimport drc_cases_pending_c1b as b\n'
+              'a = math.floor(1.5) + math.sqrt(4)\nc = collections.Counter()\n'
+              'h = reliability.case_sha256({})\nn = reliability.fixture_name(0, {})\nr = b.records\n'
+              'for group, module in (("g", b),):\n    module.cases()\n')
+        self.assertEqual(scan(PENDING_PATH, ok), [])
+
+    def test_pending_imports_must_be_pending_files_of_the_same_tree(self):
+        source = b'import drc_cases_pending_zz\n'
+        self.assertTrue(baseline_guard.source_problems(PENDING_PATH, source, {'drc_cases_pending_c1a'}))
+        self.assertEqual(baseline_guard.source_problems(PENDING_PATH, b'import drc_cases_pending_c1a\n',
+                                                        {'drc_cases_pending_c1a'}), [])
+
+
+def git(repo, *args, data=None):
+    done = subprocess.run(['git', '-C', str(repo), *args], input=data, capture_output=True, check=True)
+    return done.stdout.decode('utf-8').strip()
+
+
+class TreeTests(unittest.TestCase):
+    """New entries under scripts/asic that change what `import` finds are violations (git ls-tree, no checkout)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.repo = Path(cls.tmp.name)
+        git(cls.repo, 'init', '-q')
+        git(cls.repo, 'config', 'user.name', 't')
+        git(cls.repo, 'config', 'user.email', 't@t')
+        files = {CASES_PATH: (ROOT/CASES_PATH).read_bytes(), PENDING_PATH: b'import math\n',
+                 'scripts/asic/drc_cases_pending.py': b'import drc_cases_pending_c1a as c1a\n',
+                 baseline_guard.RULES: b'{"rules": []}'}
+        for path, data in files.items():
+            blob = git(cls.repo, 'hash-object', '-w', '--stdin', data=data)
+            git(cls.repo, 'update-index', '--add', '--cacheinfo', f'100644,{blob},{path}')
+        cls.base = git(cls.repo, 'commit-tree', git(cls.repo, 'write-tree'), '-m', 'base')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def head(self, *entries):
+        """Commit on top of base with extra (mode, path, bytes) entries; returns its sha."""
+        git(self.repo, 'read-tree', self.base)
+        for mode, path, data in entries:
+            blob = git(self.repo, 'hash-object', '-w', '--stdin', data=data)
+            git(self.repo, 'update-index', '--add', '--cacheinfo', f'{mode},{blob},{path}')
+        return git(self.repo, 'commit-tree', git(self.repo, 'write-tree'), '-p', self.base, '-m', 'head')
+
+    def found(self, *entries):
+        base = baseline_guard.snapshot_at(self.base, self.repo)
+        return baseline_guard.violations(base, baseline_guard.snapshot_at(self.head(*entries), self.repo))
+
+    def test_base_against_itself_is_clean(self):
+        self.assertEqual(self.found(), [])
+
+    def test_new_import_shadows_are_violations(self):
+        evil = b'import reliability\nreliability.case_sha256 = len\n'
+        for name, entries in (
+                ('symlink', [('120000', CASES_PATH, b'evil.py'), ('100644', 'scripts/asic/evil.py', evil)]),
+                ('pkgshadow', [('100644', 'scripts/asic/drc_cases/__init__.py', evil)]),
+                ('pendpkg', [('100644', 'scripts/asic/drc_cases_pending/__init__.py', evil)]),
+                ('stdlib', [('100644', 'scripts/asic/hashlib.py', b'raise SystemExit("shadow")')]),
+                ('pya', [('100644', 'scripts/asic/pya.py', b'x = 1\n')]),
+                ('pyc', [('100644', 'scripts/asic/drc_cases.cpython-312.pyc', b'\x00')]),
+                ('so', [('100644', 'scripts/asic/drc_cases.so', b'\x00')]),
+                ('pycache', [('100644', 'scripts/asic/__pycache__/x.pyc', b'\x00')]),
+                ('pendimp', [('100644', PENDING_PATH, b'import math\nimport drc_cases_pending_zz\n'),
+                             ('100644', 'scripts/asic/drc_cases_pending_zz/__init__.py', evil)])):
+            with self.subTest(name=name):
+                self.assertTrue(self.found(*entries), name)
+
+    def test_ordinary_new_helper_is_allowed(self):
+        self.assertEqual(self.found(('100644', 'scripts/asic/new_helper.py', b'x = 1\n')), [])
+
+
+class NormaliseTests(unittest.TestCase):
+    """Fixture builders see exactly what case_sha256 hashed (json round trip), so subclasses cannot lie."""
+
+    def test_fixture_test_normalises_cases(self):
+        text = (ROOT/'scripts'/'asic'/'drc_fixture_test.py').read_text(encoding='utf-8')
+        self.assertIn('json.loads(json.dumps(cases()))', text)
+
+    def test_pending_records_normalise_cases(self):
+        sys.path.insert(0, str(ROOT/'scripts'/'asic'))
+        import drc_cases_pending
+        import reliability
+
+        class Lying(list):
+            def __iter__(self):
+                return iter([])
+        real = drc_cases_pending.c1a.cases
+        with mock.patch.object(drc_cases_pending.c1a, 'cases',
+                               lambda: [dict(case, shapes=Lying(case['shapes'])) for case in real()]):
+            records = drc_cases_pending.records()
+        lying = [dict(case, shapes=Lying(case['shapes'])) for case in real()]
+        got = [r for r in records if r['group'] == 'C1a']
+        self.assertTrue(all(type(r['case']['shapes']) is list for r in got))
+        # Whatever json saw is what the record holds and what was hashed: hash and GDS builder agree.
+        for record, case in zip(got, lying):
+            self.assertEqual(list(iter(record['case']['shapes'])), json.loads(json.dumps(case['shapes'])))
+            self.assertEqual(record['run_case_sha256'], reliability.case_sha256(case))
+
+
 class DuplicateRuleTests(unittest.TestCase):
     def rules_json(self, *entries):
         return json.dumps({'rules': [{'id': rid, 'implementation': impl, 'golden_compared': gc}
@@ -522,12 +657,24 @@ class WorkflowTextTests(unittest.TestCase):
 
     def test_guard_code_comes_from_the_workflow_commit(self):
         self.assertIn('pull_request_target:', self.text)
-        self.assertIn('git show "$GITHUB_SHA:scripts/asic/baseline_guard.py"', self.text)
-        self.assertIn('git show "$GITHUB_SHA:scripts/asic/reliability.py"', self.text)
+        self.assertIn('git -C "$repo" show "$GITHUB_SHA:scripts/asic/baseline_guard.py"', self.text)
+        self.assertIn('git -C "$repo" show "$GITHUB_SHA:scripts/asic/reliability.py"', self.text)
         self.assertNotIn('python scripts/', self.text)
         self.assertNotIn('cp scripts/', self.text)
         self.assertNotIn('actions/cache', self.text)
         self.assertIn('::stop-commands::', self.text)
+
+    def test_pr_tree_is_never_the_working_directory_or_on_sys_path(self):  # round 3: secrets.py in the PR
+        self.assertIn('path: head', self.text)
+        self.assertNotIn('working-directory: head', self.text)
+        self.assertNotIn('cd "$GITHUB_WORKSPACE"', self.text)
+        for block in self.run_blocks():
+            for line in block.splitlines():
+                code = line.split('#', 1)[0]
+                if re.search(r'(^|[^\w-])python3?( |$)', code):
+                    self.assertIn('python -I -E -s', code, line)
+        self.assertIn('od -An -N16 -tx1 /dev/urandom', self.text)
+        self.assertNotIn('import secrets', self.text)
 
     def test_run_blocks_take_event_values_only_through_env(self):
         blocks = self.run_blocks()
@@ -646,7 +793,7 @@ class CliTests(unittest.TestCase):
             for name in ('baseline_guard.py', 'reliability.py'):
                 shutil.copy(ROOT/'scripts'/'asic'/name, tmp)
             env = dict(os.environ, GITHUB_STEP_SUMMARY='', PYTHONIOENCODING='utf-8')
-            done = subprocess.run([sys.executable, str(Path(tmp)/'baseline_guard.py'), '--base', 'HEAD',
+            done = subprocess.run([sys.executable, '-X', 'utf8', '-I', '-E', '-s', str(Path(tmp)/'baseline_guard.py'), '--base', 'HEAD',
                                    '--root', str(ROOT)], cwd=tmp, env=env, capture_output=True, text=True,
                                   encoding='utf-8')
         # The working tree may hold uncommitted edits; the copy must judge exactly as the module does.

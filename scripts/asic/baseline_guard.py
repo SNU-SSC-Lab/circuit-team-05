@@ -10,22 +10,24 @@ ported). Messages also say what moved backward: new or widened unverified items,
 
 Threat model: the repository is public and the workflow runs on `pull_request_target` (base branch's
 workflow file, write-capable event context) for any PR, including fork PRs. So the job must never run
-PR code. The workflow runs this file and `reliability.py` from the workflow's own commit
-(`git show "$GITHUB_SHA:scripts/asic/baseline_guard.py"` and `reliability.py` into a temp directory)
-with `--base BASE_SHA --head HEAD_SHA`. Changes to the guard, its workflows and CODEOWNERS are
+PR code. The workflow checks the head out into `$GITHUB_WORKSPACE/head` (never the working directory),
+copies this file and `reliability.py` from the workflow's own commit (`git -C head show
+"$GITHUB_SHA:scripts/asic/baseline_guard.py"`) into a temp directory and runs
+`python -I -E -s baseline_guard.py --base BASE_SHA --head HEAD_SHA --root "$GITHUB_WORKSPACE/head"` there. Changes to the guard, its workflows and CODEOWNERS are
 violations too, once base has the guard. Base without reliability files (first introduction) yields
 no violations.
 
 Fixture checks that need `drc_cases.py` evaluated (a verified rule losing or changing a golden fixture,
 a fixture added without golden, only refused fixtures left) run in `reliability.py check` inside the
-unprivileged `pull_request` job `reliability-table`. That job imports `drc_cases.py` (through
-drc_fixture_test.py) and `drc_cases_pending*.py` (check-pending) next to reliability.py, so a PR could
-rebind reliability functions there. The guard therefore scans those sources as data: `ast.parse` only,
-never compile or exec. A new or changed source with imports (pending files: only math, collections,
-reliability and drc_cases_pending*), match statements, names starting with `_` (pending files:
-dunders other than `__name__`), `_`-prefixed or frame attributes, attribute assignment or deletion,
-FORBIDDEN_NAMES, a syntax error, non-UTF-8 text or more than MAX_SOURCE_BYTES is a violation.
-Duplicate rule ids in drc-rules.json are a violation (the rule state would be ambiguous).
+unprivileged `pull_request` job `reliability-table`. That job runs PR code by design: drc_fixture_test.py
+imports `drc_cases.py`, check-pending imports `drc_cases_pending*.py`, and the DRC harness itself
+(drc_fixture_test.py, drc_geometry.py, drc_ports.py, drc.py) comes from the PR. Accepted residual risk: a
+PR that edits that harness can fake its own results there; CODEOWNERS asks 도재겸 to review those files.
+As defence in depth the guard scans the fixture sources as data (`ast.parse(bytes)` only, never compile
+or exec; see `source_problems`) and reports a new or changed source that does more than define fixtures,
+and new entries directly under scripts/asic that change what `import` finds there (folders/packages,
+symlinks, __pycache__, compiled modules, stdlib or pya names), read with `git ls-tree`. Duplicate rule ids
+in drc-rules.json are a violation (the rule state would be ambiguous).
 
 Output: names in messages come from the PR, so `_c()` escapes newlines and control characters and
 replaces backticks; the workflow also prints the report between `::stop-commands::` markers.
@@ -37,6 +39,7 @@ a timeout, after the same strict scan. The scan is defence in depth, not a sandb
 import argparse
 import ast
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -45,8 +48,11 @@ import secrets
 import subprocess
 import sys
 import tempfile
+import tokenize
 
-import reliability
+# The workflow runs `python -I` (no script folder on sys.path), so import the trusted copy next to this file.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import reliability  # noqa: E402
 
 HERE = Path(__file__).resolve().parent  # the trusted reliability.py the child imports
 ROOT = HERE.parents[1]
@@ -71,8 +77,20 @@ FORBIDDEN_NAMES = {'__import__', '__builtins__', '__name__', 'exec', 'eval', 'co
 PENDING = 'scripts/asic/drc_cases_pending'
 MAX_SOURCE_BYTES = 512*1024
 MAX_SOURCE_PROBLEMS = 10
-# drc_cases_pending*.py may import only these modules and may read __name__ (its own __main__ block).
-PENDING_IMPORTS = re.compile(r'(math|collections|reliability|drc_cases_pending(_[a-z0-9]+)?)')
+SCRIPTS = 'scripts/asic'
+# drc_cases_pending*.py may import only these modules plus the pending files of the same tree, and may
+# reach them only through these attributes (what the 2026-11-28 files use).
+PENDING_MODULES = {'math': {'floor', 'sqrt'}, 'collections': {'Counter'}, 'json': {'loads', 'dumps'},
+                   'reliability': {'case_sha256', 'fixture_name'}}
+PENDING_NAME = re.compile(r'drc_cases_pending(_[a-z0-9]+)?')  # only when the tree is unknown (unit use)
+# Attributes that would lead from a pending module object to another module.
+MODULE_ATTRS = {'reliability', 'math', 'collections', 'sys', 'os', 'subprocess', 'builtins', 'modules', 'importlib',
+                'json', 'hashlib', 'Path', 'pathlib', 'csv', 're', 'time', 'argparse', 'loader', 'spec'}
+REGULAR = {'100644', '100755'}
+# New files under scripts/asic with these names change what `import` finds for reliability.py and the
+# DRC harness (stdlib modules, KLayout's pya).
+SHADOWED = set(sys.stdlib_module_names) | {'pya', 'klayout'}
+BINARY_SUFFIXES = ('.pyc', '.pyo', '.so', '.pyd')
 # Class patterns read attributes without an ast.Attribute node (`case type(__base__=o)`); fixtures need none.
 MATCH_NODES = (ast.Match, ast.MatchValue, ast.MatchSingleton, ast.MatchSequence, ast.MatchMapping,
                ast.MatchClass, ast.MatchStar, ast.MatchAs, ast.MatchOr)
@@ -89,7 +107,7 @@ source = sys.stdin.read()
 namespace = {}
 exec(compile(source, 'scripts/asic/drc_cases.py', 'exec'), namespace)
 rows = [[reliability.fixture_name(i, c)+'.gds', c['rule'], reliability.case_sha256(c)]
-        for i, c in enumerate(namespace['cases']())]
+        for i, c in enumerate(json.loads(json.dumps(namespace['cases']())))]
 sys.stdout.write(json.dumps(rows)+'\\n'+sentinel+'\\n')
 sys.stdout.flush()
 '''
@@ -101,48 +119,70 @@ def empty():
     `fixtures`/`fixture_rules` stay None unless drc_cases.py was evaluated (--run-fixtures)."""
     return {'rules': {}, 'unverified': None, 'unverified_checks': {}, 'golden': {}, 'fixtures': None,
             'fixture_rules': None, 'golden_fixtures': {}, 'table': None, 'baseline_files': {}, 'guard_files': {},
-            'sources': {}, 'duplicate_rules': []}
+            'sources': {}, 'duplicate_rules': [], 'entries': {}}
 
 
-def _node_problem(node, strict):
+def _node_problem(node, strict, parents, aliases, pending_modules):
     """Why one AST node is not allowed in a fixture source, or None. strict: drc_cases.py rules."""
     if isinstance(node, (ast.Import, ast.ImportFrom)):
         if strict:
             return 'import 문'
-        names = [alias.name for alias in node.names]
         if isinstance(node, ast.ImportFrom):
-            if node.level or not node.module:
-                return '상대 import'
-            names = [node.module]
-        bad = [name for name in names if not PENDING_IMPORTS.fullmatch(name)]
+            return 'from … import 문'
+        bad = [alias.name for alias in node.names
+               if alias.name not in PENDING_MODULES and not (
+                   PENDING_NAME.fullmatch(alias.name) if pending_modules is None else alias.name in pending_modules)]
         return f'허용하지 않는 import {", ".join(bad)}' if bad else None
     if isinstance(node, MATCH_NODES):
         return 'match 문'
+    if strict and isinstance(node, (ast.ClassDef, ast.Lambda, ast.Global, ast.Nonlocal)):
+        return {'ClassDef': 'class 정의', 'Lambda': 'lambda', 'Global': 'global 문', 'Nonlocal': 'nonlocal 문'}[
+            type(node).__name__]
+    if strict and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('_'):
+        return f'밑줄로 시작하는 함수 이름 {node.name}'
     if isinstance(node, ast.Name):
         if strict and node.id.startswith('_') or not strict and node.id.startswith('__') and node.id != '__name__':
             return f'밑줄로 시작하는 이름 {node.id}'
-        if node.id in FORBIDDEN_NAMES and (strict or node.id != '__name__'):
+        if node.id in FORBIDDEN_NAMES and (strict or node.id != '__name__') or strict and node.id == 'type':
             return f'내부 기능 {node.id}'
+        module = aliases.get(node.id)
+        if module in PENDING_MODULES:
+            parent = parents.get(node)
+            if not (isinstance(parent, ast.Attribute) and parent.value is node and isinstance(parent.ctx, ast.Load)
+                    and parent.attr in PENDING_MODULES[module]):
+                attr = f'.{parent.attr}' if isinstance(parent, ast.Attribute) and parent.value is node else ''
+                return f'모듈 {module}{attr}은(는) 허용한 속성({", ".join(sorted(PENDING_MODULES[module]))})으로만 씁니다'
     if isinstance(node, ast.Attribute):
-        if node.attr.startswith('_') or node.attr in FRAME_ATTRS:
+        if node.attr.startswith('_') or node.attr in FRAME_ATTRS or node.attr in FORBIDDEN_NAMES:
             return f'내부 속성 .{node.attr}'
         if not isinstance(node.ctx, ast.Load):
             return f'속성 대입·삭제 .{node.attr}'
+        if not strict and (node.attr in MODULE_ATTRS or node.attr.startswith('drc_cases')):
+            return f'모듈로 이어지는 속성 .{node.attr}'
     return None
 
 
-def source_problems(relpath, data):
+def source_problems(relpath, data, pending_modules=None):
     """Korean problems of a fixture source given as bytes. Parsed with ast only: never compiled or run.
 
-    drc_cases.py (strict): no import, match, names starting with `_`, `_`/frame attributes, attribute
-    assignment or FORBIDDEN_NAMES. drc_cases_pending*.py: the same, except imports from PENDING_IMPORTS,
-    `_name` locals and reading `__name__`. Anything that cannot be read fails closed."""
+    The bytes are parsed as Python reads them (a coding cookie other than UTF-8 is rejected: UTF-7 or
+    unicode_escape can hide code from a reader of the text). drc_cases.py (strict): no import, match,
+    class, lambda, global/nonlocal, names or function names starting with `_`, `type`, `_`/frame/forbidden
+    attributes, attribute assignment or FORBIDDEN_NAMES. drc_cases_pending*.py: imports only of
+    PENDING_MODULES and the pending files of the same tree (`pending_modules`), those modules only through
+    the listed attributes, no attribute leading to a module, `_name` locals and reading `__name__` allowed.
+    Anything that cannot be read fails closed."""
     if len(data) > MAX_SOURCE_BYTES:
         return [f'파일이 너무 큽니다({len(data)}바이트, 한도 {MAX_SOURCE_BYTES}).']
     try:
-        tree = ast.parse(data.decode('utf-8'), relpath)
-    except UnicodeDecodeError:
+        data.decode('utf-8')
+        encoding, _ = tokenize.detect_encoding(io.BytesIO(data).readline)
+    except (UnicodeDecodeError, SyntaxError, LookupError):
         return ['UTF-8로 읽을 수 없습니다.']
+    if encoding not in ('utf-8', 'utf-8-sig'):
+        return [f'파일이 {encoding} 인코딩을 선언합니다. UTF-8만 받습니다.']
+    try:
+        tree = ast.parse(data, relpath)
     except SyntaxError as error:
         return [f'문법을 읽을 수 없습니다({error.lineno}번째 줄: {error.msg}).']
     except (ValueError, RecursionError, MemoryError) as error:
@@ -150,10 +190,13 @@ def source_problems(relpath, data):
     strict = relpath == CASES
     problems = []
     try:
+        parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+        aliases = {alias.asname or alias.name: alias.name for node in ast.walk(tree)
+                   if isinstance(node, ast.Import) for alias in node.names}
         for node in ast.walk(tree):
-            why = _node_problem(node, strict)
+            why = _node_problem(node, strict, parents, aliases, pending_modules)
             if why:
-                problems.append(f'{node.lineno}번째 줄: {why}')
+                problems.append(f'{getattr(node, "lineno", 0)}번째 줄: {why}')
     except RecursionError:
         return ['구조가 너무 깊어 끝까지 읽을 수 없습니다.']
     problems = sorted(set(problems), key=lambda text: (int(text.split('번째')[0]), text))
@@ -212,9 +255,9 @@ def _digest(data):
     return hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()
 
 
-def _build(read, baseline_paths, run_fixtures=False, source_paths=(CASES,)):
+def _build(read, baseline_paths, run_fixtures=False, entries=None):
     """read(relpath) -> bytes or None; baseline_paths: repo-relative files under BASELINE;
-    source_paths: drc_cases.py and drc_cases_pending*.py to scan as data.
+    entries: {name: git mode} of the direct children of scripts/asic (None: only drc_cases.py, as a file).
 
     Only bytes and JSON are read. drc_cases.py is evaluated only when run_fixtures (local use)."""
     result = empty()
@@ -229,10 +272,21 @@ def _build(read, baseline_paths, run_fixtures=False, source_paths=(CASES,)):
             ids.append(rule['id'])
             result['rules'][rule['id']] = reliability.rule_state(rule)
         result['duplicate_rules'] = sorted({rule for rule in ids if ids.count(rule) > 1})
-    for path in sorted(set(source_paths)):
+    if entries is None:
+        entries = {CASES.rsplit('/', 1)[1]: '100644'}
+    else:
+        result['entries'] = dict(entries)
+    names = [name for name in entries if name == 'drc_cases.py'
+             or name.startswith('drc_cases_pending') and name.endswith('.py')]
+    pending = {name[:-3] for name in names if name != 'drc_cases.py' and entries[name] in REGULAR}
+    for name in sorted(names):
+        path = f'{SCRIPTS}/{name}'
+        if entries[name] not in REGULAR:  # a symlink blob holds a path, a tree is a package: both hide code
+            result['sources'][path] = (f'mode:{entries[name]}', [f'일반 파일이 아닙니다(git 모드 {entries[name]}).'])
+            continue
         data = read(path)
         if data is not None:
-            result['sources'][path] = (_digest(data), source_problems(path, data))
+            result['sources'][path] = (_digest(data), source_problems(path, data, pending))
     text = read(CASES) if run_fixtures else None
     if text is not None:
         result['fixtures'], result['fixture_rules'] = fixtures_from_source(text.decode('utf-8'), result['rules'])
@@ -272,8 +326,12 @@ def snapshot(root, run_fixtures=False):
         return path.read_bytes() if path.is_file() else None
     folder = root/BASELINE
     paths = [p.relative_to(root).as_posix() for p in folder.rglob('*') if p.is_file()] if folder.is_dir() else []
-    sources = [CASES]+[p.relative_to(root).as_posix() for p in (root/PENDING).parent.glob('drc_cases_pending*.py')]
-    return _build(read, [p for p in paths if '/__pycache__/' not in p], run_fixtures, sources)
+    entries = {}
+    if (root/SCRIPTS).is_dir():  # local use; untracked __pycache__ folders are skipped
+        for child in (root/SCRIPTS).iterdir():
+            if child.name != '__pycache__':
+                entries[child.name] = '120000' if child.is_symlink() else '040000' if child.is_dir() else '100644'
+    return _build(read, [p for p in paths if '/__pycache__/' not in p], run_fixtures, entries)
 
 
 def snapshot_at(ref, root=ROOT, run_fixtures=False):
@@ -290,11 +348,13 @@ def snapshot_at(ref, root=ROOT, run_fixtures=False):
         return shown.stdout if shown.returncode == 0 else None
     listed = subprocess.run(git+['ls-tree', '-r', '-z', '--name-only', commit, '--', BASELINE],
                             check=True, capture_output=True)
-    scripts = subprocess.run(git+['ls-tree', '-z', '--name-only', commit, '--', PENDING.rsplit('/', 1)[0]+'/'],
-                             check=True, capture_output=True)
-    sources = [CASES]+[p.decode('utf-8') for p in scripts.stdout.split(b'\0')
-                       if p.decode('utf-8').startswith(PENDING) and p.decode('utf-8').endswith('.py')]
-    return _build(read, [p.decode('utf-8') for p in listed.stdout.split(b'\0') if p], run_fixtures, sources)
+    scripts = subprocess.run(git+['ls-tree', '-z', commit, '--', SCRIPTS+'/'], check=True, capture_output=True)
+    entries = {}
+    for line in scripts.stdout.split(b'\0'):
+        if line:
+            meta, path = line.split(b'\t', 1)
+            entries[path.decode('utf-8', 'replace').rsplit('/', 1)[-1]] = meta.split(b' ')[0].decode('ascii')
+    return _build(read, [p.decode('utf-8') for p in listed.stdout.split(b'\0') if p], run_fixtures, entries)
 
 
 def _evidence_problems(snap):
@@ -345,6 +405,20 @@ def violations(base, head):
     found = []
     for rule in head.get('duplicate_rules', []):
         found.append(f'규칙 `{_c(rule)}`이(가) `{RULES}`에 두 번 이상 있습니다. 어느 상태가 맞는지 정할 수 없어 통과시키지 않습니다.')
+    base_entries, head_entries = base.get('entries', {}), head.get('entries', {})
+    if base_entries:  # first introduction (no tree known for base) has nothing to compare
+        for name, mode in sorted(head_entries.items()):
+            if base_entries.get(name) == mode:
+                continue
+            stem, dot, suffix = name.rpartition('.')
+            why = ('폴더(패키지)' if mode in ('040000', '160000') else '심볼릭 링크' if mode == '120000'
+                   else '캐시 폴더' if name == '__pycache__'
+                   else '컴파일된 모듈' if name.endswith(BINARY_SUFFIXES)
+                   else '표준 라이브러리·KLayout 모듈과 같은 이름' if dot and suffix == 'py' and stem in SHADOWED
+                   else None)
+            if why:
+                found.append(f'`{SCRIPTS}/{_c(name)}`에 새 {why}이(가) 생겼습니다. 같은 폴더의 `import`가 '
+                             '다른 코드를 읽게 될 수 있어 통과시키지 않습니다.')
     base_sources = base.get('sources', {})
     for path, (digest, problems) in sorted(head.get('sources', {}).items()):
         if problems and base_sources.get(path, (None,))[0] != digest:
