@@ -11,6 +11,7 @@ import pya
 from drc_cases import cases
 from drc_geometry import check
 from drc_ports import PORTS
+import reliability
 
 def main():
     out = Path(os.environ['SSC_DRC_TEST_OUT'])
@@ -42,6 +43,7 @@ def main():
         saved.read(str(path))
         record = {k:v for k,v in case.items() if k != 'shapes'}
         record['gds'] = path.name
+        record['case_sha256'] = reliability.case_sha256(case)
         try:
             result = check(saved, saved.cell('fixture'), [case['rule']])
             value = result['rules'][case['rule']]
