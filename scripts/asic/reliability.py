@@ -285,17 +285,23 @@ def check(selftest, golden_dir, out, rules_json=RULES_JSON):
 
 # klayout_version: the KLayout that computed geometry_sha256 (hashes are only compared under it).
 MUTATION_META_KEYS = ('calibre_version', 'deck_sha256', 'corpus_tarball_sha256', 'run_date', 'klayout_version')
-MANIFEST_KEYS = ('gds', 'source', 'cell', 'variant', 'op', 'delta_um', 'layer', 'near_um')
+# Generators check-mutations can rerun; a golden's meta.generator names one of them.
+GENERATORS = ('scripts/asic/mutate.py', 'scripts/asic/mutate_v2.py')
+MUTATION_GOLDENS = 'drc-mutations-*/golden.json'
 EMPTY_REASON = 'empty top cell: the mutation removed every shape, and KLayout DRC refuses an empty top'
-MUTATION_KO = {'match': '일치', 'mismatch': '불일치', 'excluded': '제외', 'geometry_changed': '형상 다름',
-               'missing': 'GDS 없음', 'klayout_error': 'KLayout 결과 없음'}
+MUTATION_KO = {'match': '일치', 'mismatch': '불일치', 'excluded': '제외', 'not_regenerated': '이번에 만들지 않음(기준점 전용)',
+               'geometry_changed': '형상 다름', 'missing': 'GDS 없음', 'klayout_error': 'KLayout 결과 없음'}
 
 
-def import_mutations(counts_csv, manifest, geometry, meta):
+def import_mutations(counts_csv, manifest, geometry, meta, generator='scripts/asic/mutate.py', checkpoint_only=()):
     """Mutation golden: one record per corpus GDS with its geometry hash and every rule Calibre fired.
 
     counts_csv: gds, rules_fired (rule:count;...), calibre_exit, run_ms, calibre_error (one Calibre run per GDS).
-    manifest: the corpus manifest.json. geometry: `mutate.py hash` output for the exact GDS Calibre read."""
+    manifest: the corpus manifest.json. geometry: `mutate.py hash` output for the exact GDS Calibre read.
+    generator: the repository script that rebuilds the corpus. checkpoint_only: source file names (e.g. our
+    own core GDS) that CI cannot rebuild; their records are compared only when that exact source is given."""
+    if generator not in GENERATORS:
+        raise ValueError('unknown generator '+generator)
     missing = [key for key in MUTATION_META_KEYS if not meta.get(key)]
     if missing:
         raise ValueError('mutation golden meta is missing '+', '.join(missing))
@@ -320,7 +326,7 @@ def import_mutations(counts_csv, manifest, geometry, meta):
     mutations = []
     for record in manifest['records']:
         row, shape = rows[record['gds']], geometry[record['gds']]
-        entry = {key: record[key] for key in MANIFEST_KEYS if key in record}
+        entry = {key: value for key, value in record.items() if key not in ('geometry_sha256', 'polygons')}
         entry.update(geometry_sha256=shape['geometry_sha256'], polygons=shape['polygons'])
         if int(row['calibre_exit']) != 0:
             reason = row['calibre_error'].strip()
@@ -330,22 +336,37 @@ def import_mutations(counts_csv, manifest, geometry, meta):
         else:
             entry.update(calibre='ok', rules_fired=_other_rules(row['rules_fired']), refused_reason=None)
         mutations.append(entry)
-    meta = dict(meta, seed=manifest['seed'], per_cell=manifest['per_cell'],
-                sources=list(dict.fromkeys(record['source'] for record in manifest['records'])),
-                generator='scripts/asic/mutate.py', geometry_hash='mutate.geometry_sha256')
+    used = list(dict.fromkeys(record['source'] for record in manifest['records']))
+    unknown = sorted(set(checkpoint_only)-set(used))
+    if unknown:
+        raise ValueError('checkpoint-only source not in the manifest: '+', '.join(unknown))
+    extra = {key: value for key, value in manifest.items() if key not in ('records', 'generator', 'generator_sha256')}
+    meta = dict(meta, **extra)
+    meta.setdefault('sources', used)
+    if manifest.get('generator_sha256'):
+        meta['original_generator_sha256'] = manifest['generator_sha256']
+    meta.update(generator=generator, geometry_hash='mutate.geometry_sha256')
+    if checkpoint_only:
+        meta['checkpoint_only_sources'] = sorted(checkpoint_only)
     return {'meta': meta, 'mutations': mutations}
 
 
-def mutation_targets(golden, geometry):
-    """GDS that KLayout must judge: Calibre accepted it, the geometry is the golden's and not empty."""
-    return [m['gds'] for m in golden['mutations'] if m['calibre'] == 'ok' and m['gds'] in geometry
-            and geometry[m['gds']]['geometry_sha256'] == m['geometry_sha256'] and geometry[m['gds']]['polygons']]
+def mutation_targets(golden, geometry, unavailable=None):
+    """GDS that KLayout must judge: Calibre accepted it, its source was rebuilt, the geometry is the golden's
+    and not empty."""
+    unavailable = unavailable or {}
+    return [m['gds'] for m in golden['mutations'] if m['calibre'] == 'ok' and m['source'] not in unavailable
+            and m['gds'] in geometry and geometry[m['gds']]['geometry_sha256'] == m['geometry_sha256']
+            and geometry[m['gds']]['polygons']]
 
 
-def compare_mutations(golden, geometry, klayout, verified):
+def compare_mutations(golden, geometry, klayout, verified, unavailable=None):
     """Per GDS and verified rule: did KLayout fire (errors > 0) exactly when Calibre fired?
 
-    geometry: {gds: {geometry_sha256, polygons}} of the corpus checked; klayout: {gds: drc.py `rules`}."""
+    geometry: {gds: {geometry_sha256, polygons}} of the corpus checked; klayout: {gds: drc.py `rules`};
+    unavailable: {source: reason} for checkpoint-only sources not rebuilt this time. Their records are
+    `not_regenerated`: counted and listed, neither a match nor a failure."""
+    unavailable = unavailable or {}
     counts = dict(both=0, none=0, klayout_only=0, calibre_only=0)
     items, disagreements = [], []
     for record in golden['mutations']:
@@ -353,6 +374,8 @@ def compare_mutations(golden, geometry, klayout, verified):
         item = {'gds': gds, 'cell': record['cell'], 'op': record['op']}
         if record['calibre'] == 'refused':
             item.update(verdict='excluded', reason=record['refused_reason'])
+        elif record['source'] in unavailable:
+            item.update(verdict='not_regenerated', reason=unavailable[record['source']])
         elif shape is None:
             item['verdict'] = 'missing'
         elif shape['geometry_sha256'] != record['geometry_sha256']:
@@ -380,7 +403,7 @@ def compare_mutations(golden, geometry, klayout, verified):
                     disagreements.append({'gds': gds, 'rule': rule, 'klayout': ours, 'calibre': theirs})
         items.append(item)
     compared = sum(item['verdict'] in ('match', 'mismatch') for item in items)
-    failing = [item for item in items if item['verdict'] not in ('match', 'excluded')]
+    failing = [item for item in items if item['verdict'] not in ('match', 'excluded', 'not_regenerated')]
     status = 'fail' if failing or not verified or not compared else 'pass'
     return {'status': status, 'rules': list(verified), 'compared_gds': compared, 'counts': counts,
             'disagreements': disagreements, 'mutations': items}
@@ -393,7 +416,7 @@ def mutation_summary(result, meta):
              '- 기준: 변형본 GDS마다 `verified` 규칙이 위반을 냈는지(있음/없음)만 Calibre와 비교한다. '
              '마커 수는 기록만 한다.',
              f'- golden: Calibre {meta.get("calibre_version")}, deck sha256 `{meta.get("deck_sha256")}`, '
-             f'실행일 {meta.get("run_date")}, 변형본 seed {meta.get("seed")}, 셀당 {meta.get("per_cell")}개',
+             f'실행일 {meta.get("run_date")}, 변형본 생성 `{meta.get("generator")}` seed {meta.get("seed")}',
              f'- KLayout: 이번 실행 `{result.get("klayout_version")}`, golden 형상 해시를 만든 버전 '
              f'`{meta.get("klayout_version")}`',
              '', '| 구분 | 판정 수 |', '| --- | --- |']
@@ -413,6 +436,15 @@ def mutation_summary(result, meta):
                   '형상 해시가 golden과 다르거나, GDS가 없거나, KLayout 결과가 없으면 근거와 같은 입력을 '
                   '검사했다고 볼 수 없어 실패로 센다.', '']
         lines += [f'- `{m["gds"]}`: {MUTATION_KO[m["verdict"]]}' for m in broken]
+    skipped = {}
+    for m in result['mutations']:
+        if m['verdict'] == 'not_regenerated':
+            skipped.setdefault(m['reason'], []).append(m['gds'])
+    if skipped:
+        lines += ['', '## 이번에 만들지 않은 GDS (기준점 전용, 실패 아님)', '',
+                  'CI가 다시 만들 수 없는 원본(우리 RTL로 만든 코어 GDS 등)에서 나온 변형본이다. 같은 원본 파일'
+                  '(sha256 일치)을 `--core-gds`로 주면 함께 비교한다.', '']
+        lines += [f'- {len(names)}개: {reason} (`{names[0]}` ~ `{names[-1]}`)' for reason, names in skipped.items()]
     excluded = [m for m in result['mutations'] if m['verdict'] == 'excluded']
     if excluded:
         lines += ['', '## 제외된 GDS', '']
@@ -459,28 +491,97 @@ def _run_drc(gds_dir, targets, out, jobs, klayout):
         return dict(zip(targets, results))
 
 
-def check_mutations(golden_path, out, kit=None, gds_dir=None, rules_json=RULES_JSON, jobs=None, klayout='klayout'):
-    """Rebuild (or take) the mutation corpus, run KLayout DRC on it and compare with golden; 1 on any failure."""
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, 'rb') as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _rebuild(golden, corpus, kit, core_gds, klayout):
+    """Rebuild golden's corpus into corpus; returns {source: reason} for checkpoint-only sources left out."""
+    meta = golden['meta']
+    if meta['generator'] == 'scripts/asic/mutate.py':
+        import mutate
+        mutate.generate(kit, corpus, meta['seed'], meta['per_cell'], klayout)
+        return {}
+    if meta['generator'] != 'scripts/asic/mutate_v2.py':
+        raise ValueError('golden names an unknown generator: '+str(meta['generator']))
+    import mutate_v2
+    unavailable, core = {}, None
+    for source in meta.get('checkpoint_only_sources', []):
+        want = meta['sources'][source]
+        if core_gds is None:
+            unavailable[source] = f'`{source}` not given (--core-gds); checkpoint-only source'
+        elif _sha256(core_gds) != want:
+            unavailable[source] = (f'given core GDS sha256 {_sha256(core_gds)[:12]}… is not the golden '
+                                   f'`{source}` {want[:12]}… (different RTL or flow); checkpoint-only source')
+        else:
+            core = core_gds
+    manifest = mutate_v2.run_generate(kit, corpus, meta['seed'], core, klayout=klayout)
+    for source, digest in manifest['sources'].items():
+        if source in meta['sources'] and meta['sources'][source] != digest:
+            raise ValueError(f'kit source {source} sha256 {digest} is not the golden {meta["sources"][source]}')
+    return unavailable
+
+
+def check_mutations(golden_path, out, kit=None, gds_dir=None, rules_json=RULES_JSON, jobs=None, klayout='klayout',
+                    core_gds=None, version=None):
+    """Rebuild (or take) one golden's corpus, run KLayout DRC on it and compare; returns the result dict."""
     golden = json.loads(Path(golden_path).read_text(encoding='utf-8'))
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
+    unavailable = {}
     if gds_dir is None:
-        import mutate
         gds_dir = out/'gds'
-        mutate.generate(kit, gds_dir, golden['meta']['seed'], golden['meta']['per_cell'], klayout)
-    version = klayout_version(klayout)
+        unavailable = _rebuild(golden, gds_dir, kit, core_gds, klayout)
     geometry = _mutation_geometry(gds_dir, out/'geometry.json', klayout)
-    targets = mutation_targets(golden, geometry)
+    targets = mutation_targets(golden, geometry, unavailable)
     klayout_rules = _run_drc(gds_dir, targets, out/'klayout', jobs or os.cpu_count() or 1, klayout)
     verified = verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8')))
-    result = compare_mutations(golden, geometry, klayout_rules, verified)
+    result = compare_mutations(golden, geometry, klayout_rules, verified, unavailable)
     result['wall_seconds'] = round(time.monotonic()-started, 1)
     result['klayout_version'] = version
     result['golden_klayout_version'] = golden['meta'].get('klayout_version')
     (out/'result.json').write_text(json.dumps(result, indent=2, ensure_ascii=False)+'\n', encoding='utf-8', newline='\n')
     (out/'summary.md').write_text(mutation_summary(result, golden['meta']), encoding='utf-8', newline='\n')
-    return 0 if result['status'] == 'pass' else 1
+    return result
+
+
+def check_all_mutations(goldens, out, kit=None, gds_dir=None, rules_json=RULES_JSON, jobs=None, klayout='klayout',
+                        core_gds=None):
+    """Every mutation golden in turn (out/<golden folder>/); out/result.json and summary.md combine them."""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    version = klayout_version(klayout)
+    results, parts = {}, []
+    for path in goldens:
+        name = Path(path).parent.name
+        result = check_mutations(path, out/name, kit, gds_dir, rules_json, jobs, klayout, core_gds, version)
+        results[name] = result
+        parts.append((out/name/'summary.md').read_text(encoding='utf-8'))
+    status = 'pass' if results and all(r['status'] == 'pass' for r in results.values()) else 'fail'
+    combined = {'status': status, 'klayout_version': version, 'goldens': {}}
+    lines = ['# DRC 변형본 대조 요약', '', f'- 판정: **{"통과" if status == "pass" else "실패"}** (golden {len(results)}개)',
+             f'- KLayout: `{version}`', '',
+             '| golden | 판정 | 비교한 GDS | 불일치 판정 | 제외 | 기준점 전용(이번에 안 만듦) | 실패 GDS | 걸린 시간(s) |',
+             '| --- | --- | --- | --- | --- | --- | --- | --- |']
+    for name, r in results.items():
+        verdicts = {v: sum(m['verdict'] == v for m in r['mutations']) for v in MUTATION_KO}
+        failed = verdicts['geometry_changed']+verdicts['missing']+verdicts['klayout_error']
+        combined['goldens'][name] = {'status': r['status'], 'compared_gds': r['compared_gds'], 'counts': r['counts'],
+                                     'verdicts': verdicts, 'disagreements': len(r['disagreements']),
+                                     'wall_seconds': r['wall_seconds']}
+        lines.append(f'| `{name}` | {"통과" if r["status"] == "pass" else "실패"} | {r["compared_gds"]} | '
+                     f'{len(r["disagreements"])} | {verdicts["excluded"]} | {verdicts["not_regenerated"]} | {failed} | '
+                     f'{r["wall_seconds"]} |')
+    if not results:
+        lines += ['', '변형본 golden이 없어 아무것도 확인하지 않았다. 게이트는 실패로 본다.']
+    (out/'result.json').write_text(json.dumps(combined, indent=2, ensure_ascii=False)+'\n', encoding='utf-8', newline='\n')
+    (out/'summary.md').write_text('\n'.join(lines)+'\n\n'+'\n'.join(parts), encoding='utf-8', newline='\n')
+    return 0 if status == 'pass' else 1
 
 
 def _cell(text):
@@ -538,10 +639,13 @@ def main(argv=None):
     for key in META_KEYS:
         importer.add_argument('--'+key.replace('_', '-'), required=True)
     mutations = commands.add_parser('check-mutations', help='KLayout DRC on the mutation corpus against its golden')
-    mutations.add_argument('--golden', type=Path, required=True, help='drc-mutations-*/golden.json')
+    mutations.add_argument('--golden', type=Path, action='append',
+                           help='a drc-mutations-*/golden.json; repeat for more (default: every one in the repository)')
     corpus = mutations.add_mutually_exclusive_group(required=True)
-    corpus.add_argument('--kit', type=Path, help='unpacked NSPL_05CMOS_PDK_260820 folder; rebuild the corpus')
-    corpus.add_argument('--gds-dir', type=Path, help='an existing corpus folder')
+    corpus.add_argument('--kit', type=Path, help='unpacked NSPL_05CMOS_PDK_260820 folder; rebuild every corpus')
+    corpus.add_argument('--gds-dir', type=Path, help='an existing corpus folder (exactly one --golden)')
+    mutations.add_argument('--core-gds', type=Path,
+                           help='core GDS of checkpoint-only sources; compared only when its sha256 is the golden one')
     mutations.add_argument('--out', type=Path, required=True)
     mutations.add_argument('--rules', type=Path, default=RULES_JSON, help='drc-rules.json that names verified rules')
     mutations.add_argument('--jobs', type=int, help='parallel KLayout runs (default: CPU count)')
@@ -551,11 +655,18 @@ def main(argv=None):
     mutation_importer.add_argument('--manifest', type=Path, required=True, help='manifest.json of the corpus Calibre ran')
     mutation_importer.add_argument('--geometry', type=Path, required=True, help='mutate.py hash output for that corpus')
     mutation_importer.add_argument('--out', type=Path, required=True)
+    mutation_importer.add_argument('--generator', default='scripts/asic/mutate.py', choices=GENERATORS)
+    mutation_importer.add_argument('--checkpoint-only-source', action='append', default=[],
+                                   help='source file CI cannot rebuild (e.g. v_ternary8_top.gds)')
     for key in MUTATION_META_KEYS:
         mutation_importer.add_argument('--'+key.replace('_', '-'), required=True)
     args = parser.parse_args(argv)
     if args.command == 'check-mutations':
-        code = check_mutations(args.golden, args.out, args.kit, args.gds_dir, args.rules, args.jobs, args.klayout)
+        goldens = args.golden or sorted((ROOT/'verification/reliability/golden').glob(MUTATION_GOLDENS))
+        if args.gds_dir and len(goldens) != 1:
+            parser.error('--gds-dir needs exactly one --golden')
+        code = check_all_mutations(goldens, args.out, args.kit, args.gds_dir, args.rules, args.jobs, args.klayout,
+                                   args.core_gds)
         if hasattr(sys.stdout, 'reconfigure'):
             sys.stdout.reconfigure(errors='replace')
         print((args.out/'summary.md').read_text(encoding='utf-8'))
@@ -584,7 +695,8 @@ def main(argv=None):
         parser.error(f'{args.out} exists; golden files are written once and never overwritten')
     if args.command == 'import-mutations':
         golden = import_mutations(args.counts, args.manifest, args.geometry,
-                                  {key: getattr(args, key) for key in MUTATION_META_KEYS})
+                                  {key: getattr(args, key) for key in MUTATION_META_KEYS},
+                                  args.generator, args.checkpoint_only_source)
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with args.out.open('x', encoding='utf-8', newline='\n') as stream:
             stream.write(json.dumps(golden, indent=1)+'\n')

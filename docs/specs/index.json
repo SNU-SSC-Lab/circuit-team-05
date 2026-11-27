@@ -383,6 +383,7 @@
         "scripts/run_asic.py",
         "scripts/asic/drc_fixture_test.py",
         "scripts/asic/mutate.py",
+        "scripts/asic/mutate_v2.py",
         "scripts/asic/drc_geometry.py",
         "scripts/asic/drc_cases.py",
         "scripts/asic/drc_cases_pending*.py",

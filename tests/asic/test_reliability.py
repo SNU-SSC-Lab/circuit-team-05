@@ -903,5 +903,134 @@ class EvidenceSummaryTests(unittest.TestCase):
                 self.assertTrue((folder/'README.md').is_file(), folder.name)
 
 
+class WaveTwoMutationTests(unittest.TestCase):
+    """Second mutation golden: kit part rebuilt in CI, core windows checkpoint-only."""
+    GOLDEN = {'meta': dict(MUTATION_META, generator='scripts/asic/mutate_v2.py', seed=20261129,
+                           sources={'s.gds': 'k'*64, 'core.gds': 'c'*64}, checkpoint_only_sources=['core.gds']),
+              'mutations': [mutation('kit.gds', fired={'R': 1}), dict(mutation('w0.gds'), source='core.gds'),
+                            dict(mutation('w1.gds', fired={'R': 2}), source='core.gds')]}
+
+    def geometry(self, *names):
+        return {m['gds']: {'geometry_sha256': m['geometry_sha256'], 'polygons': m['polygons']}
+                for m in self.GOLDEN['mutations'] if m['gds'] in names}
+
+    def test_checkpoint_only_records_are_counted_not_compared_nor_failed(self):
+        unavailable = {'core.gds': '`core.gds` not given'}
+        self.assertEqual(reliability.mutation_targets(self.GOLDEN, self.geometry('kit.gds'), unavailable), ['kit.gds'])
+        r = reliability.compare_mutations(self.GOLDEN, self.geometry('kit.gds'), {'kit.gds': drc(R=1)}, ['R'], unavailable)
+        self.assertEqual(r['status'], 'pass')
+        self.assertEqual(r['compared_gds'], 1)
+        self.assertEqual([m['verdict'] for m in r['mutations']], ['match', 'not_regenerated', 'not_regenerated'])
+        summary = reliability.mutation_summary(r, self.GOLDEN['meta'])
+        self.assertIn('2개: `core.gds` not given', summary)
+
+    def test_core_given_is_compared_and_its_geometry_must_match(self):
+        geometry = self.geometry('kit.gds', 'w0.gds', 'w1.gds')
+        r = reliability.compare_mutations(self.GOLDEN, geometry, {g: drc(R=n) for g, n in
+                                          (('kit.gds', 1), ('w0.gds', 0), ('w1.gds', 3))}, ['R'], {})
+        self.assertEqual((r['status'], r['compared_gds']), ('pass', 3))
+        geometry['w1.gds'] = {'geometry_sha256': 'other', 'polygons': 10}
+        r = reliability.compare_mutations(self.GOLDEN, geometry, {'kit.gds': drc(R=1), 'w0.gds': drc(R=0)}, ['R'], {})
+        self.assertEqual(r['status'], 'fail')
+        self.assertEqual(r['mutations'][2]['verdict'], 'geometry_changed')
+
+    def test_import_keeps_v2_records_and_meta(self):
+        manifest = {'seed': 20261129, 'generator': 'mutate_v2.py', 'generator_sha256': 'f'*64,
+                    'sources': {'s.gds': 'k'*64, 'core.gds': 'c'*64}, 'params': {'windows': 28},
+                    'records': [{'gds': 'a.gds', 'source': 's.gds', 'cell': 'A', 'kind': 'kit_cell', 'variant': 1,
+                                 'op': 'edge_move', 'params': {'delta_um': 0.01}, 'draws': 2, 'layer': '32/0',
+                                 'shape_before_um': [[0, 0], [0, 1], [1, 1], [1, 0]], 'xor_area_um2': 0.01},
+                                {'gds': 'w.gds', 'source': 'core.gds', 'cell': 'top', 'kind': 'core_window',
+                                 'window': 'core_w00', 'window_um': [0, 0, 30, 30], 'variant': 0, 'op': 'original'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            (tmp/'counts.csv').write_text('gds,rules_fired,calibre_exit,run_ms,calibre_error\na.gds,R:1,0,1,\nw.gds,,0,1,\n')
+            (tmp/'manifest.json').write_text(json.dumps(manifest))
+            (tmp/'geometry.json').write_text(json.dumps({'a.gds': {'geometry_sha256': 'ga', 'polygons': 3},
+                                                         'w.gds': {'geometry_sha256': 'gw', 'polygons': 9}}))
+            args = (tmp/'counts.csv', tmp/'manifest.json', tmp/'geometry.json', MUTATION_META)
+            g = reliability.import_mutations(*args, 'scripts/asic/mutate_v2.py', ['core.gds'])
+            for bad in (('scripts/asic/other.py', []), ('scripts/asic/mutate_v2.py', ['missing.gds'])):
+                with self.subTest(bad=bad), self.assertRaises(ValueError):
+                    reliability.import_mutations(*args, *bad)
+        a, w = g['mutations']
+        self.assertEqual({k: a[k] for k in manifest['records'][0]}, manifest['records'][0])
+        self.assertEqual((a['geometry_sha256'], a['rules_fired']), ('ga', {'R': 1}))
+        self.assertEqual(w['window_um'], [0, 0, 30, 30])
+        meta = g['meta']
+        self.assertEqual((meta['generator'], meta['seed'], meta['sources'], meta['params']),
+                         ('scripts/asic/mutate_v2.py', 20261129, manifest['sources'], {'windows': 28}))
+        self.assertEqual(meta['original_generator_sha256'], 'f'*64)
+        self.assertEqual(meta['checkpoint_only_sources'], ['core.gds'])
+
+    def test_all_goldens_are_checked_and_combined(self):
+        one = {'meta': MUTATION_META, 'mutations': [mutation('ok.gds', fired={'R': 1})]}
+
+        def fake_check(path, out, *args):
+            Path(out).mkdir(parents=True)
+            name = Path(path).parent.name
+            fired = 0 if name == 'bad' else 1
+            r = reliability.compare_mutations(one, {'ok.gds': {'geometry_sha256': 'g-ok.gds', 'polygons': 10}},
+                                              {'ok.gds': drc(R=fired)}, ['R'])
+            r.update(wall_seconds=1.0, klayout_version='K')
+            (Path(out)/'summary.md').write_text(reliability.mutation_summary(r, one['meta']), encoding='utf-8')
+            return r
+        for names, code in ((['a', 'b'], 0), (['a', 'bad'], 1), ([], 1)):
+            with self.subTest(names=names), tempfile.TemporaryDirectory() as tmp, \
+                    mock.patch.object(reliability, 'check_mutations', side_effect=fake_check), \
+                    mock.patch.object(reliability, 'klayout_version', return_value='K'):
+                tmp = Path(tmp)
+                got = reliability.check_all_mutations([tmp/n/'golden.json' for n in names], tmp/'out')
+                result = json.loads((tmp/'out'/'result.json').read_text(encoding='utf-8'))
+                self.assertEqual(got, code)
+                self.assertEqual(sorted(result['goldens']), names)
+                summary = (tmp/'out'/'summary.md').read_text(encoding='utf-8')
+                for n in names:
+                    self.assertIn(f'| `{n}` |', summary)
+
+    def test_gds_dir_needs_one_golden(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            reliability.main(['check-mutations', '--golden', 'a/golden.json', '--golden', 'b/golden.json',
+                              '--gds-dir', 'x', '--out', 'o'])
+
+
+class WaveTwoGoldenFileTests(unittest.TestCase):
+    FOLDER = RELIABILITY/'golden'/'drc-mutations-20261128b'
+
+    def test_golden(self):
+        g = json.loads((self.FOLDER/'golden.json').read_text(encoding='utf-8'))
+        meta = g['meta']
+        self.assertEqual({k: meta[k] for k in ('calibre_version', 'deck_sha256', 'run_date', 'klayout_version')},
+                         {k: MUTATION_META[k] for k in ('calibre_version', 'deck_sha256', 'run_date', 'klayout_version')})
+        self.assertEqual(meta['corpus_tarball_sha256'], 'ecf0263db5aa2ff527d26d4a5b07b8aebb47360f5036e1e853dc8d402784d5a1')
+        self.assertEqual((meta['seed'], meta['generator']), (20261129, 'scripts/asic/mutate_v2.py'))
+        self.assertEqual(meta['sources']['v_ternary8_top.gds'],
+                         'fa6ab910b7f03fd4c966c9c19b2455fd7f26297614c1f20ccb221fed9b09ea93')
+        self.assertEqual(meta['checkpoint_only_sources'], ['v_ternary8_top.gds'])
+        m = g['mutations']
+        self.assertEqual(len(m), 800)
+        self.assertEqual(sum(x['kind'] == 'kit_cell' for x in m), 604)
+        self.assertEqual(sum(x['source'] == 'v_ternary8_top.gds' for x in m), 196)
+        self.assertEqual(sum(x['calibre'] == 'refused' for x in m), 0)
+        empty = {x['gds']: x['rules_fired'] for x in m if x['polygons'] == 0}
+        self.assertEqual(empty, {'0348-CONT-v1.gds': {'1.PWL.bad1': 1}, '0350-CONT-v3.gds': {'1.PWL.bad1': 1}})
+        self.assertTrue(all(re.fullmatch('[0-9a-f]{64}', x['geometry_sha256']) for x in m))
+
+    def test_empty_tops_are_excluded_because_calibre_fired_no_verified_rule(self):
+        g = json.loads((self.FOLDER/'golden.json').read_text(encoding='utf-8'))
+        empty = [x for x in g['mutations'] if x['polygons'] == 0]
+        verified = reliability.verified_rules(json.loads(RULES_JSON.read_text(encoding='utf-8')))
+        geometry = {x['gds']: {'geometry_sha256': x['geometry_sha256'], 'polygons': 0} for x in empty}
+        r = reliability.compare_mutations({'meta': g['meta'], 'mutations': empty}, geometry, {}, verified)
+        self.assertEqual([x['verdict'] for x in r['mutations']], ['excluded', 'excluded'])
+
+    def test_readme_without_server_details(self):
+        text = (self.FOLDER/'README.md').read_text(encoding='utf-8')
+        for needle in ('v2023.4_17.10', drc_catalog.SOURCE_SHA, 'ecf0263db5aa2ff527d26d4a5b07b8aebb47360f5036e1e853dc8d402784d5a1',
+                       '20261129', 'scripts/asic/mutate_v2.py', '--core-gds', '2026-11-28'):
+            self.assertIn(needle, text)
+        self.assertIsNone(SERVER_TRACE.search(text))
+        self.assertIsNone(SERVER_TRACE.search((self.FOLDER/'golden.json').read_text(encoding='utf-8')))
+
 if __name__ == '__main__':
     unittest.main()

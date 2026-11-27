@@ -95,6 +95,7 @@ verification/reliability/
     drc-fixtures-20261128/   Calibre 427개 결과 요약(규칙별 발동 수·마커 좌표), 입력 fixture 해시, deck 해시, 도구 버전
     drc-fixtures-20261128b/  둘러싸기 규칙 fixture 24개(0427~0450, 일부 겹침·겹침 없음·안쪽 섬·바깥 근접)의 Calibre 결과
     drc-mutations-20261128/  키트 셀 변형본 695개의 형상 해시와 Calibre 발동 규칙(81개는 Calibre 입력 거부)
+    drc-mutations-20261128b/ 2차 변형본 800개(키트 셀 604 + 코어 창 196, 모두 Calibre 검사)
     chip-v2-20261128/        v2 칩 GDS 해시, Calibre DRC/ANT/LVS 요약, Genus/Innovus/Tempus 요약
   CHECKPOINT.md         상용 재실행 절차
 ```
@@ -116,6 +117,7 @@ DRC 규칙 판정 칸의 기준은 Calibre `v2023.4_17.10`, 키트 DRC deck sha2
 - **DRC fixture 대조의 게이트 기준은 대상 규칙의 발동 여부(위반 있음/없음)뿐이다.** 마커 수·좌표와 대상 밖 규칙 발동(Calibre에서 50개 규칙)은 golden에 기록하고 리포트로만 보여 준다. 이미 0242(KLayout 4 · Calibre 1)와 0408(1 · 2)이 수에서 다르고, 대상 밖 발동은 아직 대조한 적이 없기 때문이다. 대상 밖 발동 중 KLayout 구현 규칙에 해당하는 것은 다음 기준점에서 대조한 뒤 게이트로 올린다. (구현자 판단)
 - golden은 **fixture 파일 내용 해시**로 묶는다. 생성기가 바뀌어 fixture 해시가 달라지면 그 fixture는 golden이 없는 것으로 본다(3절의 규칙 상태로 처리). (구현자 판단)
 - **실제 형상 변형본 golden**(`drc-mutations-20261128/`): 키트 표준셀·GPIO 셀의 도형 하나를 옮기기·키우기·줄이기·지우기로 바꾼 GDS 695개를 Calibre로 GDS마다 한 번씩 검사한 결과다. `scripts/asic/mutate.py`(seed 20261128, 셀당 6개)가 같은 형상을 다시 만들고, golden은 GDS 바이트 대신 **형상 해시**(층별 다각형 좌표의 sha256)로 묶는다. `reliability.py check-mutations`는 형상 해시가 golden과 같은 GDS마다 `verified` 규칙의 발동 여부를 Calibre와 비교하고, 하나라도 다르거나 형상 해시가 다르면 실패한다. Calibre가 거부한 81개(자기 교차 다각형)와 최상위 셀이 빈 5개는 사유가 붙은 제외다. 첫 대조에서 `ENC … OVERLAP`(둘러싸는 층에 일부만 겹친 도형도 위반)을 KLayout 구현이 놓친 13건이 나와 같은 작업에서 고쳤다. 고친 판정은 "안쪽 도형의 변이 둘러싸는 층 경계를 가로지른다(변의 일부는 안, 일부는 밖)"이며, 둘러싸는 층 도형이 안쪽 도형 안에 통째로 있거나 바깥에 가까이 있는 경우는 위반이 아니라는 것을 fixture `0427`~`0450`의 Calibre 결과(`drc-fixtures-20261128b/`)로 확인했다. (구현자 판단)
+- **2차 변형본 golden**(`drc-mutations-20261128b/`): `scripts/asic/mutate_v2.py`(seed 20261129)가 키트 셀과 오픈소스 흐름 코어 GDS의 30×30 µm 창을 한 번씩 고친 800개다(병합 의미로 편집해 Calibre 거부 0). 코어 GDS는 우리 RTL로 만든 결과라 저장소에 없고 RTL이 바뀌면 달라지므로, CI는 키트 셀 604개만 다시 만들어 비교하고 코어 창 196개는 `not_regenerated`(기준점 전용)로 수와 이유만 적는다. 같은 코어 GDS(sha256 일치)를 `--core-gds`로 주면 창도 비교한다. 일치로도 실패로도 세지 않는 것은 이 경우뿐이다. (구현자 판단)
 - 대응표 칸의 판정은 "일치 / 불일치 / 근거 없음(미검증)" 세 가지다. 수치 비교(타이밍 차이 등)는 기록만 하고, 허용 오차는 팀이 정할 때까지 게이트 조건으로 쓰지 않는다. 허용 오차를 근거 없이 정하면 조용한 기준 완화와 같아지기 때문이다. (구현자 판단)
 
 ### 3. 미검증 목록과 DRC 규칙 상태
@@ -192,7 +194,7 @@ flowchart TD
 + # PR마다: 게이트 실행
 + python scripts/run_asic.py --pdk NSPL키트경로 --target chip --out 새폴더 --gate          # 미검증 목록 항목만 미실행 허용
 + python scripts/asic/reliability.py check --selftest selftest.json --golden verification/reliability/golden --out 새폴더  # 아래 fixture golden 전부
-+ python scripts/asic/reliability.py check-mutations --golden verification/reliability/golden/drc-mutations-20261128/golden.json --kit NSPL키트경로 --out 새폴더
++ python scripts/asic/reliability.py check-mutations --kit NSPL키트경로 --out 새폴더  # golden/drc-mutations-*/ 전부, 코어 창은 --core-gds 줄 때만
 + python scripts/asic/baseline_guard.py --base origin/main
 ```
 
@@ -205,6 +207,7 @@ flowchart TD
 | `scripts/asic/reliability.py` | fixture 정의 해시, Calibre 결과 요약을 golden으로 가져오기, KLayout 판정과 golden 대조, 규칙 상태 계산, 대응표 `table.md` 생성 |
 | `scripts/asic/drc_fixture_test.py` | fixture 결과 기록에 fixture 정의 해시를 함께 남김 |
 | `scripts/asic/mutate.py` | 키트 셀 변형본 생성(seed 고정)과 형상 해시 |
+| `scripts/asic/mutate_v2.py` | 2차 변형본 생성(키트 셀 + 선택적으로 코어 창, seed 고정)과 형상 검사 |
 | `scripts/asic/drc_geometry.py`, `scripts/asic/drc_cases.py` | 둘러싸기 규칙에 deck의 `ENC … OVERLAP` 의미(일부만 겹친 도형도 위반) 추가, 일부 겹침·겹침 없음 fixture 추가 |
 | `scripts/asic/baseline_guard.py` | 기준 브랜치와 PR의 규칙 상태·미검증 목록·golden을 비교해 뒤로 가는 변경을 실패시킴 |
 | `scripts/asic/flow.py`, `scripts/run_asic.py` | 지금 코드에 고정된 미확인 허용 목록(`flow.UNQUALIFIED`)을 `unverified.json`에서 읽고 게이트 실행 옵션 추가. `--experimental`은 유지 |
