@@ -3,6 +3,8 @@ import contextlib
 import io
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -16,7 +18,7 @@ LAST_LINE = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에�
 
 
 def snap(rules=None, unverified=(), golden=None, fixtures=None, rule='B', golden_fixtures=None,
-         table=None, unverified_checks=None):
+         table=None, unverified_checks=None, files=None, guard=None):
     """Snapshot for tests; every fixture belongs to `rule` unless fixtures map gds -> (rule, hash)."""
     fixtures = fixtures or {}
     pairs = {gds: (v if isinstance(v, tuple) else (rule, v)) for gds, v in fixtures.items()}
@@ -28,7 +30,9 @@ def snap(rules=None, unverified=(), golden=None, fixtures=None, rule='B', golden
             'fixture_rules': {gds: owner for gds, (owner, _) in pairs.items()},
             'golden_fixtures': {digest: dict(zip(('gds', 'rule', 'calibre'), entry))
                                 for digest, entry in (golden_fixtures or {}).items()},
-            'table': table}
+            'table': table,
+            'baseline_files': dict(files or {}),
+            'guard_files': dict(guard or {})}
 
 
 # Golden fixtures of verified rule B: one fired, one clean.
@@ -70,6 +74,16 @@ class RuleStateTests(unittest.TestCase):
         found = baseline_guard.violations(base, head)
         self.assertTrue(found and all('`C`' in v for v in found), found)
 
+    def test_promotion_with_golden_needs_bypass(self):  # CI cannot tell real Calibre output from a hand-written one
+        base = backed(rules={'B': 'verified', 'C': 'ported'})
+        head = backed(rules={'B': 'verified', 'C': 'verified'},
+                      fixtures={'x.gds': 'h1', 'y.gds': 'h2', 'c.gds': ('C', 'h9')},
+                      golden_fixtures=dict(BACKED['golden_fixtures'], h9=('c.gds', 'C', 'fired')))
+        found = baseline_guard.violations(base, head)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('`C`', found[0])
+        self.assertIn('verified', found[0])
+
 
 class FixtureTests(unittest.TestCase):
     def test_backed_snapshot_is_clean(self):
@@ -92,12 +106,14 @@ class FixtureTests(unittest.TestCase):
         self.assertIn('`z.gds`', found[0])
         self.assertIn('`B`', found[0])
 
-    def test_fixture_added_with_new_golden_passes(self):
+    def test_fixture_added_with_new_golden_needs_bypass(self):
         new = 'verification/reliability/golden/g2/golden.json'
         head = backed(fixtures={'x.gds': 'h1', 'y.gds': 'h2', 'z.gds': 'h9'},
                       golden=dict(BACKED['golden'], **{new: 's9'}),
                       golden_fixtures=dict(BACKED['golden_fixtures'], h9=('z.gds', 'B', 'fired')))
-        self.assertEqual(baseline_guard.violations(backed(), head), [])
+        found = baseline_guard.violations(backed(), head)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn(f'`{new}`', found[0])
 
     def test_golden_of_another_rule_does_not_back(self):
         head = backed(golden_fixtures={'h1': ('x.gds', 'B', 'fired'), 'h2': ('y.gds', 'OTHER', 'clean')})
@@ -138,9 +154,18 @@ class GoldenTests(unittest.TestCase):
         self.assertEqual(len(found), 1, found)
         self.assertIn('`g.json`', found[0])
 
-    def test_golden_add_passes(self):
-        self.assertEqual(baseline_guard.violations(snap(golden={'g.json': 's1'}),
-                                                   snap(golden={'g.json': 's1', 'h.json': 's2'})), [])
+    def test_golden_add_needs_bypass(self):
+        found = baseline_guard.violations(snap(golden={'g.json': 's1'}), snap(golden={'g.json': 's1', 'h.json': 's2'}))
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('`h.json`', found[0])
+
+    def test_every_reliability_file_change_is_listed(self):
+        base = snap(files={'t.md': 'a', 'c.md': 'b', 'old.md': 'c'})
+        head = snap(files={'t.md': 'a', 'c.md': 'B', 'new.md': 'd'})
+        found = baseline_guard.violations(base, head)
+        self.assertEqual(len(found), 3, found)
+        for path in ('`c.md`', '`old.md`', '`new.md`'):
+            self.assertTrue(any(path in v for v in found), (path, found))
 
 
 class UnverifiedTests(unittest.TestCase):
@@ -149,12 +174,14 @@ class UnverifiedTests(unittest.TestCase):
         self.assertEqual(len(found), 1, found)
         self.assertIn('`new`', found[0])
 
-    def test_removed_item_needs_evidence(self):
+    def test_removed_item_fails_even_with_new_golden(self):
         found = baseline_guard.violations(snap(unverified={'pex'}), snap(unverified=set()))
         self.assertEqual(len(found), 1, found)
         self.assertIn('`pex`', found[0])
         head = snap(unverified=set(), golden={'verification/reliability/golden/pex/summary.json': 's'})
-        self.assertEqual(baseline_guard.violations(snap(unverified={'pex'}), head), [])
+        found = baseline_guard.violations(snap(unverified={'pex'}), head)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('`pex`', found[0])
 
     def test_wider_allows_checks_fails(self):
         base = snap(unverified={'pex'}, unverified_checks={'pex': ('asic-pex',)})
@@ -167,6 +194,10 @@ class UnverifiedTests(unittest.TestCase):
         base = snap(unverified=None)
         head = snap(unverified={'pex'}, golden={'g.json': 's'}, table={'pex': 'no_evidence', 'drc': 'match'})
         self.assertEqual(baseline_guard.violations(base, head), [])
+        # 303bcb6: drc-rules.json existed with every implemented rule ported, before any golden or guard.
+        base = snap(rules={'B': 'ported'}, unverified=None, guard={'.github/workflows/asic.yml': 'a'})
+        head = backed(table={'drc': 'match'}, guard={'.github/workflows/asic.yml': 'b'})
+        self.assertEqual(baseline_guard.violations(base, head), [])
 
 
 class TableTests(unittest.TestCase):
@@ -176,17 +207,42 @@ class TableTests(unittest.TestCase):
             self.assertEqual(len(found), 1, found)
             self.assertIn('`lvs`', found[0])
 
-    def test_new_match_needs_new_golden(self):
+    def test_new_match_fails_even_with_new_golden(self):
         found = baseline_guard.violations(snap(table={'pex': 'no_evidence'}), snap(table={'pex': 'match'}))
         self.assertEqual(len(found), 1, found)
         self.assertIn('`pex`', found[0])
         head = snap(table={'pex': 'match'}, golden={'verification/reliability/golden/pex/summary.json': 's'})
-        self.assertEqual(baseline_guard.violations(snap(table={'pex': 'no_evidence'}), head), [])
+        found = baseline_guard.violations(snap(table={'pex': 'no_evidence'}), head)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('`pex`', found[0])
 
     def test_removed_row_fails(self):
         found = baseline_guard.violations(snap(table={'lvs': 'no_evidence'}), snap(table={}))
         self.assertEqual(len(found), 1, found)
         self.assertIn('`lvs`', found[0])
+
+
+class GuardFileTests(unittest.TestCase):
+    GUARD = 'scripts/asic/baseline_guard.py'
+
+    def test_guard_edit_or_delete_fails(self):
+        base = snap(guard={self.GUARD: 'a', 'scripts/asic/reliability.py': 'r'})
+        for head in (snap(guard={self.GUARD: 'b', 'scripts/asic/reliability.py': 'r'}),
+                     snap(guard={self.GUARD: 'a'})):
+            found = baseline_guard.violations(base, head)
+            self.assertEqual(len(found), 1, found)
+        self.assertIn('`scripts/asic/reliability.py`', found[0])
+
+    def test_workflow_edit_fails_once_the_guard_exists(self):
+        base = snap(guard={self.GUARD: 'a', '.github/workflows/asic.yml': 'w'})
+        found = baseline_guard.violations(base, snap(guard={self.GUARD: 'a', '.github/workflows/asic.yml': 'W'}))
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('`.github/workflows/asic.yml`', found[0])
+
+    def test_new_guard_file_passes(self):
+        base = snap(guard={self.GUARD: 'a'})
+        head = snap(guard={self.GUARD: 'a', '.github/workflows/baseline.yml': 'w'})
+        self.assertEqual(baseline_guard.violations(base, head), [])
 
 
 class SnapshotTests(unittest.TestCase):
@@ -200,6 +256,10 @@ class SnapshotTests(unittest.TestCase):
         self.assertIn('verification/reliability/golden/drc-fixtures-20261128/golden.json', head['golden'])
         self.assertIn('pex', head['unverified'])
         self.assertEqual(head['table']['drc-fixtures'], 'match')
+        self.assertIn('verification/reliability/table.md', head['baseline_files'])
+        self.assertIn('verification/reliability/golden/drc-fixtures-20261128/golden.json', head['baseline_files'])
+        self.assertIn('scripts/asic/baseline_guard.py', head['guard_files'])
+        self.assertIn('scripts/asic/reliability.py', head['guard_files'])
         self.assertEqual(baseline_guard.violations(head, head), [])
 
     def test_first_introduction_against_working_tree(self):
@@ -218,6 +278,14 @@ class SnapshotTests(unittest.TestCase):
         self.assertEqual(list(fixtures), ['0000-B-a_b.gds'])
         self.assertEqual(owners, {'0000-B-a_b.gds': 'B'})
         self.assertNotIn('cases', vars(baseline_guard))
+
+    def test_cases_with_import_fail_closed(self):
+        for source in ('import os\ndef cases():\n    return []\n',
+                       'from os import path\ndef cases():\n    return []\n',
+                       'def cases():\n    __import__("os")\n    return []\n',
+                       'def cases():\n    return [().__class__]\n'):
+            with self.assertRaisesRegex(ValueError, 'drc_cases.py'):
+                baseline_guard.fixtures_from_source(source, {})
 
 
 class CliTests(unittest.TestCase):
@@ -246,10 +314,32 @@ class CliTests(unittest.TestCase):
         self.assertNotIn(LAST_LINE, text)
         self.assertIn('origin/main', summary)
 
-    def test_self_compare_against_head(self):
+    def test_snapshot_error_fails_closed(self):
         out = io.StringIO()
-        with mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
-            self.assertEqual(baseline_guard.main(['--base', 'HEAD']), 0)
+        with mock.patch.object(baseline_guard, 'snapshot_at', side_effect=ValueError('가짜 오류')), \
+             mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+            self.assertEqual(baseline_guard.main(['--base', 'origin/main']), 1)
+        self.assertIn('가짜 오류', out.getvalue())
+
+    def test_runs_from_a_copy_with_root(self):  # Task 7 runs the base ref's guard from a temp directory
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ('baseline_guard.py', 'reliability.py'):
+                shutil.copy(ROOT/'scripts'/'asic'/name, tmp)
+            env = dict(os.environ, GITHUB_STEP_SUMMARY='', PYTHONIOENCODING='utf-8')
+            done = subprocess.run([sys.executable, str(Path(tmp)/'baseline_guard.py'), '--base', 'HEAD',
+                                   '--root', str(ROOT)], cwd=tmp, env=env, capture_output=True, text=True,
+                                  encoding='utf-8')
+        # The working tree may hold uncommitted edits; the copy must judge exactly as the module does.
+        expected = baseline_guard.violations(baseline_guard.snapshot_at('HEAD', ROOT), baseline_guard.snapshot(ROOT))
+        self.assertEqual(done.returncode, 1 if expected else 0, done.stdout+done.stderr)
+        self.assertEqual(done.stdout, baseline_guard.report('HEAD', expected))
+
+    def test_self_compare_against_head(self):
+        at = baseline_guard.snapshot_at('HEAD', ROOT)
+        out = io.StringIO()
+        with mock.patch.object(baseline_guard, 'snapshot', return_value=at), \
+             mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+            self.assertEqual(baseline_guard.main(['--base', 'HEAD']), 0, out.getvalue())
 
 
 if __name__ == '__main__':
