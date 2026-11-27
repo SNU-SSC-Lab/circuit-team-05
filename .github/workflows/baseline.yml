@@ -57,7 +57,11 @@ jobs:
           # Run from the temp folder with -E -s: no PYTHON* variables, no user site, no PR files on sys.path.
           (cd "$guard" && python -E -s baseline_guard.py --base "$BASE_SHA" --head "$HEAD_SHA" --root "$GITHUB_WORKSPACE") \
             > "$guard/out.txt" || status=$?
+          # Messages quote PR file names and ids; pause workflow commands while printing them.
+          token="guard-$(python -c 'import secrets; print(secrets.token_hex(16))')"
+          echo "::stop-commands::${token}"
           cat "$guard/out.txt"
+          echo "::${token}::"
           if [ "$status" -eq 0 ]; then
             result=clean
           elif head -n 1 "$guard/out.txt" | grep -qx '# 기준 파일 확인: 실패'; then

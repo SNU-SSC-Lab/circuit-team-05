@@ -1,6 +1,7 @@
 """Baseline guard: verification baselines only move forward (SPEC 0019)."""
 import contextlib
 import io
+import json
 import os
 from pathlib import Path
 import shutil
@@ -337,12 +338,18 @@ class DataOnlyTests(unittest.TestCase):
             marker = Path(away)/'marker'
             self.head_root(tmp, marker)
             out = io.StringIO()
-            with mock.patch.object(baseline_guard, '_check_cases_source'),                  mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()),                  mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+            with mock.patch.object(baseline_guard, '_check_cases_source'), \
+                    mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()), \
+                    mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
                 code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
-            self.assertEqual(code, 0, out.getvalue())
+            # The AST scan (no exec) reports `open` as a violation; the file itself never ran.
+            self.assertEqual(code, 1, out.getvalue())
+            self.assertIn('`scripts/asic/drc_cases.py`', out.getvalue())
             self.assertFalse(marker.exists())
             # The same head file does run when fixtures are asked for, so the marker would have shown it.
-            with mock.patch.object(baseline_guard, '_check_cases_source'),                  mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()),                  mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(io.StringIO()):
+            with mock.patch.object(baseline_guard, '_check_cases_source'), \
+                    mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()), \
+                    mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(io.StringIO()):
                 baseline_guard.main(['--base', 'origin/main', '--root', tmp, '--run-fixtures'])
             self.assertTrue(marker.exists())
 
@@ -373,6 +380,160 @@ class DataOnlyTests(unittest.TestCase):
 
     def test_codeowners_is_a_guard_file(self):
         self.assertIn('.github/CODEOWNERS', baseline_guard.GUARD)
+
+LOADER = ("def cases():\n    p = __loader__.load_module('posix')\n"
+          "    return [{'rule': 'LEAK', 'label': str(p.getpid())}]\n")
+# Review probe `casesonly`: a head drc_cases.py that rebinds reliability.case_sha256 for drc_fixture_test.py.
+CASESONLY = "def cases():\n    return []\nimport reliability as _r\n_o = _r.case_sha256\n_r.case_sha256 = lambda c: _o(c)\n"
+CASES_PATH = 'scripts/asic/drc_cases.py'
+PENDING_PATH = 'scripts/asic/drc_cases_pending_c1a.py'
+
+
+def scan(path, text):
+    return baseline_guard.source_problems(path, text.encode('utf-8') if isinstance(text, str) else text)
+
+
+class SourceScanTests(unittest.TestCase):
+    """Fixture sources are parsed with ast only (never compiled or run) and judged as data (fix round 2)."""
+
+    def test_repository_sources_are_clean(self):
+        for path in [CASES_PATH] + sorted(p.relative_to(ROOT).as_posix()
+                                          for p in (ROOT/'scripts'/'asic').glob('drc_cases_pending*.py')):
+            with self.subTest(path=path):
+                self.assertEqual(scan(path, (ROOT/path).read_bytes()), [])
+
+    def test_casesonly_probe_is_reported(self):
+        found = scan(CASES_PATH, CASESONLY)
+        self.assertTrue(found)
+        self.assertTrue(any('import' in why for why in found), found)
+
+    def test_strict_rules_for_drc_cases(self):
+        for source in ('import math\ndef cases():\n    return []\n', LOADER, MATCH_ESCAPE,
+                       'def cases():\n    _x = 1\n    return []\n', 'def cases():\n    return [().__class__]\n',
+                       'def cases():\n    setattr(1, "a", 2)\n    return []\n', 'x = [1]\nx.y = 2\n',
+                       'def cases():\n    return open("f")\n'):
+            with self.subTest(source=source):
+                self.assertTrue(scan(CASES_PATH, source), source)
+
+    def test_pending_rules_allow_known_imports_only(self):
+        self.assertEqual(scan(PENDING_PATH, 'import math\nimport reliability\nimport drc_cases_pending_c1b as b\n'
+                                            '_n = 1\nif __name__ == "__main__":\n    import collections\n'), [])
+        for source in ('import os\n', 'from os import path\n', 'from . import x\n', LOADER,
+                       'import reliability\nreliability.case_sha256 = len\n',
+                       'import reliability\ndel reliability.case_sha256\n', 'x = vars()\n'):
+            with self.subTest(source=source):
+                self.assertTrue(scan(PENDING_PATH, source), source)
+
+    def test_unreadable_sources_fail_closed(self):
+        for data in (b'def cases(:\n', b'\xff\xfe', b'x = ' + b'(' * 5000 + b')' * 5000 + b'\n',
+                     b'x = 1\n' * 200000, b'x = 1\x00\n'):
+            with self.subTest(data=data[:20]):
+                self.assertTrue(scan(CASES_PATH, data))
+
+    def test_changed_source_is_a_violation_unchanged_is_not(self):
+        bad = {CASES_PATH: ('d1', ['3번째 줄: import']), PENDING_PATH: ('d2', [])}
+        base = dict(snap(), sources=dict(bad))
+        self.assertEqual(baseline_guard.violations(base, dict(snap(), sources=dict(bad))), [])
+        head = dict(snap(), sources={CASES_PATH: ('d9', ['3번째 줄: import']), PENDING_PATH: ('d2', [])})
+        found = baseline_guard.violations(base, head)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn(f'`{CASES_PATH}`', found[0])
+
+    def test_casesonly_head_is_reported_without_running_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for relpath, text in ((CASES_PATH, CASESONLY), (baseline_guard.RULES, '{"rules": []}')):
+                (Path(tmp)/relpath).parent.mkdir(parents=True, exist_ok=True)
+                (Path(tmp)/relpath).write_text(text, encoding='utf-8')
+            out = io.StringIO()
+            with mock.patch.object(baseline_guard, '_run_cases', side_effect=AssertionError('ran PR code')), \
+                    mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()), \
+                    mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+                code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
+        self.assertEqual(code, 1, out.getvalue())
+        self.assertIn(f'`{CASES_PATH}`', out.getvalue())
+
+    def test_exec_path_rejects_every_underscore_name(self):  # review PoC: __loader__.load_module('posix')
+        for source in (LOADER, 'def cases():\n    _x = []\n    return _x\n'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'drc_cases.py'):
+                baseline_guard._check_cases_source(source)
+
+
+class DuplicateRuleTests(unittest.TestCase):
+    def rules_json(self, *entries):
+        return json.dumps({'rules': [{'id': rid, 'implementation': impl, 'golden_compared': gc}
+                                     for rid, impl, gc in entries]}).encode('utf-8')
+
+    def test_duplicate_rule_id_is_a_violation(self):  # review probe `dupid`
+        data = self.rules_json(('A', 'unported', False), ('B', 'geometry_port', True), ('A', 'geometry_port', True))
+        files = {baseline_guard.RULES: data}
+        head = baseline_guard._build(lambda rel: files.get(rel), [])
+        found = baseline_guard.violations(baseline_guard.empty(), head)
+        self.assertTrue(any('`A`' in v and '두 번' in v for v in found), found)
+
+    def test_reliability_rejects_duplicate_ids(self):
+        sys.path.insert(0, str(ROOT/'scripts'/'asic'))
+        import reliability
+        catalog = json.loads(self.rules_json(('A', 'geometry_port', True), ('A', 'unported', False)))
+        with self.assertRaisesRegex(ValueError, 'A'):
+            reliability.verified_rules(catalog)
+
+
+class OutputTests(unittest.TestCase):
+    """Names come from the PR; they must not start workflow commands or break the report (fix round 2)."""
+
+    def test_newlines_and_backticks_in_names_are_escaped(self):
+        path = 'verification/reliability/a\n::set-output name=result::clean\n::error::x`y'
+        found = baseline_guard.violations(snap(golden={'verification/reliability/golden/g/golden.json': 's'}),
+                                          snap(golden={'verification/reliability/golden/g/golden.json': 's'},
+                                               files={path: 'h'}))
+        text = baseline_guard.report('base', found)
+        self.assertTrue(found)
+        self.assertFalse([line for line in text.splitlines() if line.lstrip().startswith('::')], text)
+        self.assertNotIn('x`y', text)
+        item = 'z\n::set-output name=result::clean'
+        found = baseline_guard.violations(snap(unverified=['a']), snap(unverified=['a', item]))
+        self.assertTrue(found)
+        self.assertNotIn('\n', ''.join(found))
+
+
+class WorkflowTextTests(unittest.TestCase):
+    """baseline.yml (pull_request_target) must never run PR code; pin the parts that guarantee it."""
+
+    def setUp(self):
+        self.text = (ROOT/'.github'/'workflows'/'baseline.yml').read_text(encoding='utf-8')
+
+    def run_blocks(self):
+        blocks, current, indent = [], None, None
+        for line in self.text.splitlines():
+            stripped = line.lstrip()
+            if current is not None:
+                if stripped and len(line) - len(stripped) <= indent:
+                    blocks.append('\n'.join(current))
+                    current = None
+                else:
+                    current.append(line)
+                    continue
+            if stripped.startswith('run:'):
+                indent = len(line) - len(stripped)
+                current = [stripped[4:]]
+        if current is not None:
+            blocks.append('\n'.join(current))
+        return blocks
+
+    def test_guard_code_comes_from_the_workflow_commit(self):
+        self.assertIn('pull_request_target:', self.text)
+        self.assertIn('git show "$GITHUB_SHA:scripts/asic/baseline_guard.py"', self.text)
+        self.assertIn('git show "$GITHUB_SHA:scripts/asic/reliability.py"', self.text)
+        self.assertNotIn('python scripts/', self.text)
+        self.assertNotIn('cp scripts/', self.text)
+        self.assertNotIn('actions/cache', self.text)
+        self.assertIn('::stop-commands::', self.text)
+
+    def test_run_blocks_take_event_values_only_through_env(self):
+        blocks = self.run_blocks()
+        self.assertGreaterEqual(len(blocks), 2)
+        for block in blocks:
+            self.assertNotIn('${{', block)
 
 
 class CliTests(unittest.TestCase):

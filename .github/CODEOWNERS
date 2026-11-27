@@ -7,3 +7,7 @@ scripts/asic/reliability.py @Dojaegyum
 .github/workflows/** @Dojaegyum
 verification/asic/drc-rules.json @Dojaegyum
 .github/CODEOWNERS @Dojaegyum
+scripts/asic/drc_cases.py @Dojaegyum
+scripts/asic/drc_cases_pending*.py @Dojaegyum
+scripts/asic/drc_fixture_test.py @Dojaegyum
+scripts/asic/drc_selftest.py @Dojaegyum

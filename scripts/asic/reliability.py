@@ -32,7 +32,17 @@ def state_counts(catalog, ids=None):
     return {state: states.count(state) for state in ('unported', 'ported', 'verified')}
 
 
+def rule_ids(catalog):
+    """Rule ids of drc-rules.json; a duplicated id makes the rule state ambiguous, so it is an error."""
+    ids = [rule['id'] for rule in catalog['rules']]
+    duplicated = sorted({rule for rule in ids if ids.count(rule) > 1})
+    if duplicated:
+        raise ValueError('drc-rules.json lists a rule id more than once: '+', '.join(duplicated))
+    return ids
+
+
 def verified_rules(catalog):
+    rule_ids(catalog)
     return sorted(rule['id'] for rule in catalog['rules'] if rule_state(rule) == 'verified')
 
 

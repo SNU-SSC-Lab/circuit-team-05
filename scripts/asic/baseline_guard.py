@@ -18,11 +18,21 @@ no violations.
 
 Fixture checks that need `drc_cases.py` evaluated (a verified rule losing or changing a golden fixture,
 a fixture added without golden, only refused fixtures left) run in `reliability.py check` inside the
-unprivileged `pull_request` job `reliability-table`. `--run-fixtures` (local use only, never on
-untrusted code) also evaluates both refs' `drc_cases.py` here: in a separate `python -I` child process
-with a temp working directory, an empty environment and a timeout, behind an AST check (no imports,
-escape names, `_`-prefixed or frame attributes, or match statements). Known limit of that local mode:
-the AST check is defence in depth, not a sandbox.
+unprivileged `pull_request` job `reliability-table`. That job imports `drc_cases.py` (through
+drc_fixture_test.py) and `drc_cases_pending*.py` (check-pending) next to reliability.py, so a PR could
+rebind reliability functions there. The guard therefore scans those sources as data: `ast.parse` only,
+never compile or exec. A new or changed source with imports (pending files: only math, collections,
+reliability and drc_cases_pending*), match statements, names starting with `_` (pending files:
+dunders other than `__name__`), `_`-prefixed or frame attributes, attribute assignment or deletion,
+FORBIDDEN_NAMES, a syntax error, non-UTF-8 text or more than MAX_SOURCE_BYTES is a violation.
+Duplicate rule ids in drc-rules.json are a violation (the rule state would be ambiguous).
+
+Output: names in messages come from the PR, so `_c()` escapes newlines and control characters and
+replaces backticks; the workflow also prints the report between `::stop-commands::` markers.
+
+`--run-fixtures` (local use only, never on untrusted code) also evaluates both refs' `drc_cases.py`
+here: in a separate `python -I` child process with a temp working directory, an empty environment and
+a timeout, after the same strict scan. The scan is defence in depth, not a sandbox.
 """
 import argparse
 import ast
@@ -30,6 +40,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import subprocess
 import sys
@@ -52,7 +63,16 @@ RANK = {'unported': 0, 'ported': 1, 'verified': 2}
 BYPASS = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에서 우회 머지합니다(SPEC 0019).'
 # With --run-fixtures drc_cases.py runs inside the guard, so it may only define fixtures.
 FORBIDDEN_NAMES = {'__import__', '__builtins__', '__name__', 'exec', 'eval', 'compile', 'open', 'getattr',
-                   'globals', 'locals', 'vars', 'SystemExit', 'quit', 'exit', 'breakpoint', 'input'}
+                   'setattr', 'delattr', 'globals', 'locals', 'vars', 'SystemExit', 'quit', 'exit', 'breakpoint',
+                   'input'}
+# Fixture sources the guard scans as data (ast.parse only; never compiled or run). drc_fixture_test.py
+# imports drc_cases.py and check-pending imports drc_cases_pending*.py in the same process as
+# reliability.py, so a PR could rebind reliability.case_sha256 there and blind the fixture checks.
+PENDING = 'scripts/asic/drc_cases_pending'
+MAX_SOURCE_BYTES = 512*1024
+MAX_SOURCE_PROBLEMS = 10
+# drc_cases_pending*.py may import only these modules and may read __name__ (its own __main__ block).
+PENDING_IMPORTS = re.compile(r'(math|collections|reliability|drc_cases_pending(_[a-z0-9]+)?)')
 # Class patterns read attributes without an ast.Attribute node (`case type(__base__=o)`); fixtures need none.
 MATCH_NODES = (ast.Match, ast.MatchValue, ast.MatchSingleton, ast.MatchSequence, ast.MatchMapping,
                ast.MatchClass, ast.MatchStar, ast.MatchAs, ast.MatchOr)
@@ -80,21 +100,74 @@ def empty():
 
     `fixtures`/`fixture_rules` stay None unless drc_cases.py was evaluated (--run-fixtures)."""
     return {'rules': {}, 'unverified': None, 'unverified_checks': {}, 'golden': {}, 'fixtures': None,
-            'fixture_rules': None, 'golden_fixtures': {}, 'table': None, 'baseline_files': {}, 'guard_files': {}}
+            'fixture_rules': None, 'golden_fixtures': {}, 'table': None, 'baseline_files': {}, 'guard_files': {},
+            'sources': {}, 'duplicate_rules': []}
+
+
+def _node_problem(node, strict):
+    """Why one AST node is not allowed in a fixture source, or None. strict: drc_cases.py rules."""
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        if strict:
+            return 'import 문'
+        names = [alias.name for alias in node.names]
+        if isinstance(node, ast.ImportFrom):
+            if node.level or not node.module:
+                return '상대 import'
+            names = [node.module]
+        bad = [name for name in names if not PENDING_IMPORTS.fullmatch(name)]
+        return f'허용하지 않는 import {", ".join(bad)}' if bad else None
+    if isinstance(node, MATCH_NODES):
+        return 'match 문'
+    if isinstance(node, ast.Name):
+        if strict and node.id.startswith('_') or not strict and node.id.startswith('__') and node.id != '__name__':
+            return f'밑줄로 시작하는 이름 {node.id}'
+        if node.id in FORBIDDEN_NAMES and (strict or node.id != '__name__'):
+            return f'내부 기능 {node.id}'
+    if isinstance(node, ast.Attribute):
+        if node.attr.startswith('_') or node.attr in FRAME_ATTRS:
+            return f'내부 속성 .{node.attr}'
+        if not isinstance(node.ctx, ast.Load):
+            return f'속성 대입·삭제 .{node.attr}'
+    return None
+
+
+def source_problems(relpath, data):
+    """Korean problems of a fixture source given as bytes. Parsed with ast only: never compiled or run.
+
+    drc_cases.py (strict): no import, match, names starting with `_`, `_`/frame attributes, attribute
+    assignment or FORBIDDEN_NAMES. drc_cases_pending*.py: the same, except imports from PENDING_IMPORTS,
+    `_name` locals and reading `__name__`. Anything that cannot be read fails closed."""
+    if len(data) > MAX_SOURCE_BYTES:
+        return [f'파일이 너무 큽니다({len(data)}바이트, 한도 {MAX_SOURCE_BYTES}).']
+    try:
+        tree = ast.parse(data.decode('utf-8'), relpath)
+    except UnicodeDecodeError:
+        return ['UTF-8로 읽을 수 없습니다.']
+    except SyntaxError as error:
+        return [f'문법을 읽을 수 없습니다({error.lineno}번째 줄: {error.msg}).']
+    except (ValueError, RecursionError, MemoryError) as error:
+        return [f'문법을 읽을 수 없습니다({type(error).__name__}).']
+    strict = relpath == CASES
+    problems = []
+    try:
+        for node in ast.walk(tree):
+            why = _node_problem(node, strict)
+            if why:
+                problems.append(f'{node.lineno}번째 줄: {why}')
+    except RecursionError:
+        return ['구조가 너무 깊어 끝까지 읽을 수 없습니다.']
+    problems = sorted(set(problems), key=lambda text: (int(text.split('번째')[0]), text))
+    if len(problems) > MAX_SOURCE_PROBLEMS:
+        problems = problems[:MAX_SOURCE_PROBLEMS]+[f'외 {len(problems)-MAX_SOURCE_PROBLEMS}건']
+    return problems
 
 
 def _check_cases_source(source):
-    """Fail closed when drc_cases.py does more than define fixtures."""
-    try:
-        tree = ast.parse(source, CASES)
-    except SyntaxError as error:
-        raise ValueError(f'`{CASES}`을(를) 읽을 수 없습니다(문법 오류 {error.lineno}번째 줄).') from None
-    for node in ast.walk(tree):
-        if (isinstance(node, (ast.Import, ast.ImportFrom) + MATCH_NODES)
-                or isinstance(node, ast.Name) and node.id in FORBIDDEN_NAMES
-                or isinstance(node, ast.Attribute) and (node.attr.startswith('_') or node.attr in FRAME_ATTRS)):
-            raise ValueError(f'`{CASES}` {node.lineno}번째 줄에 import·match 문이나 내부 기능 호출이 있습니다. '
-                             '기준 확인은 이 파일을 그대로 실행하므로 fixture 정의만 둘 수 있습니다.')
+    """Fail closed when drc_cases.py does more than define fixtures (before --run-fixtures runs it)."""
+    problems = source_problems(CASES, source.encode('utf-8'))
+    if problems:
+        raise ValueError(f'`{CASES}`에 fixture 정의 밖의 코드가 있습니다({problems[0]}). '
+                         '기준 확인은 이 파일을 그대로 실행하므로 fixture 정의만 둘 수 있습니다.')
 
 
 def fixtures_from_source(source, rules):
@@ -139,8 +212,9 @@ def _digest(data):
     return hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()
 
 
-def _build(read, baseline_paths, run_fixtures=False):
-    """read(relpath) -> bytes or None; baseline_paths: repo-relative files under BASELINE.
+def _build(read, baseline_paths, run_fixtures=False, source_paths=(CASES,)):
+    """read(relpath) -> bytes or None; baseline_paths: repo-relative files under BASELINE;
+    source_paths: drc_cases.py and drc_cases_pending*.py to scan as data.
 
     Only bytes and JSON are read. drc_cases.py is evaluated only when run_fixtures (local use)."""
     result = empty()
@@ -150,7 +224,15 @@ def _build(read, baseline_paths, run_fixtures=False):
             result['guard_files'][path] = _digest(data)
     text = read(RULES)
     if text is not None:
-        result['rules'] = {rule['id']: reliability.rule_state(rule) for rule in json.loads(text)['rules']}
+        ids = []
+        for rule in json.loads(text)['rules']:
+            ids.append(rule['id'])
+            result['rules'][rule['id']] = reliability.rule_state(rule)
+        result['duplicate_rules'] = sorted({rule for rule in ids if ids.count(rule) > 1})
+    for path in sorted(set(source_paths)):
+        data = read(path)
+        if data is not None:
+            result['sources'][path] = (_digest(data), source_problems(path, data))
     text = read(CASES) if run_fixtures else None
     if text is not None:
         result['fixtures'], result['fixture_rules'] = fixtures_from_source(text.decode('utf-8'), result['rules'])
@@ -190,7 +272,8 @@ def snapshot(root, run_fixtures=False):
         return path.read_bytes() if path.is_file() else None
     folder = root/BASELINE
     paths = [p.relative_to(root).as_posix() for p in folder.rglob('*') if p.is_file()] if folder.is_dir() else []
-    return _build(read, [p for p in paths if '/__pycache__/' not in p], run_fixtures)
+    sources = [CASES]+[p.relative_to(root).as_posix() for p in (root/PENDING).parent.glob('drc_cases_pending*.py')]
+    return _build(read, [p for p in paths if '/__pycache__/' not in p], run_fixtures, sources)
 
 
 def snapshot_at(ref, root=ROOT, run_fixtures=False):
@@ -207,7 +290,11 @@ def snapshot_at(ref, root=ROOT, run_fixtures=False):
         return shown.stdout if shown.returncode == 0 else None
     listed = subprocess.run(git+['ls-tree', '-r', '-z', '--name-only', commit, '--', BASELINE],
                             check=True, capture_output=True)
-    return _build(read, [p.decode('utf-8') for p in listed.stdout.split(b'\0') if p], run_fixtures)
+    scripts = subprocess.run(git+['ls-tree', '-z', '--name-only', commit, '--', PENDING.rsplit('/', 1)[0]+'/'],
+                             check=True, capture_output=True)
+    sources = [CASES]+[p.decode('utf-8') for p in scripts.stdout.split(b'\0')
+                       if p.decode('utf-8').startswith(PENDING) and p.decode('utf-8').endswith('.py')]
+    return _build(read, [p.decode('utf-8') for p in listed.stdout.split(b'\0') if p], run_fixtures, sources)
 
 
 def _evidence_problems(snap):
@@ -223,17 +310,17 @@ def _evidence_problems(snap):
         for gds, digest in sorted(mine.items()):
             if digest not in golden:
                 problems[('unbacked', rule, gds, digest)] = (
-                    f'검증된 규칙 `{rule}`의 fixture `{gds}`에 Calibre golden이 없습니다. '
+                    f'검증된 규칙 `{_c(rule)}`의 fixture `{_c(gds)}`에 Calibre golden이 없습니다. '
                     'verified 규칙의 fixture를 추가하거나 고치려면 기준점에서 Calibre golden을 새로 받아야 합니다.')
         present = set(mine.values())
         for digest, entry in sorted(golden.items(), key=lambda item: item[1]['gds']):
             if digest not in present:
                 problems[('lost', rule, digest)] = (
-                    f'검증된 규칙 `{rule}`의 golden fixture `{entry["gds"]}`(Calibre {entry["calibre"]})이(가) '
+                    f'검증된 규칙 `{_c(rule)}`의 golden fixture `{_c(entry["gds"])}`(Calibre {_c(entry["calibre"])})이(가) '
                     '`scripts/asic/drc_cases.py`에서 사라졌거나 정의가 바뀌었습니다. 근거가 줄어듭니다.')
         if not any(golden[d]['calibre'] != 'refused' for d in present if d in golden):
             problems[('no_evidence', rule)] = (
-                f'검증된 규칙 `{rule}`에 Calibre가 판정한 fixture가 없습니다'
+                f'검증된 규칙 `{_c(rule)}`에 Calibre가 판정한 fixture가 없습니다'
                 '(golden이 없거나 Calibre가 거부한 fixture만 남음). 판정 근거가 없으면 verified일 수 없습니다.')
     return problems
 
@@ -244,29 +331,36 @@ def _file_changes(base_files, head_files, kind):
         golden = path.startswith(GOLDEN+'/')
         if path not in head_files:
             why = ' golden은 지우지 않고 새 기준점 경로를 추가합니다.' if golden else ''
-            found.append(f'{kind} `{path}`이(가) 삭제되었습니다.{why}')
+            found.append(f'{_c(kind)} `{_c(path)}`이(가) 삭제되었습니다.{_c(why)}')
         elif path not in base_files:
-            found.append(f'{kind} `{path}`이(가) 추가되었습니다. CI는 상용 도구 출력인지 가릴 수 없습니다.')
+            found.append(f'{_c(kind)} `{_c(path)}`이(가) 추가되었습니다. CI는 상용 도구 출력인지 가릴 수 없습니다.')
         elif base_files[path] != head_files[path]:
             why = ' golden은 상용 도구 출력에서 한 번 만들고 고치지 않습니다.' if golden else ''
-            found.append(f'{kind} `{path}`이(가) 수정되었습니다.{why}')
+            found.append(f'{_c(kind)} `{_c(path)}`이(가) 수정되었습니다.{_c(why)}')
     return found
 
 
 def violations(base, head):
     """Korean reasons why head needs 도재겸's bypass against base; [] when no baseline moved."""
     found = []
+    for rule in head.get('duplicate_rules', []):
+        found.append(f'규칙 `{_c(rule)}`이(가) `{RULES}`에 두 번 이상 있습니다. 어느 상태가 맞는지 정할 수 없어 통과시키지 않습니다.')
+    base_sources = base.get('sources', {})
+    for path, (digest, problems) in sorted(head.get('sources', {}).items()):
+        if problems and base_sources.get(path, (None,))[0] != digest:
+            found.append(f'fixture 정의 파일 `{_c(path)}`에 정의 밖의 코드가 있습니다: '+'; '.join(_c(p) for p in problems)
+                         +'. 이 파일은 시험 과정에서 reliability.py와 같은 프로세스로 실행되므로 fixture 정의만 둘 수 있습니다.')
     base_files = dict(base['golden'], **base['baseline_files'])
     head_files = dict(head['golden'], **head['baseline_files'])
     introduced = bool(base_files)  # before the first golden, rules reach verified with the baseline itself
     for rule, before in sorted(base['rules'].items()):
         after = head['rules'].get(rule)
         if after is None:
-            found.append(f'규칙 `{rule}`이(가) `{RULES}`에서 사라졌습니다(이전 상태 {before}).')
+            found.append(f'규칙 `{_c(rule)}`이(가) `{_c(RULES)}`에서 사라졌습니다(이전 상태 {_c(before)}).')
         elif RANK[after] < RANK[before]:
-            found.append(f'규칙 `{rule}`의 상태가 {before}에서 {after}(으)로 내려갔습니다.')
+            found.append(f'규칙 `{_c(rule)}`의 상태가 {_c(before)}에서 {_c(after)}(으)로 내려갔습니다.')
         elif introduced and after == 'verified' and before != 'verified':
-            found.append(f'규칙 `{rule}`이(가) {before}에서 verified로 올라갔습니다(golden_compared). '
+            found.append(f'규칙 `{_c(rule)}`이(가) {_c(before)}에서 verified로 올라갔습니다(golden_compared). '
                          'Calibre golden과 맞춰 본 근거를 도재겸이 확인해야 합니다.')
     count = sum(state == 'verified' for state in base['rules'].values())
     if count and not any(state == 'verified' for state in head['rules'].values()):
@@ -283,26 +377,31 @@ def violations(base, head):
     if base['unverified'] is not None:
         after = head['unverified'] or set()
         for item in sorted(after-base['unverified']):
-            found.append(f'미검증 목록 `{UNVERIFIED}`에 새 항목 `{item}`이(가) 생겼습니다. '
+            found.append(f'미검증 목록 `{_c(UNVERIFIED)}`에 새 항목 `{_c(item)}`이(가) 생겼습니다. '
                          '이미 검증된 것을 미검증으로 돌리면 안 됩니다.')
         for item in sorted(base['unverified']-after):
-            found.append(f'미검증 항목 `{item}`이(가) 빠졌습니다. 닫는 근거를 도재겸이 확인해야 합니다.')
+            found.append(f'미검증 항목 `{_c(item)}`이(가) 빠졌습니다. 닫는 근거를 도재겸이 확인해야 합니다.')
         for item in sorted(base['unverified'] & after):
             wider = sorted(set(head['unverified_checks'].get(item, ()))-set(base['unverified_checks'].get(item, ())))
             if wider:
-                found.append(f'미검증 항목 `{item}`이(가) 허용하는 체크가 늘었습니다: '
-                             +', '.join(f'`{c}`' for c in wider)+'.')
+                found.append(f'미검증 항목 `{_c(item)}`이(가) 허용하는 체크가 늘었습니다: '
+                             +', '.join(f'`{_c(c)}`' for c in wider)+'.')
     if base['table'] is not None:
         after = head['table'] or {}
         for row, before in sorted(base['table'].items()):
             if row not in after:
-                found.append(f'대응표 `{TABLE}`에서 행 `{row}`이(가) 사라졌습니다.')
+                found.append(f'대응표 `{_c(TABLE)}`에서 행 `{_c(row)}`이(가) 사라졌습니다.')
             elif before == 'match' and after[row] != 'match':
-                found.append(f'대응표 행 `{row}`의 판정이 match에서 {after[row]}(으)로 내려갔습니다.')
+                found.append(f'대응표 행 `{_c(row)}`의 판정이 match에서 {_c(after[row])}(으)로 내려갔습니다.')
         for row, verdict in sorted(after.items()):
             if verdict == 'match' and base['table'].get(row) != 'match':
-                found.append(f'대응표 행 `{row}`이(가) match가 되었습니다. 일치 근거를 도재겸이 확인해야 합니다.')
+                found.append(f'대응표 행 `{_c(row)}`이(가) match가 되었습니다. 일치 근거를 도재겸이 확인해야 합니다.')
     return found
+
+
+def _c(value):
+    """A value from the PR shown in a message: newlines and control characters escaped, no backticks."""
+    return json.dumps(str(value), ensure_ascii=False)[1:-1].replace('`', "'")
 
 
 def report(base_ref, found):
@@ -310,7 +409,7 @@ def report(base_ref, found):
         return (f'# 기준 파일 확인\n\n`{base_ref}`와(과) 비교해 기준 파일·검사 코드에 '
                 '우회 머지가 필요한 변경이 없습니다.\n')
     lines = ['# 기준 파일 확인: 실패', '', f'`{base_ref}`와(과) 비교해 아래 변경은 우회 머지가 필요합니다.', '']
-    lines += [f'- {text}' for text in found]
+    lines += ['- '+text.replace('\r', '\\r').replace('\n', '\\n') for text in found]
     return '\n'.join(lines+['', BYPASS])+'\n'
 
 
