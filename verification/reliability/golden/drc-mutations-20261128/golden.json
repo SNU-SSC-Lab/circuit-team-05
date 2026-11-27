@@ -4,6 +4,7 @@
   "deck_sha256": "6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f",
   "corpus_tarball_sha256": "0dbbcf4dcbcbae612b51e8d76da887a81e9524e3636ade5929ae9a45eaeb2225",
   "run_date": "2026-11-28",
+  "klayout_version": "0.28.16",
   "seed": 20261128,
   "per_cell": 6,
   "sources": [

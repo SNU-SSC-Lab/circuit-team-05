@@ -69,11 +69,14 @@ def check(layout, top, selected=None):
             # Deck: ENC inner outer < v ABUT < 90 SINGULAR OVERLAP REGION. ENC compares
             # interacting layers only: contacts solely on ACT must not fail the separate
             # POLY1 enclosure check, and vice versa. OVERLAP also flags an inner shape
-            # that overlaps the outer layer but is not completely inside it.
+            # whose boundary crosses the outer boundary: part of its edges inside the
+            # outer layer and part outside. An outer shape (or hole) lying wholly inside
+            # the inner shape crosses no inner edge and does not fire (Calibre C9).
             inner = regions[0]
+            edges = inner.edges()
             for outer in regions[1:]:
-                errors += [outer.enclosing_check(inner, scale(value)),
-                           inner.overlapping(outer).not_inside(outer)]
+                crossing = inner.interacting(edges.inside_part(outer)).interacting(edges.outside_part(outer))
+                errors += [outer.enclosing_check(inner, scale(value)), crossing]
         elif kind == 'not_interacting':
             errors = [regions[0].not_interacting(regions[1])]
         elif kind == 'overlap':

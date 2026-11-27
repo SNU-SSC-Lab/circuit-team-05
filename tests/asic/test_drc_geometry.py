@@ -65,9 +65,15 @@ class EnclosureOverlapTests(unittest.TestCase):
             for name, box in [('inside', [-margin, -margin, size+margin, size+margin]),
                               # outer covers the left half only: the inner shape crosses its right edge
                               ('partial', [-margin, -margin, size/2, size+margin]),
-                              ('outside', [size+5, -margin, 2*size+5, size+margin])]:
+                              ('outside', [size+5, -margin, 2*size+5, size+margin]),
+                              # outer wholly inside the inner shape: no inner edge crosses it
+                              ('island', [size/4, size/4, size*3/4, size*3/4])]:
                 cases.append(dict(name=rule+'/'+name, rules=[rule],
                                   shapes=inside+[[outer, box] for outer in outers]))
+        # 13.PAD.E with a 20 um hole in every metal under the PAD (C9 0449: Calibre 0).
+        ring = [[-3.5, -3.5, 83.5, 30], [-3.5, 50, 83.5, 83.5], [-3.5, 30, 30, 50], [50, 30, 83.5, 50]]
+        cases.append(dict(name='13.PAD.E/hole', rules=['13.PAD.E'],
+                          shapes=[[37, [0, 0, 80, 80]]]+[[m, box] for m in (32, 34, 36) for box in ring]))
         # 0023-AOI22X1-v3 of the 2026-11-28 C2 corpus, reduced: one 0.6 um contact with 0.5 um ACT and
         # 0.6 um MET1 enclosure shifted right by 0.8 um. Calibre fired 7.CONT.E1 and 7.CONT.E3 (2 each);
         # KLayout before the OVERLAP fix fired neither.
@@ -94,6 +100,17 @@ class EnclosureOverlapTests(unittest.TestCase):
         for rule, *_ in ENCLOSURES:
             with self.subTest(rule=rule):
                 self.assertEqual(self.errors(rule+'/outside', rule), 0)
+
+    def test_outer_wholly_inside_inner_is_not_overlap(self):
+        # Calibre C9 0439-0449: only 2.ACT.E3 fires, because NTAP is clipped to the NWELL
+        # island and every NTAP edge lies on an NWELL edge (distance 0).
+        for rule, *_ in ENCLOSURES:
+            with self.subTest(rule=rule):
+                if rule == '2.ACT.E3':
+                    self.assertGreater(self.errors(rule+'/island', rule), 0)
+                else:
+                    self.assertEqual(self.errors(rule+'/island', rule), 0)
+        self.assertEqual(self.errors('13.PAD.E/hole', '13.PAD.E'), 0)
 
     def test_reduced_c2_case_matches_calibre(self):
         self.assertEqual(self.result['c2-0023-original'], {'7.CONT.E1': 0, '7.CONT.E3': 0})

@@ -372,7 +372,7 @@ class GoldenFileTests(unittest.TestCase):
 
 MUTATION_META = dict(calibre_version='v2023.4_17.10', deck_sha256=drc_catalog.SOURCE_SHA,
                      corpus_tarball_sha256='0dbbcf4dcbcbae612b51e8d76da887a81e9524e3636ade5929ae9a45eaeb2225',
-                     run_date='2026-11-28')
+                     run_date='2026-11-28', klayout_version='0.28.16')
 
 
 def mutation(gds, calibre='ok', fired=None, sha=None, polygons=10, reason=None):
@@ -474,6 +474,21 @@ class MutationCompareTests(unittest.TestCase):
                 self.assertEqual(r['status'], 'fail')
                 self.assertIn(verdict, [m['verdict'] for m in r['mutations']])
 
+    def test_empty_top_is_excluded_only_without_a_verified_calibre_verdict(self):
+        golden = {'meta': MUTATION_META, 'mutations': [mutation('ok.gds'), mutation('empty.gds', polygons=0, fired={'R': 1})]}
+        geometry = {m['gds']: {'geometry_sha256': m['geometry_sha256'], 'polygons': m['polygons']}
+                    for m in golden['mutations']}
+        r = reliability.compare_mutations(golden, geometry, {'ok.gds': drc(R=0)}, ['R'])
+        self.assertEqual(r['status'], 'fail')
+        self.assertEqual(r['mutations'][1]['verdict'], 'mismatch')
+        self.assertEqual(r['disagreements'], [{'gds': 'empty.gds', 'rule': 'R', 'klayout': 0, 'calibre': 1}])
+
+    def test_klayout_timeout_reads_as_klayout_error(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+                reliability.subprocess, 'run', side_effect=reliability.subprocess.TimeoutExpired('klayout', 600)):
+            got = reliability._drc_one('a.gds', tmp, Path(tmp), 'klayout')
+        self.assertIsNone(got)
+
     def test_no_verified_rule_fails(self):
         r = reliability.compare_mutations(self.GOLDEN, self.geometry(), {'ok.gds': drc(R=2), 'clean.gds': drc(R=0)}, [])
         self.assertEqual(r['status'], 'fail')
@@ -490,6 +505,7 @@ class MutationCompareTests(unittest.TestCase):
                 (tmp/'corpus').mkdir()
                 with mock.patch.object(reliability, '_mutation_geometry', return_value=self.geometry()), \
                         mock.patch.object(reliability, '_run_drc', side_effect=fake_drc), \
+                        mock.patch.object(reliability, 'klayout_version', return_value='KLayout 0.28.16'), \
                         contextlib.redirect_stdout(io.StringIO()):
                     got = reliability.main(['check-mutations', '--golden', str(tmp/'golden.json'),
                                             '--gds-dir', str(tmp/'corpus'), '--out', str(tmp/'out'),
@@ -498,6 +514,7 @@ class MutationCompareTests(unittest.TestCase):
                 summary = (tmp/'out'/'summary.md').read_text(encoding='utf-8')
                 result = json.loads((tmp/'out'/'result.json').read_text(encoding='utf-8'))
                 self.assertEqual(result['status'], 'pass' if code == 0 else 'fail')
+                self.assertEqual(result['klayout_version'], 'KLayout 0.28.16')
                 self.assertIn('refused.gds', summary)
                 if flip:
                     self.assertIn('| `clean.gds` | `R` | 1 | 0 |', summary)
@@ -518,11 +535,40 @@ class MutationCompareTests(unittest.TestCase):
         self.assertEqual([s['path'] for s in loaded['sources']], ['fixtures/golden.json'])
 
 
+class EdgeGoldenFileTests(unittest.TestCase):
+    FOLDER = RELIABILITY/'golden'/'drc-fixtures-20261128b'
+
+    def test_edge_golden_backs_the_24_enclosure_fixtures(self):
+        g = json.loads((self.FOLDER/'golden.json').read_text(encoding='utf-8'))
+        self.assertEqual(g['meta']['deck_sha256'], drc_catalog.SOURCE_SHA)
+        for needle in ('15acbafef6f71fbf0b4357a3bb1aa82e502347fce9dc3f4e0033d011646ff8ef',
+                       '58c6e44f8ef30c79cf2641356cc7ba5ae5840d7359a712e20f54aa0a5597fb02'):
+            self.assertIn(needle, g['meta']['fixture_tarball_sha256'])
+        all_cases = cases()
+        self.assertEqual([f['gds'] for f in g['fixtures']],
+                         [reliability.fixture_name(i, all_cases[i])+'.gds' for i in range(427, 451)])
+        self.assertEqual([f['case_sha256'] for f in g['fixtures']],
+                         [reliability.case_sha256(all_cases[i]) for i in range(427, 451)])
+        self.assertEqual([f['calibre'] == 'fired' for f in g['fixtures']], [all_cases[i]['fail'] for i in range(427, 451)])
+
+    def test_all_fixture_golden_covers_every_case(self):
+        loaded = reliability.load_golden(RELIABILITY/'golden')
+        self.assertEqual(len(loaded['fixtures']), 451)
+        self.assertEqual({f['case_sha256'] for f in loaded['fixtures']}, {reliability.case_sha256(c) for c in cases()})
+
+    def test_readme_without_server_details(self):
+        text = (self.FOLDER/'README.md').read_text(encoding='utf-8')
+        for needle in ('v2023.4_17.10', drc_catalog.SOURCE_SHA, '756b384', '2026-11-28'):
+            self.assertIn(needle, text)
+        self.assertIsNone(SERVER_TRACE.search(text))
+
+
 class MutationGoldenFileTests(unittest.TestCase):
     def test_golden_counts(self):
         g = json.loads(MUTATION_GOLDEN.read_text(encoding='utf-8'))
         self.assertEqual({k: g['meta'][k] for k in MUTATION_META}, MUTATION_META)
         self.assertEqual((g['meta']['seed'], g['meta']['per_cell']), (20261128, 6))
+        self.assertEqual(g['meta']['klayout_version'], '0.28.16')
         m = g['mutations']
         self.assertEqual(len(m), 695)
         self.assertEqual(sum(x['calibre'] == 'refused' for x in m), 81)

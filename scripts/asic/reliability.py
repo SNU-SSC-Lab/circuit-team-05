@@ -232,7 +232,8 @@ def check(selftest, golden_dir, out, rules_json=RULES_JSON):
     return 1 if failing else 0
 
 
-MUTATION_META_KEYS = ('calibre_version', 'deck_sha256', 'corpus_tarball_sha256', 'run_date')
+# klayout_version: the KLayout that computed geometry_sha256 (hashes are only compared under it).
+MUTATION_META_KEYS = ('calibre_version', 'deck_sha256', 'corpus_tarball_sha256', 'run_date', 'klayout_version')
 MANIFEST_KEYS = ('gds', 'source', 'cell', 'variant', 'op', 'delta_um', 'layer', 'near_um')
 EMPTY_REASON = 'empty top cell: the mutation removed every shape, and KLayout DRC refuses an empty top'
 MUTATION_KO = {'match': '일치', 'mismatch': '불일치', 'excluded': '제외', 'geometry_changed': '형상 다름',
@@ -306,7 +307,15 @@ def compare_mutations(golden, geometry, klayout, verified):
         elif shape['geometry_sha256'] != record['geometry_sha256']:
             item.update(verdict='geometry_changed', geometry_sha256=shape['geometry_sha256'])
         elif not shape['polygons']:
-            item.update(verdict='excluded', reason=EMPTY_REASON)
+            # KLayout refuses an empty top; an empty layout fires nothing, so Calibre firing a
+            # verified rule there is a disagreement, not an exclusion.
+            fired = [rule for rule in verified if record['rules_fired'].get(rule, 0)]
+            if fired:
+                item['verdict'] = 'mismatch'
+                disagreements += [{'gds': gds, 'rule': rule, 'klayout': 0, 'calibre': record['rules_fired'][rule]}
+                                  for rule in fired]
+            else:
+                item.update(verdict='excluded', reason=EMPTY_REASON)
         elif klayout.get(gds) is None or any(rule not in klayout[gds] for rule in verified):
             item['verdict'] = 'klayout_error'
         else:
@@ -334,6 +343,8 @@ def mutation_summary(result, meta):
              '마커 수는 기록만 한다.',
              f'- golden: Calibre {meta.get("calibre_version")}, deck sha256 `{meta.get("deck_sha256")}`, '
              f'실행일 {meta.get("run_date")}, 변형본 seed {meta.get("seed")}, 셀당 {meta.get("per_cell")}개',
+             f'- KLayout: 이번 실행 `{result.get("klayout_version")}`, golden 형상 해시를 만든 버전 '
+             f'`{meta.get("klayout_version")}`',
              '', '| 구분 | 판정 수 |', '| --- | --- |']
     names = dict(both='둘 다 위반', none='둘 다 위반 없음', klayout_only='KLayout만 위반', calibre_only='Calibre만 위반')
     lines += [f'| {names[key]} (`{key}`) | {count} |' for key, count in result['counts'].items()]
@@ -363,14 +374,26 @@ def _mutation_geometry(gds_dir, out, klayout):
     return mutate.hash_folder(gds_dir, out, klayout)
 
 
+DRC_TIMEOUT = 600  # seconds per GDS
+
+
+def klayout_version(klayout='klayout'):
+    done = subprocess.run([klayout, '-b', '-v'], capture_output=True, text=True, timeout=60)
+    return (done.stdout or done.stderr).strip() or None
+
+
 def _drc_one(gds, gds_dir, out, klayout):
     stem = Path(gds).stem
     env = dict(os.environ, QT_QPA_PLATFORM='offscreen', PYTHONDONTWRITEBYTECODE='1', SSC_DRC_PROFILE='expanded',
                SSC_GDS=str(Path(gds_dir).resolve()/gds), SSC_TOP='mut', SSC_DRC_OUT=str(out/(stem+'.json')))
     with (out/(stem+'.log')).open('w', encoding='utf-8') as log:
         # drc.py exits non-zero whenever a rule fires; the JSON it writes is the result.
-        subprocess.run([klayout, '-b', '-r', str(ROOT/'scripts/asic/drc.py')], env=env, stdout=log,
-                       stderr=subprocess.STDOUT, timeout=600)
+        try:
+            subprocess.run([klayout, '-b', '-r', str(ROOT/'scripts/asic/drc.py')], env=env, stdout=log,
+                           stderr=subprocess.STDOUT, timeout=DRC_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            log.write(f'\ncheck-mutations: KLayout DRC stopped after {DRC_TIMEOUT} s\n')
+            return None  # reads as klayout_error
     path = out/(stem+'.json')
     return json.loads(path.read_text(encoding='utf-8'))['rules'] if path.is_file() else None
 
@@ -390,17 +413,20 @@ def check_mutations(golden_path, out, kit=None, gds_dir=None, rules_json=RULES_J
     golden = json.loads(Path(golden_path).read_text(encoding='utf-8'))
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
+    started = time.monotonic()
     if gds_dir is None:
         import mutate
         gds_dir = out/'gds'
         mutate.generate(kit, gds_dir, golden['meta']['seed'], golden['meta']['per_cell'], klayout)
-    started = time.monotonic()
+    version = klayout_version(klayout)
     geometry = _mutation_geometry(gds_dir, out/'geometry.json', klayout)
     targets = mutation_targets(golden, geometry)
     klayout_rules = _run_drc(gds_dir, targets, out/'klayout', jobs or os.cpu_count() or 1, klayout)
     verified = verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8')))
     result = compare_mutations(golden, geometry, klayout_rules, verified)
     result['wall_seconds'] = round(time.monotonic()-started, 1)
+    result['klayout_version'] = version
+    result['golden_klayout_version'] = golden['meta'].get('klayout_version')
     (out/'result.json').write_text(json.dumps(result, indent=2, ensure_ascii=False)+'\n', encoding='utf-8', newline='\n')
     (out/'summary.md').write_text(mutation_summary(result, golden['meta']), encoding='utf-8', newline='\n')
     return 0 if result['status'] == 'pass' else 1
@@ -443,7 +469,8 @@ def main(argv=None):
     commands = parser.add_subparsers(dest='command', required=True)
     checker = commands.add_parser('check', help='compare a KLayout selftest.json with golden')
     checker.add_argument('--selftest', type=Path, required=True)
-    checker.add_argument('--golden', type=Path, required=True)
+    checker.add_argument('--golden', type=Path, default=ROOT/'verification/reliability/golden',
+                         help='folder; every fixture golden.json below it is used (default: all)')
     checker.add_argument('--out', type=Path, required=True)
     checker.add_argument('--rules', type=Path, default=RULES_JSON, help='drc-rules.json that names verified rules')
     renderer = commands.add_parser('render', help='write table.md from table.json')
