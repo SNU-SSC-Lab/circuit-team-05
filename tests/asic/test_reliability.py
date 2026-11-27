@@ -7,6 +7,7 @@ import re
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'scripts'/'asic'))
@@ -16,6 +17,8 @@ from drc_cases import cases
 
 GOLDEN_DIR = ROOT/'verification/reliability/golden/drc-fixtures-20261128'
 GOLDEN = GOLDEN_DIR/'golden.json'
+MUTATION_DIR = ROOT/'verification/reliability/golden/drc-mutations-20261128'
+MUTATION_GOLDEN = MUTATION_DIR/'golden.json'
 RELIABILITY = ROOT/'verification/reliability'
 RULES_JSON = ROOT/'verification/asic/drc-rules.json'
 SERVER_TRACE = re.compile(r'\.ac\.kr|\d+\.\d+\.\d+\.\d+|/tmp|/home|/var/|authorized_keys', re.I)
@@ -33,7 +36,7 @@ class CaseHashTests(unittest.TestCase):
 
     def test_every_fixture_case_hashes(self):
         hashes = [reliability.case_sha256(c) for c in cases()]
-        self.assertEqual(len(hashes), 427)
+        self.assertEqual(len(hashes), 439)  # 427 with the 2026-11-28 golden + 12 ENC OVERLAP fixtures
 
 
 def golden(*fixtures):
@@ -366,6 +369,181 @@ class GoldenFileTests(unittest.TestCase):
             self.assertIn(needle, text)
         self.assertIsNone(SERVER_TRACE.search(text))
 
+
+MUTATION_META = dict(calibre_version='v2023.4_17.10', deck_sha256=drc_catalog.SOURCE_SHA,
+                     corpus_tarball_sha256='0dbbcf4dcbcbae612b51e8d76da887a81e9524e3636ade5929ae9a45eaeb2225',
+                     run_date='2026-11-28')
+
+
+def mutation(gds, calibre='ok', fired=None, sha=None, polygons=10, reason=None):
+    return {'gds': gds, 'source': 's.gds', 'cell': gds[:-4], 'variant': 1, 'op': 'grow',
+            'geometry_sha256': sha or 'g-'+gds, 'polygons': polygons, 'calibre': calibre,
+            'rules_fired': fired or {}, 'refused_reason': reason}
+
+
+def drc(**errors):
+    """KLayout drc.py `rules` part: drc(R=2) -> {'R': {'errors': 2}}."""
+    return {rule: {'errors': count} for rule, count in errors.items()}
+
+
+class MutationImportTests(unittest.TestCase):
+    RECORDS = [{'gds': 'a.gds', 'source': 's.gds', 'cell': 'A', 'variant': 0, 'op': 'original'},
+               {'gds': 'b.gds', 'source': 's.gds', 'cell': 'A', 'variant': 1, 'op': 'grow', 'delta_um': 0.8,
+                'layer': '31/0', 'near_um': [0, 0, 1, 1]}]
+    GEOMETRY = {'a.gds': {'geometry_sha256': 'ga', 'polygons': 3}, 'b.gds': {'geometry_sha256': 'gb', 'polygons': 3}}
+
+    def corpus(self, tmp, rows, records, geometry):
+        tmp = Path(tmp)
+        (tmp/'c2_counts.csv').write_text('gds,rules_fired,calibre_exit,run_ms,calibre_error\n'+''.join(r+'\n' for r in rows))
+        (tmp/'manifest.json').write_text(json.dumps({'seed': 20261128, 'per_cell': 6, 'records': records}))
+        (tmp/'geometry.json').write_text(json.dumps(geometry))
+        return tmp/'c2_counts.csv', tmp/'manifest.json', tmp/'geometry.json'
+
+    def test_import_binds_manifest_geometry_and_calibre(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = self.corpus(tmp, ['a.gds,7.CONT.E1:2;1.PWL.bad1:1,0,600,',
+                                      'b.gds,,4,500,"Non-orientable boundary at location (1,2) in cell mut on layer 14 datatype 0."'],
+                                self.RECORDS, self.GEOMETRY)
+            g = reliability.import_mutations(*paths, MUTATION_META)
+        self.assertEqual((g['meta']['seed'], g['meta']['per_cell']), (20261128, 6))
+        self.assertEqual(g['meta']['deck_sha256'], drc_catalog.SOURCE_SHA)
+        a, b = g['mutations']
+        self.assertEqual((a['calibre'], a['rules_fired'], a['geometry_sha256'], a['polygons']),
+                         ('ok', {'7.CONT.E1': 2, '1.PWL.bad1': 1}, 'ga', 3))
+        self.assertIsNone(a['refused_reason'])
+        self.assertEqual((b['calibre'], b['rules_fired'], b['op'], b['delta_um'], b['layer']), ('refused', {}, 'grow', 0.8, '31/0'))
+        self.assertTrue(b['refused_reason'].startswith('Non-orientable boundary'))
+
+    def test_import_rejects_unmatched_inputs(self):
+        bad = [(['a.gds,,0,1,'], self.GEOMETRY),  # b.gds has no Calibre row
+               (['a.gds,,0,1,', 'b.gds,,0,1,', 'c.gds,,0,1,'], self.GEOMETRY),  # c.gds not in manifest
+               (['a.gds,,0,1,', 'b.gds,,0,1,'], {'a.gds': self.GEOMETRY['a.gds']}),  # b.gds has no geometry
+               (['a.gds,,0,1,', 'b.gds,,4,1,'], self.GEOMETRY)]  # refused without a reason
+        for rows, geometry in bad:
+            with self.subTest(rows=rows), tempfile.TemporaryDirectory() as tmp:
+                with self.assertRaises(ValueError):
+                    reliability.import_mutations(*self.corpus(tmp, rows, self.RECORDS, geometry), MUTATION_META)
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = self.corpus(tmp, ['a.gds,,0,1,', 'b.gds,,0,1,'], self.RECORDS, self.GEOMETRY)
+            with self.assertRaises(ValueError):
+                reliability.import_mutations(*paths, dict(MUTATION_META, deck_sha256='0'*64))
+
+
+class MutationCompareTests(unittest.TestCase):
+    GOLDEN = {'meta': MUTATION_META, 'mutations': [
+        mutation('ok.gds', fired={'R': 2, 'U': 1}),
+        mutation('clean.gds'),
+        mutation('refused.gds', 'refused', reason='Non-orientable boundary'),
+        mutation('empty.gds', polygons=0, fired={'U': 1})]}
+
+    def geometry(self, **changed):
+        result = {m['gds']: {'geometry_sha256': m['geometry_sha256'], 'polygons': m['polygons']}
+                  for m in self.GOLDEN['mutations']}
+        result.update(changed)
+        return result
+
+    def test_targets_skip_refused_and_empty(self):
+        self.assertEqual(reliability.mutation_targets(self.GOLDEN, self.geometry()), ['ok.gds', 'clean.gds'])
+
+    def test_agreement_on_verified_rules_only(self):
+        # Q is not verified, so its KLayout-only marker does not count; U is unported (Calibre only).
+        r = reliability.compare_mutations(self.GOLDEN, self.geometry(),
+                                          {'ok.gds': drc(R=1, Q=3), 'clean.gds': drc(R=0, Q=0)}, ['R'])
+        self.assertEqual(r['status'], 'pass')
+        self.assertEqual(r['counts'], {'both': 1, 'none': 1, 'klayout_only': 0, 'calibre_only': 0})
+        self.assertEqual([m['verdict'] for m in r['mutations']], ['match', 'match', 'excluded', 'excluded'])
+        self.assertEqual(r['mutations'][2]['reason'], 'Non-orientable boundary')
+        self.assertIn('empty', r['mutations'][3]['reason'])
+
+    def test_disagreement_fails_with_counts(self):
+        r = reliability.compare_mutations(self.GOLDEN, self.geometry(),
+                                          {'ok.gds': drc(R=0), 'clean.gds': drc(R=5)}, ['R'])
+        self.assertEqual(r['status'], 'fail')
+        self.assertEqual(r['disagreements'], [{'gds': 'ok.gds', 'rule': 'R', 'klayout': 0, 'calibre': 2},
+                                              {'gds': 'clean.gds', 'rule': 'R', 'klayout': 5, 'calibre': 0}])
+
+    def test_changed_or_missing_geometry_or_klayout_failure_fails(self):
+        for geometry, klayout, verdict in [
+                (self.geometry(**{'ok.gds': {'geometry_sha256': 'other', 'polygons': 10}}),
+                 {'clean.gds': drc(R=0)}, 'geometry_changed'),
+                ({k: v for k, v in self.geometry().items() if k != 'clean.gds'}, {'ok.gds': drc(R=1)}, 'missing'),
+                (self.geometry(), {'ok.gds': drc(R=1)}, 'klayout_error'),  # no KLayout result for clean.gds
+                (self.geometry(), {'ok.gds': drc(R=1), 'clean.gds': drc(Q=0)}, 'klayout_error')]:  # R missing
+            with self.subTest(verdict=verdict, klayout=klayout):
+                r = reliability.compare_mutations(self.GOLDEN, geometry, klayout, ['R'])
+                self.assertEqual(r['status'], 'fail')
+                self.assertIn(verdict, [m['verdict'] for m in r['mutations']])
+
+    def test_no_verified_rule_fails(self):
+        r = reliability.compare_mutations(self.GOLDEN, self.geometry(), {'ok.gds': drc(R=2), 'clean.gds': drc(R=0)}, [])
+        self.assertEqual(r['status'], 'fail')
+
+    def test_check_mutations_cli(self):
+        for flip, code in [(False, 0), (True, 1)]:
+            def fake_drc(gds_dir, targets, out, jobs, klayout):
+                self.assertEqual(targets, ['ok.gds', 'clean.gds'])
+                return {'ok.gds': drc(R=1), 'clean.gds': drc(R=int(flip))}
+            with self.subTest(flip=flip), tempfile.TemporaryDirectory() as tmp:
+                tmp = Path(tmp)
+                (tmp/'golden.json').write_text(json.dumps(self.GOLDEN))
+                rules_file(tmp/'drc-rules.json', R='verified', U='unported')
+                (tmp/'corpus').mkdir()
+                with mock.patch.object(reliability, '_mutation_geometry', return_value=self.geometry()), \
+                        mock.patch.object(reliability, '_run_drc', side_effect=fake_drc), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    got = reliability.main(['check-mutations', '--golden', str(tmp/'golden.json'),
+                                            '--gds-dir', str(tmp/'corpus'), '--out', str(tmp/'out'),
+                                            '--rules', str(tmp/'drc-rules.json')])
+                self.assertEqual(got, code)
+                summary = (tmp/'out'/'summary.md').read_text(encoding='utf-8')
+                result = json.loads((tmp/'out'/'result.json').read_text(encoding='utf-8'))
+                self.assertEqual(result['status'], 'pass' if code == 0 else 'fail')
+                self.assertIn('refused.gds', summary)
+                if flip:
+                    self.assertIn('| `clean.gds` | `R` | 1 | 0 |', summary)
+
+    def test_check_mutations_needs_kit_or_folder(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            reliability.main(['check-mutations', '--golden', 'g.json', '--out', 'o'])
+
+    def test_fixture_check_ignores_mutation_golden(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            (tmp/'fixtures').mkdir()
+            (tmp/'fixtures'/'golden.json').write_text(json.dumps(dict(meta=META, **golden(('a.gds', 'R', 'h1', 'fired')))))
+            (tmp/'mutations').mkdir()
+            (tmp/'mutations'/'golden.json').write_text(json.dumps(self.GOLDEN))
+            loaded = reliability.load_golden(tmp)
+        self.assertEqual([f['gds'] for f in loaded['fixtures']], ['a.gds'])
+        self.assertEqual([s['path'] for s in loaded['sources']], ['fixtures/golden.json'])
+
+
+class MutationGoldenFileTests(unittest.TestCase):
+    def test_golden_counts(self):
+        g = json.loads(MUTATION_GOLDEN.read_text(encoding='utf-8'))
+        self.assertEqual({k: g['meta'][k] for k in MUTATION_META}, MUTATION_META)
+        self.assertEqual((g['meta']['seed'], g['meta']['per_cell']), (20261128, 6))
+        m = g['mutations']
+        self.assertEqual(len(m), 695)
+        self.assertEqual(sum(x['calibre'] == 'refused' for x in m), 81)
+        self.assertEqual(sum(x['op'] == 'original' for x in m), 105)
+        self.assertFalse(any(x['op'] == 'original' for x in m if x['calibre'] == 'refused'))
+        self.assertTrue(all(x['refused_reason'].startswith('Non-orientable boundary') for x in m if x['calibre'] == 'refused'))
+        self.assertEqual(sum(x['polygons'] == 0 for x in m), 5)
+        self.assertTrue(all(re.fullmatch('[0-9a-f]{64}', x['geometry_sha256']) for x in m))
+        # Calibre-only verdicts of the first KLayout comparison stay in the golden as Calibre saw them.
+        by = {x['gds']: x for x in m}
+        self.assertEqual(by['0023-AOI22X1-v3.gds']['rules_fired'].get('7.CONT.E1'), 2)
+        self.assertEqual(by['0644-poly2cont_CDNS_756087690058-v5.gds']['rules_fired'].get('7.CONT.E3'), 3)
+
+    def test_readme_states_conditions_without_server_details(self):
+        text = (MUTATION_DIR/'README.md').read_text(encoding='utf-8')
+        for needle in ('v2023.4_17.10', drc_catalog.SOURCE_SHA,
+                       '0dbbcf4dcbcbae612b51e8d76da887a81e9524e3636ade5929ae9a45eaeb2225',
+                       '20261128', 'scripts/asic/mutate.py', '2026-11-28'):
+            self.assertIn(needle, text)
+        self.assertIsNone(SERVER_TRACE.search(text))
+        self.assertIsNone(SERVER_TRACE.search(MUTATION_GOLDEN.read_text(encoding='utf-8')))
 
 if __name__ == '__main__':
     unittest.main()

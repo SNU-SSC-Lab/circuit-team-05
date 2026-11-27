@@ -66,9 +66,14 @@ def check(layout, top, selected=None):
             if kind == 'separation_no_stack':
                 errors.append(regions[0] & regions[1])
         elif kind == 'enclosure':
-            # ENC compares interacting layers. Contacts solely on ACT must
-            # not fail the separate POLY1 enclosure check, and vice versa.
-            errors = [outer.enclosing_check(regions[0], scale(value)) for outer in regions[1:]]
+            # Deck: ENC inner outer < v ABUT < 90 SINGULAR OVERLAP REGION. ENC compares
+            # interacting layers only: contacts solely on ACT must not fail the separate
+            # POLY1 enclosure check, and vice versa. OVERLAP also flags an inner shape
+            # that overlaps the outer layer but is not completely inside it.
+            inner = regions[0]
+            for outer in regions[1:]:
+                errors += [outer.enclosing_check(inner, scale(value)),
+                           inner.overlapping(outer).not_inside(outer)]
         elif kind == 'not_interacting':
             errors = [regions[0].not_interacting(regions[1])]
         elif kind == 'overlap':

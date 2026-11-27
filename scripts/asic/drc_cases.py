@@ -81,10 +81,11 @@ def cases():
         if context == 'stack':
             emit(rule, 'stacked', [rectangle(first, 0, 0, 4, 4), rectangle(second, 0, 0, 4, 4)], True)
 
-    for rule, first, others, threshold, context in [
+    enclosures = [
          ('2.ACT.E2', 11, [2], 1.4, 'pmos'), ('2.ACT.E3', 11, [2], .5, 'ntap'),
          ('7.CONT.E1', 31, [11], .5, ''), ('7.CONT.E2', 31, [12], .5, ''),
-         ('7.CONT.E3', 31, [32], .6, ''), ('13.PAD.E', 37, [32, 34, 36], 2.5, '')]:
+         ('7.CONT.E3', 31, [32], .6, ''), ('13.PAD.E', 37, [32, 34, 36], 2.5, '')]
+    for rule, first, others, threshold, context in enclosures:
         for label, delta, fail, hierarchy in [('below', -.01, True, False),
              ('boundary', 0, False, False), ('above', .01, False, False), ('child-rotated', -.01, True, True)]:
             margin = round(threshold+delta, 4)
@@ -134,4 +135,19 @@ def cases():
     emit('7.CONT.W', 'bar-vertical', [rectangle(31, 0, 0, .6, 1.2)], False)
     emit('7.CONT.W', 'bar-horizontal', [rectangle(31, 0, 0, 1.2, .6)], False)
     emit('7.CONT.W', 'bar-wrong-length', [rectangle(31, 0, 0, .6, 1.19)], True)
+
+    # Deck `ENC a b < v ... OVERLAP` (DMACRO Enc_check): an inner shape partly outside the enclosing
+    # layer fails; one that does not overlap it is not measured (other rules may fire). For 2.ACT.E3
+    # NTAP is clipped to NWELL, so the partial case is an NTAP edge on the NWELL edge. Appended last
+    # so earlier fixtures keep their numbered names.
+    for rule, first, others, threshold, context in enclosures:
+        size = 80 if first == 37 else 2
+        margin = threshold+1
+        for label, outer, fail in [('partial-overlap', [-margin, -margin, size/2, size+margin], True),
+                                   ('outside-no-overlap', [size+5, -margin, 2*size+5, size+margin], False)]:
+            shapes = [rectangle(first, 0, 0, size, size)]+[[layer, outer] for layer in others]
+            if context == 'pmos':
+                shapes += [rectangle(15, 0, 0, size, size), rectangle(12, .5, -1, 1.5, size+1)]
+            if context == 'ntap': shapes += [rectangle(14, 0, 0, size, size)]
+            emit(rule, label, shapes, fail)
     return result
