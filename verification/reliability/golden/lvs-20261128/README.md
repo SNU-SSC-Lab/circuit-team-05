@@ -39,11 +39,11 @@ source CDL은 Virtuoso IC6.1.8 `auCdl`로 키트 OA 라이브러리 `ETRI_NSPL_G
 
 ### 표준셀 11종을 오픈소스 쪽이 확인 못 한 이유
 
-`AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2`. Calibre는 34종 모두 CORRECT라서 셀이 틀린 것이 아니라 우리 Netgen 대조 설정의 한계다.
+`AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2`. Calibre는 34종 모두 CORRECT라서 셀이 틀린 것이 아니라 우리 Netgen 대조 설정의 한계다. 아래 원인은 netlist를 비교해 본 추정이다. Calibre CORRECT는 셀이 맞다는 근거이지 이 원인의 근거는 아니다.
 
-- property 오류 6종(AND2X2, BUFX4, INVX2, INVX4, INVX8, OR2X2): CDL은 `m=2`처럼 쓰고 layout은 finger가 따로 있다. Calibre는 병렬 MOS를 합쳐서(`LVS REDUCE PARALLEL MOS YES`) 맞춘다.
-- 최상위 핀 맞춤 실패 4종(AOI21X1, NOR2X1, OAI21X1, OAI22X1): 직렬 트랜지스터 입력 순서가 CDL과 layout에서 다르다. Calibre는 게이트 입력을 바꿔 맞춘다(`LVS RECOGNIZE GATES ALL`).
-- 불일치 1종(TBUFX2): 3상태 출력단. Calibre는 CORRECT.
+- property 오류 6종(AND2X2, BUFX4, INVX2, INVX4, INVX8, OR2X2): CDL은 `m=2`처럼 쓰고 layout은 finger가 따로 있다. Calibre는 병렬 MOS를 합쳐서(`LVS REDUCE PARALLEL MOS YES`) 맞춘다. 우리 Netgen이 이것을 합치지 않아서로 보인다(추정).
+- 최상위 핀 맞춤 실패 4종(AOI21X1, NOR2X1, OAI21X1, OAI22X1): 직렬 트랜지스터 입력 순서가 CDL과 layout에서 다르다. Calibre는 게이트 입력을 바꿔 맞춘다(`LVS RECOGNIZE GATES ALL`). 우리 Netgen이 순서를 바꿔 맞추지 않아서로 보인다(추정).
+- 불일치 1종(TBUFX2): 3상태 출력단. Calibre는 CORRECT. 원인은 아직 모른다.
 
 미검증 목록 `std-cell-netgen-11`에 남긴다.
 

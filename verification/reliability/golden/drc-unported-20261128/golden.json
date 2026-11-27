@@ -28,7 +28,7 @@
      "clean": 116,
      "refused": 2
     },
-    "corrected": 3
+    "corrected": 1
    },
    "C1b": {
     "fixtures": 330,
@@ -2797,9 +2797,7 @@
    "gds": "0225-NONSIMPLE-bow-tie.gds",
    "rule": "NONSIMPLE",
    "deck": "DRC",
-   "case_sha256": "e508779f46f91c0038d016f8d6e48732156bafe07467daf12f2e4c0bcf05b7aa",
-   "run_case_sha256": "73aedbd931e5a6252c086fb6743d3c959448edc7b9ba5e0d2861a5f9f61cf748",
-   "correction": "Calibre가 입력을 거부함(Non-orientable boundary): 자기 교차 다각형은 NONSIMPLE 경고가 아니라 입력 오류",
+   "case_sha256": "73aedbd931e5a6252c086fb6743d3c959448edc7b9ba5e0d2861a5f9f61cf748",
    "calibre": "refused",
    "target_count": null,
    "other_rules": {},
@@ -2810,9 +2808,7 @@
    "gds": "0226-NONSIMPLE-orthogonal-self-crossing.gds",
    "rule": "NONSIMPLE",
    "deck": "DRC",
-   "case_sha256": "8f0dff204eb9610c541fba80120ce4a624913322b4f629d6a862af42fc1e112c",
-   "run_case_sha256": "9c23441be11aa4ca78d6c7a083edf21ef593c8c4cacbd38b309ba39d6c3db3c0",
-   "correction": "Calibre가 입력을 거부함(Non-orientable boundary): 자기 교차 다각형은 NONSIMPLE 경고가 아니라 입력 오류",
+   "case_sha256": "9c23441be11aa4ca78d6c7a083edf21ef593c8c4cacbd38b309ba39d6c3db3c0",
    "calibre": "refused",
    "target_count": null,
    "other_rules": {},

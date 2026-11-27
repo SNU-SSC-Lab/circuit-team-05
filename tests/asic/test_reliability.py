@@ -274,6 +274,7 @@ class UnverifiedListTests(unittest.TestCase):
         self.assertIn('AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2',
                       items['std-cell-netgen-11']['what'])
         self.assertIn('34/34 CORRECT', items['std-cell-netgen-11']['why'])
+        self.assertIn('(추정)', items['std-cell-netgen-11']['why'])
         self.assertIn('estimated.spef', items['wire-rc-zero']['what'])
         self.assertIn('delete_from_list', items['sdc-portability']['what'])
         self.assertIn('remove_from_collection', items['sdc-portability']['why'])
@@ -321,6 +322,9 @@ class TableTests(unittest.TestCase):
         self.assertIn('gpio-internal-lvs', rows['lvs-chip']['unverified'])
         self.assertIn('estimated.spef는 RC 0', rows['pnr-sta']['scope'])
         self.assertIn('hold 최대 0.353 ns', rows['pnr-sta']['scope'])
+        self.assertTrue(rows['pnr-sta']['scope'].startswith('STA 계산만:'))
+        self.assertIn('Task 7에서 CI 연결 예정', rows['drc-unported']['pr_check'])
+        self.assertIn('제외', rows['drc-unported']['note'])
         self.assertIn('std-cell-netgen-11', rows['lvs-cells']['unverified'])
         self.assertIn('wire-rc-zero', rows['pex']['unverified'])
         self.assertIn('golden/drc-unported-20261128/golden.json', rows['antenna']['evidence'])
@@ -642,9 +646,9 @@ class MutationGoldenFileTests(unittest.TestCase):
 
 ANT_RULES = {'ANT_01', 'ANT_02_1', 'ANT_02_2', 'ANT_02_3', 'ANT_03_1', 'ANT_03_2', 'ANT_03_3', 'ANT_04',
              'ANT_05_1', 'ANT_05_2', 'ANT_06_01', 'ANT_06_02'}
-CORRECTED = {('C1a', '0225-NONSIMPLE-bow-tie.gds'): {'raises': True},
-             ('C1a', '0226-NONSIMPLE-orthogonal-self-crossing.gds'): {'raises': True},
-             ('C1a', '0227-NONSIMPLE-self-touching-vertex.gds'): {'fail': False},
+# Calibre-refused 0225/0226 are not corrected: `raises` means our writer/KLayout raises (like 0169/0170).
+REFUSED = {('C1a', '0225-NONSIMPLE-bow-tie.gds'), ('C1a', '0226-NONSIMPLE-orthogonal-self-crossing.gds')}
+CORRECTED = {('C1a', '0227-NONSIMPLE-self-touching-vertex.gds'): {'fail': False},
              ('C1b', '0315-ANT_06_01-boundary.gds'): {'fail': True},
              ('C1b', '0323-ANT_06_02-boundary.gds'): {'fail': True}}
 
@@ -682,7 +686,7 @@ class PendingCaseTests(unittest.TestCase):
         self.assertFalse(ported & {reliability.case_sha256(r['case']) for r in self.records})
         self.assertFalse({c['rule'] for c in cases()} & {r['case']['rule'] for r in self.records})
 
-    def test_intent_follows_calibre_for_the_five_corrected_fixtures(self):
+    def test_intent_follows_calibre_for_the_three_corrected_fixtures(self):
         corrected = {(r['group'], r['gds']): r for r in self.records if r['correction']}
         self.assertEqual(set(corrected), set(CORRECTED))
         for key, change in CORRECTED.items():
@@ -696,6 +700,14 @@ class PendingCaseTests(unittest.TestCase):
         for record in self.records:
             if not record['correction']:
                 self.assertEqual(record['run_case_sha256'], reliability.case_sha256(record['case']))
+            self.assertFalse(record['case']['raises'], record['gds'])  # no pending fixture expects a writer error
+
+    def test_calibre_refused_fixtures_keep_their_run_definition(self):
+        by = {(r['group'], r['gds']): r for r in self.records}
+        for key in REFUSED:
+            record = by[key]
+            self.assertIsNone(record['correction'])
+            self.assertEqual((record['case']['fail'], record['case']['raises']), (True, False))
 
 
 def pending_doc(entries, **meta):
@@ -741,10 +753,12 @@ class PendingGoldenTests(unittest.TestCase):
         cases_by = {(r['group'], r['gds']): r['case'] for r in drc_cases_pending.records()}
         for entry in self.golden['fixtures']:
             case = cases_by[(entry['group'], entry['gds'])]
+            self.assertFalse(case['raises'], entry['gds'])
             if entry['calibre'] == 'refused':
-                self.assertTrue(case['raises'], entry['gds'])
+                self.assertIn((entry['group'], entry['gds']), REFUSED)  # excluded with a reason, no intent checked
+                self.assertNotIn('run_case_sha256', entry)
+                self.assertEqual(entry['case_sha256'], reliability.case_sha256(case))
             else:
-                self.assertFalse(case['raises'], entry['gds'])
                 self.assertEqual(entry['calibre'] == 'fired', case['fail'], (entry['group'], entry['gds']))
 
     def test_fixture_check_ignores_pending_golden(self):
@@ -761,6 +775,8 @@ class PendingGoldenTests(unittest.TestCase):
             'changed': [dict(good[0], case_sha256='0'*64)]+good[1:],
             'verdict': [dict(good[0], calibre='fired' if good[0]['calibre'] == 'clean' else 'clean')]+good[1:],
         }
+        refused = [i for i, f in enumerate(good) if f['calibre'] == 'refused']
+        self.assertEqual(len(refused), 2)
         for name, entries in broken.items():
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
                 folder = Path(tmp)/'golden'/'pending'
@@ -769,6 +785,25 @@ class PendingGoldenTests(unittest.TestCase):
                 result = reliability.check_pending(Path(tmp)/'golden', drc_cases_pending.records())
                 self.assertEqual(result['status'], 'fail')
                 self.assertTrue(result['problems'])
+
+    def test_check_pending_excludes_calibre_refusals_whatever_the_intent(self):
+        def record(gds, fail, raises=False):
+            case = {'rule': 'R', 'label': gds, 'shapes': [], 'fail': fail, 'hierarchy': False, 'dbu': .001, 'raises': raises}
+            return {'group': 'G', 'gds': gds, 'deck': 'DRC', 'case': case, 'run_case_sha256': reliability.case_sha256(case)}
+        def entry(rec, calibre):
+            return {'group': 'G', 'gds': rec['gds'], 'rule': 'R', 'deck': 'DRC', 'case_sha256': rec['run_case_sha256'],
+                    'calibre': calibre, 'refused_reason': 'Non-orientable boundary' if calibre == 'refused' else None}
+        records = [record('a.gds', True), record('b.gds', False), record('c.gds', True, raises=True), record('d.gds', True)]
+        entries = [entry(records[0], 'refused'), entry(records[1], 'refused'), entry(records[2], 'refused'),
+                   entry(records[3], 'fired')]
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp)/'p').mkdir()
+            (Path(tmp)/'p'/'golden.json').write_text(json.dumps(pending_doc(entries)), encoding='utf-8')
+            result = reliability.check_pending(Path(tmp), records)
+            self.assertEqual((result['status'], result['problems'], result['excluded']), ('pass', [], 3))
+            entries[3]['calibre'] = 'clean'
+            (Path(tmp)/'p'/'golden.json').write_text(json.dumps(pending_doc(entries)), encoding='utf-8')
+            self.assertEqual(reliability.check_pending(Path(tmp), records)['status'], 'fail')
 
     def test_check_pending_without_pending_golden_fails(self):
         with tempfile.TemporaryDirectory() as tmp:

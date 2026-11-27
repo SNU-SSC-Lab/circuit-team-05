@@ -68,7 +68,7 @@ python scripts/asic/reliability.py import --counts calibre_counts.csv --selftest
 
 ### 미구현 규칙 fixture (`golden/<이름>-YYYYMMDD/golden.json`, `meta.pending` = true)
 
-KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fixture golden과 같고, `group`(묶음)과 `deck`(DRC/ANT)이 더 있다. `reliability.py check`는 이 파일을 읽지 않고, `python scripts/asic/reliability.py check-pending`이 fixture 정의(`scripts/asic/drc_cases_pending.py`)와 1:1인지와 정의의 `fail`·`raises`가 Calibre 판정과 같은지만 확인한다. fixture 정의는 생성한 파일을 그대로 옮겨 `case_sha256`이 Calibre가 읽은 GDS의 manifest 값과 같게 한다. 가설(`fail`)이 Calibre와 다르면 정의를 Calibre 판정으로 고치고(입력 거부는 `raises`), golden 항목에 Calibre가 읽은 정의의 해시를 `run_case_sha256`으로 남긴다.
+KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fixture golden과 같고, `group`(묶음)과 `deck`(DRC/ANT)이 더 있다. `reliability.py check`는 이 파일을 읽지 않고, `python scripts/asic/reliability.py check-pending`이 fixture 정의(`scripts/asic/drc_cases_pending.py`)와 1:1인지와, Calibre가 판정한 fixture에서 정의의 `fail`이 Calibre 판정과 같은지만 확인한다. fixture 정의는 생성한 파일을 그대로 옮겨 `case_sha256`이 Calibre가 읽은 GDS의 manifest 값과 같게 한다. 가설(`fail`)이 Calibre와 다르면 정의를 Calibre 판정으로 고치고, golden 항목에 Calibre가 읽은 정의의 해시를 `run_case_sha256`으로 남긴다. Calibre가 입력을 거부한 fixture는 정의를 고치지 않고 `refused`와 사유로 남긴다(사유가 붙은 제외, 첫 묶음의 0169·0170과 같음). `raises`는 우리 GDS 작성기나 KLayout이 오류를 내는 경우에만 쓴다.
 
 ## 6. 첫 사례
 

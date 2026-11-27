@@ -680,7 +680,7 @@
      "OR2X2": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n OR2X2",
      "TBUFX2": "Netlists do not match.\nPort matching may fail to disambiguate symmetries."
     },
-    "cause": "우리 쪽 설정: property 오류 6(병렬 MOS 합치기), 최상위 핀 맞춤 실패 4(직렬 게이트 입력 순서), 불일치 1(TBUFX2). Calibre는 34종 모두 CORRECT"
+    "cause": "추정(근거 아님): property 오류 6종은 병렬 MOS(m=)를 합치지 않아서, 최상위 핀 맞춤 실패 4종은 직렬 게이트 입력 순서를 바꿔 맞추지 않아서로 보인다. TBUFX2 불일치 원인은 모른다. Calibre는 34종 모두 CORRECT라서 셀은 맞다"
    }
   },
   "gpio": {

@@ -169,7 +169,7 @@ def load_golden(directory):
     sources, fixtures = [], []
     for path in paths:
         doc = json.loads(path.read_text(encoding='utf-8'))
-        if 'mutations' in doc and 'fixtures' not in doc or doc.get('meta', {}).get('pending'):
+        if ('mutations' in doc and 'fixtures' not in doc) or doc.get('meta', {}).get('pending'):
             continue
         sources.append(dict(doc['meta'], path=path.relative_to(directory).as_posix()))
         fixtures += doc['fixtures']
@@ -182,12 +182,13 @@ def check_pending(golden_dir, records=None):
     """Pending golden (meta.pending) against drc_cases_pending.records(): one entry per fixture, same hashes.
 
     Only the binding is checked: the rules have no KLayout port yet, so there is no verdict to compare.
-    A corrected fixture's entry keeps the hash of the definition Calibre ran as run_case_sha256."""
+    A corrected fixture's entry keeps the hash of the definition Calibre ran as run_case_sha256. An entry
+    Calibre refused is an exclusion with a reason: its intent (fail/raises) is not compared."""
     if records is None:
         from drc_cases_pending import records as pending_records
         records = pending_records()
     golden_dir = Path(golden_dir)
-    sources, entries, problems = [], {}, []
+    sources, entries, problems, excluded = [], {}, [], 0
     for path in sorted(golden_dir.glob('**/golden.json')):
         doc = json.loads(path.read_text(encoding='utf-8'))
         if not doc.get('meta', {}).get('pending'):
@@ -214,12 +215,15 @@ def check_pending(golden_dir, records=None):
             problems.append(f'{name}: the definition Calibre ran has a different hash')
         if entry['rule'] != case['rule'] or entry.get('deck', 'DRC') != record['deck']:
             problems.append(f'{name}: rule or deck differs')
-        if entry['calibre'] == 'refused' and not case['raises']:
-            problems.append(f'{name}: Calibre refused it but the definition does not expect a refusal (raises)')
-        elif entry['calibre'] != 'refused' and (case['raises'] or (entry['calibre'] == 'fired') != case['fail']):
-            problems.append(f'{name}: Calibre {entry["calibre"]} but the definition says fail={case["fail"]}')
+        if entry['calibre'] == 'refused':
+            excluded += 1
+            if not entry.get('refused_reason'):
+                problems.append(f'{name}: Calibre refused it but the golden gives no reason')
+        elif case['raises'] or (entry['calibre'] == 'fired') != case['fail']:
+            problems.append(f'{name}: Calibre {entry["calibre"]} but the definition says fail={case["fail"]}, '
+                            f'raises={case["raises"]}')
     return {'status': 'fail' if problems else 'pass', 'fixtures': len(entries), 'definitions': len(wanted),
-            'sources': sources, 'problems': problems}
+            'excluded': excluded, 'sources': sources, 'problems': problems}
 
 
 def summary_markdown(result):
@@ -567,7 +571,8 @@ def main(argv=None):
         if hasattr(sys.stdout, 'reconfigure'):
             sys.stdout.reconfigure(errors='replace')
         print(f'pending golden {", ".join(result["sources"]) or "(none)"}: {result["fixtures"]} entries, '
-              f'{result["definitions"]} fixture definitions, {result["status"]}')
+              f'{result["definitions"]} fixture definitions, {result["excluded"]} excluded (Calibre refused), '
+              f'{result["status"]}')
         for problem in result['problems']:
             print('- '+problem)
         return 0 if result['status'] == 'pass' else 1

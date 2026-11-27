@@ -9,8 +9,10 @@ Calibre one GDS at a time (golden: verification/reliability/golden/drc-unported-
 
 `drc_cases_pending_c1a.py`, `_c1b.py` and `_c1c.py` are the generator files copied unchanged (line endings
 LF), so `reliability.case_sha256` of every case equals the hash in the manifest of the GDS Calibre read.
-`fail` was our hypothesis; five fixtures are corrected below to what Calibre reported, and each record keeps
-the hash of the definition Calibre ran (`run_case_sha256`).
+`fail` was our hypothesis; three fixtures are corrected below to what Calibre reported, and each record keeps
+the hash of the definition Calibre ran (`run_case_sha256`). The two fixtures Calibre refused as input
+(C1a 0225/0226, self-crossing polygons) stay as run: `raises` means our GDS writer or KLayout raises, as in
+drc_cases.py, and the golden marks those two `refused` with Calibre's reason (excluded, like 0169/0170).
 
 These fixtures are not in `drc_cases.py`: `drc_fixture_test.py` requires every fixture rule to be a KLayout
 port. When a rule is ported, move its fixtures to `drc_cases.py` and its golden entries with them.
@@ -22,10 +24,6 @@ import drc_cases_pending_c1c as c1c
 
 # (group, GDS name Calibre ran) -> fields replaced by the Calibre verdict, and why.
 CORRECTIONS = {
-    ('C1a', '0225-NONSIMPLE-bow-tie.gds'): (
-        {'raises': True}, 'Calibre가 입력을 거부함(Non-orientable boundary): 자기 교차 다각형은 NONSIMPLE 경고가 아니라 입력 오류'),
-    ('C1a', '0226-NONSIMPLE-orthogonal-self-crossing.gds'): (
-        {'raises': True}, 'Calibre가 입력을 거부함(Non-orientable boundary): 자기 교차 다각형은 NONSIMPLE 경고가 아니라 입력 오류'),
     ('C1a', '0227-NONSIMPLE-self-touching-vertex.gds'): (
         {'fail': False}, 'Calibre는 꼭짓점 하나로만 닿는 두 사각형을 NONSIMPLE로 보지 않음(경고 0)'),
     ('C1b', '0315-ANT_06_01-boundary.gds'): (

@@ -5,7 +5,7 @@ KLayout으로 옮기지 않은 DRC 규칙 113개, 전역 입력 플래그(NONSIM
 ## 지금 이 golden이 하는 일과 하지 않는 일
 
 - 이 규칙들은 KLayout 구현이 없다. 그래서 `reliability.py check`(PR마다 KLayout 판정과 golden 비교)는 이 파일을 읽지 않는다. `meta.pending`이 `true`인 golden은 `check`가 건너뛴다.
-- 대신 `python scripts/asic/reliability.py check-pending`이 fixture 정의(`scripts/asic/drc_cases_pending.py`)와 이 golden이 1:1인지만 확인한다. 정의 857개와 golden 857개가 같은 이름·같은 `case_sha256`·같은 규칙이어야 하고, Calibre 판정이 정의의 `fail`·`raises`와 같아야 한다.
+- 대신 `python scripts/asic/reliability.py check-pending`이 fixture 정의(`scripts/asic/drc_cases_pending.py`)와 이 golden이 1:1인지만 확인한다. 정의 857개와 golden 857개가 같은 이름·같은 `case_sha256`·같은 규칙이어야 하고, Calibre가 판정한 855개는 정의의 `fail`과 같아야 한다. Calibre가 입력을 거부한 2개는 사유가 붙은 제외라서 의도를 비교하지 않는다.
 - 규칙 하나를 KLayout으로 옮기면, 그 규칙의 fixture를 `scripts/asic/drc_cases.py`로 옮기고 이 golden의 해당 항목을 새 기준점 폴더의 fixture golden으로 옮긴다(기준점 PR). 그때부터 `check`가 그 규칙을 비교한다.
 
 ## 묶음
@@ -20,12 +20,14 @@ DRC 쪽 규칙은 `verification/asic/drc-rules.json`에서 `unported`인 113개 
 
 ## 의도와 Calibre 판정
 
-fixture의 `fail`은 우리가 deck을 읽고 세운 가설이었다. 857개 중 852개가 가설대로였다. 나머지 5개는 정의를 Calibre 판정에 맞춰 고쳤다(`drc_cases_pending.py`의 `CORRECTIONS`). golden 항목에는 Calibre가 실제로 읽은 정의의 해시를 `run_case_sha256`으로 남겼다. GDS는 도형(`shapes`·`hierarchy`·`dbu`)만으로 만들어지므로 `fail`·`raises`를 고쳐도 Calibre가 읽은 GDS는 같다.
+fixture의 `fail`은 우리가 deck을 읽고 세운 가설이었다. Calibre가 판정한 855개 중 852개가 가설대로였다. 다른 3개는 정의의 `fail`을 Calibre 판정에 맞춰 고쳤다(`drc_cases_pending.py`의 `CORRECTIONS`). golden 항목에는 Calibre가 실제로 읽은 정의의 해시를 `run_case_sha256`으로 남겼다. GDS는 도형(`shapes`·`hierarchy`·`dbu`)만으로 만들어지므로 `fail`을 고쳐도 Calibre가 읽은 GDS는 같다.
+
+Calibre가 입력을 거부한 2개(0225·0226)는 고치지 않았다. 정의는 Calibre가 읽은 그대로이고(`case_sha256` = manifest 값), golden에는 `calibre` = `refused`와 Calibre 오류 문구가 사유로 남는다. 첫 묶음의 `0169`·`0170`(dbu)과 같은 사유가 붙은 제외다. 이 저장소에서 `raises`는 우리 GDS 작성기나 KLayout이 오류를 내야 한다는 뜻이라(`drc_fixture_test.py`), Calibre의 입력 거부를 `raises`로 적지 않는다.
 
 | fixture | 가설 | Calibre | 고친 값 |
 | --- | --- | --- | --- |
-| C1a `0225-NONSIMPLE-bow-tie` | NONSIMPLE 경고 | 입력 거부: `Non-orientable boundary at location (0,0) in cell fixture on layer 32 datatype 0.` | `raises` = true (사유가 붙은 제외) |
-| C1a `0226-NONSIMPLE-orthogonal-self-crossing` | NONSIMPLE 경고 | 입력 거부: `Non-orientable boundary at location (0,-2) …` | `raises` = true (사유가 붙은 제외) |
+| C1a `0225-NONSIMPLE-bow-tie` | NONSIMPLE 경고 | 입력 거부: `Non-orientable boundary at location (0,0) in cell fixture on layer 32 datatype 0.` | 고치지 않음(사유가 붙은 제외) |
+| C1a `0226-NONSIMPLE-orthogonal-self-crossing` | NONSIMPLE 경고 | 입력 거부: `Non-orientable boundary at location (0,-2) …` | 고치지 않음(사유가 붙은 제외) |
 | C1a `0227-NONSIMPLE-self-touching-vertex` | 위반(꼭짓점 하나로 닿은 두 사각형) | 경고 없음 | `fail` = false |
 | C1b `0315-ANT_06_01-boundary` | 위반 없음(정확한 산술로 한계와 같음, deck은 `>`) | 위반 124 | `fail` = true |
 | C1b `0323-ANT_06_02-boundary` | 위반 없음(같은 이유) | 위반 124 | `fail` = true |
@@ -51,4 +53,4 @@ fixture의 `fail`은 우리가 deck을 읽고 세운 가설이었다. 857개 중
 
 ## 만든 방법
 
-묶음마다 결과 CSV(`c1a_counts.csv`, `c1b_results.csv`, `c1c_counts.csv`; 열 `gds,target_rule,target_rule_count,other_rules_fired,status,calibre_exit,run_ms`)와, `drc_cases_pending.records()`에서 만든 `{"records": [{gds, rule, case_sha256}]}`를 `reliability.import_calibre`에 넣었다. 거부된 2개의 사유는 같은 실행의 Calibre 로그 첫 `ERROR:` 줄이다. 세 묶음의 `fixtures`를 이어 붙이고, 항목마다 `group`·`deck`(DRC/ANT)을 더했다. 고친 5개에는 `run_case_sha256`·`correction`을, C1a의 경고가 있는 항목에는 `runtime_warnings`를 더했다. 나머지 항목 형식(`gds`·`rule`·`case_sha256`·`calibre`·`target_count`·`other_rules`·`refused_reason`)은 `drc-fixtures-20261128/golden.json`과 같다. 만든 뒤 `python scripts/asic/reliability.py check-pending`으로 857 대 857 일치를 확인했다.
+묶음마다 결과 CSV(`c1a_counts.csv`, `c1b_results.csv`, `c1c_counts.csv`; 열 `gds,target_rule,target_rule_count,other_rules_fired,status,calibre_exit,run_ms`)와, `drc_cases_pending.records()`에서 만든 `{"records": [{gds, rule, case_sha256}]}`를 `reliability.import_calibre`에 넣었다. 거부된 2개의 사유는 같은 실행의 Calibre 로그 첫 `ERROR:` 줄이다. 세 묶음의 `fixtures`를 이어 붙이고, 항목마다 `group`·`deck`(DRC/ANT)을 더했다. 고친 3개에는 `run_case_sha256`·`correction`을, C1a의 경고가 있는 항목에는 `runtime_warnings`를 더했다. 나머지 항목 형식(`gds`·`rule`·`case_sha256`·`calibre`·`target_count`·`other_rules`·`refused_reason`)은 `drc-fixtures-20261128/golden.json`과 같다. 만든 뒤 `python scripts/asic/reliability.py check-pending`으로 857 대 857 일치(제외 2)를 확인했다.
