@@ -262,6 +262,8 @@ flowchart TD
 | `scripts/asic/reliability.py` | fixture 정의 해시, Calibre 결과 요약을 golden으로 가져오기(`import`, `import-mutations`), KLayout 판정과 golden 대조(`check`, `check-mutations`), pending golden 묶음 확인(`check-pending`), 규칙 상태 계산, 대응표 `table.md` 생성(`render`) |
 | `scripts/asic/drc_fixture_test.py` | fixture 결과 기록에 fixture 정의 해시와 `drc-rules.json`의 규칙 상태 수(`rule_states`)를 남김 |
 | `scripts/asic/drc_audit.py` | 감사 결과에 구현 규칙의 상태 수(`rule_states`)를 남김. 이 GDS의 Calibre 대조는 기준점에서만 |
+| `scripts/asic/drc_catalog.py` | 규칙 대조표(`docs/verification/nspl-drc-rule-matrix.md`)의 확장 검사 칸을 unported·ported·verified 상태로 표시 |
+| `scripts/asic/report.py` | `summary.md`에 종료 코드 판정 방식(gate·experimental·strict)과 미확인으로 남아도 되는 검사 목록을 적음 |
 | `scripts/asic/mutate.py` | 키트 셀 변형본 생성(seed 고정)과 형상 해시 |
 | `scripts/asic/mutate_v2.py` | 2차 변형본 생성(키트 셀 + 선택적으로 코어 창, seed 고정)과 형상 검사 |
 | `scripts/asic/drc_geometry.py`, `scripts/asic/drc_cases.py` | 둘러싸기 규칙에 deck의 `ENC … OVERLAP` 의미(일부만 겹친 도형도 위반) 추가, 일부 겹침·겹침 없음·안쪽 섬·바깥 근접 fixture 추가 |
@@ -272,7 +274,7 @@ flowchart TD
 | `verification/asic/drc-rules.json` | 구현 96개 규칙의 golden 대조 여부(`golden_compared`)와 남은 일(`remaining`) |
 | `.github/workflows/asic.yml` | 워크플로 `ASIC gate`, job `asic-gate`(경로 필터, OpenROAD 실행 라이브러리 apt 설치와 `ldd` 확인)와 `reliability-table` |
 | `.github/workflows/baseline.yml` | 워크플로 `Baseline guard`, job `baseline-guard`(pull_request_target, base 사본 실행)와 `baseline-label` |
-| `.github/CODEOWNERS` | 기준 파일·guard·워크플로 변경에 도재겸 리뷰 요청 |
+| `.github/CODEOWNERS` | 기준 파일·guard·워크플로 변경에 도재겸 리뷰 요청(필수 승인 아님, 1절 기준점 PR 흐름) |
 | `.github/workflows/integration.yml` | 삭제 |
 | `tests/asic/**` | 대조·규칙 상태·guard·게이트 종료 코드·STA 판정 시험 |
 | `README.md`, `mychip/README.md`, `.github/workflows/pdk.yml`, `docs/verification/rtl-to-gds-guide.md`, `docs/specs/0017-rtl-to-gds.md`, `docs/specs/0013-mychip-integration.md` | `MyChip integration` 폐지 반영 |
