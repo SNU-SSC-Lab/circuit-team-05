@@ -12,6 +12,10 @@ ref's copy whenever base has one (`git show BASE:scripts/asic/baseline_guard.py`
 `python TMP/baseline_guard.py --base BASE --root "$GITHUB_WORKSPACE"`). Changes to the guard and its
 workflows are violations too, once base has the guard. Base without reliability files (first
 introduction) yields no violations.
+
+Known limit: the guard runs the head's `drc_cases.py` to hash fixtures. A file written to detect the guard
+could still present different cases; the threat model is careless edits, not an adversary, so the guard
+only rejects imports and escape hatches and fails closed on any early exit.
 """
 import argparse
 import ast
@@ -37,7 +41,8 @@ GUARD = ('scripts/asic/baseline_guard.py', 'scripts/asic/reliability.py',
 RANK = {'unported': 0, 'ported': 1, 'verified': 2}
 BYPASS = '기준 파일 변경은 도재겸이 근거를 확인한 뒤 PR에서 우회 머지합니다(SPEC 0019).'
 # drc_cases.py runs inside the guard, so it may only define fixtures.
-FORBIDDEN_NAMES = {'__import__', '__builtins__', 'exec', 'eval', 'compile', 'open', 'globals', 'vars', 'getattr'}
+FORBIDDEN_NAMES = {'__import__', '__builtins__', '__name__', 'exec', 'eval', 'compile', 'open', 'getattr',
+                   'globals', 'locals', 'vars', 'SystemExit', 'quit', 'exit', 'breakpoint', 'input'}
 
 
 def empty():
@@ -63,15 +68,19 @@ def _check_cases_source(source):
 def fixtures_from_source(source, rules):
     """{gds: case_sha256} and {gds: rule} for fixtures of verified rules, from drc_cases.py text."""
     _check_cases_source(source)
-    namespace = {'__name__': 'drc_cases_snapshot'}  # keep it out of sys.modules and this module
-    exec(compile(source, CASES, 'exec'), namespace)
+    namespace = {}  # no __name__ to recognise the guard by; kept out of sys.modules and this module
     fixtures, owners = {}, {}
-    for index, case in enumerate(namespace['cases']()):
-        if rules.get(case['rule']) != 'verified':
-            continue
-        gds = reliability.fixture_name(index, case)+'.gds'
-        fixtures[gds] = reliability.case_sha256(case)
-        owners[gds] = case['rule']
+    try:
+        exec(compile(source, CASES, 'exec'), namespace)
+        for index, case in enumerate(namespace['cases']()):
+            if rules.get(case['rule']) != 'verified':
+                continue
+            gds = reliability.fixture_name(index, case)+'.gds'
+            fixtures[gds] = reliability.case_sha256(case)
+            owners[gds] = case['rule']
+    except BaseException as error:  # SystemExit/quit() must not end the guard with exit code 0
+        raise ValueError(f'`{CASES}`을(를) 실행하다 멈췄습니다({type(error).__name__}: {error}). '
+                         'fixture 정의를 끝까지 읽지 못하면 기준 확인을 통과시키지 않습니다.') from None
     return fixtures, owners
 
 
@@ -257,9 +266,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         found = violations(snapshot_at(args.base, args.root), snapshot(args.root))
-    except ValueError as error:  # fail closed: a guard that cannot read the baseline must not pass
+    except BaseException as error:  # fail closed: a guard that cannot read the baseline must not pass
         found = None
-        text = f'# 기준 파일 확인: 실행 실패\n\n{error}\n'
+        why = str(error) if isinstance(error, ValueError) else (
+            f'기준 확인 중 예상하지 못한 오류가 났습니다({type(error).__name__}: {error}). '
+            '확인하지 못한 변경은 통과시키지 않습니다.')
+        text = f'# 기준 파일 확인: 실행 실패\n\n{why}\n'
     else:
         text = report(args.base, found)
     if os.environ.get('GITHUB_STEP_SUMMARY'):

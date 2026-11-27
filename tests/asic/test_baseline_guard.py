@@ -283,9 +283,26 @@ class SnapshotTests(unittest.TestCase):
         for source in ('import os\ndef cases():\n    return []\n',
                        'from os import path\ndef cases():\n    return []\n',
                        'def cases():\n    __import__("os")\n    return []\n',
-                       'def cases():\n    return [().__class__]\n'):
-            with self.assertRaisesRegex(ValueError, 'drc_cases.py'):
+                       'def cases():\n    return [().__class__]\n',
+                       'raise SystemExit(0)\ndef cases():\n    return []\n',
+                       'def cases():\n    quit()\n',
+                       'def cases():\n    exit(0)\n',
+                       'if __name__ == "drc_cases_snapshot":\n    pass\ndef cases():\n    return []\n'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'drc_cases.py'):
                 baseline_guard.fixtures_from_source(source, {})
+
+    def test_early_exit_while_running_cases_fails_closed(self):  # even past the AST check
+        with mock.patch.object(baseline_guard, '_check_cases_source'):
+            for source in ('raise SystemExit(0)\n', 'def cases():\n    quit()\n',
+                           'def cases():\n    raise KeyboardInterrupt\n', 'x = 1\n'):
+                with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'drc_cases.py'):
+                    baseline_guard.fixtures_from_source(source, {})
+
+    def test_cases_do_not_see_a_guard_name(self):
+        with mock.patch.object(baseline_guard, '_check_cases_source'):
+            source = 'def cases():\n    return [dict(rule="B", label=str(globals().get("__name__")), shapes=[])]\n'
+            fixtures, _ = baseline_guard.fixtures_from_source(source, {'B': 'verified'})
+        self.assertEqual(list(fixtures), ['0000-B-None.gds'])
 
 
 class CliTests(unittest.TestCase):
@@ -320,6 +337,32 @@ class CliTests(unittest.TestCase):
              mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
             self.assertEqual(baseline_guard.main(['--base', 'origin/main']), 1)
         self.assertIn('가짜 오류', out.getvalue())
+
+    def test_early_exit_in_head_cases_exits_one(self):
+        for source, checked in (('raise SystemExit(0)\ndef cases():\n    return []\n', True),
+                                ('def cases():\n    quit()\n', True),
+                                ('raise SystemExit(0)\n', False), ('def cases():\n    quit()\n', False)):
+            with self.subTest(source=source, checked=checked), tempfile.TemporaryDirectory() as tmp:
+                for relpath, text in ((baseline_guard.CASES, source), (baseline_guard.RULES, '{"rules": []}')):
+                    (Path(tmp)/relpath).parent.mkdir(parents=True, exist_ok=True)
+                    (Path(tmp)/relpath).write_text(text, encoding='utf-8')
+                out = io.StringIO()
+                skip = (contextlib.nullcontext() if checked
+                        else mock.patch.object(baseline_guard, '_check_cases_source'))
+                with skip, mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()), \
+                     mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+                    code = baseline_guard.main(['--base', 'origin/main', '--root', tmp])
+                self.assertEqual(code, 1, out.getvalue())
+                self.assertIn('실행 실패', out.getvalue())
+
+    def test_any_snapshot_exception_fails_closed(self):
+        for error in (SystemExit(0), RuntimeError('boom'), KeyError('rules')):
+            out = io.StringIO()
+            with self.subTest(error=error), mock.patch.object(baseline_guard, 'snapshot', side_effect=error), \
+                 mock.patch.object(baseline_guard, 'snapshot_at', return_value=baseline_guard.empty()), \
+                 mock.patch.dict(os.environ, {'GITHUB_STEP_SUMMARY': ''}), contextlib.redirect_stdout(out):
+                self.assertEqual(baseline_guard.main(['--base', 'origin/main']), 1)
+            self.assertIn('실행 실패', out.getvalue())
 
     def test_runs_from_a_copy_with_root(self):  # Task 7 runs the base ref's guard from a temp directory
         with tempfile.TemporaryDirectory() as tmp:
