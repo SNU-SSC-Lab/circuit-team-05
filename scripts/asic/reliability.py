@@ -425,7 +425,9 @@ def mutation_summary(result, meta):
     lines += ['', '| GDS 판정 | 수 |', '| --- | --- |']
     for verdict, label in MUTATION_KO.items():
         lines.append(f'| {label} (`{verdict}`) | {sum(m["verdict"] == verdict for m in result["mutations"])} |')
-    if not result['rules']:
+    if result.get('error'):
+        lines += ['', '## 실행 중단 (실패)', '', result['error']]
+    elif not result['rules']:
         lines += ['', '`verified` 규칙이 없어 아무것도 확인하지 않았다. 게이트는 실패로 본다.']
     if result['disagreements']:
         lines += ['', '## 불일치', '', '| GDS | 규칙 | KLayout | Calibre |', '| --- | --- | --- | --- |']
@@ -499,8 +501,20 @@ def _sha256(path):
     return digest.hexdigest()
 
 
+class SourceMismatch(ValueError):
+    """A kit source is not the file the golden was generated from; nothing can be compared."""
+
+
+def _kit_mismatch(source, digest, want):
+    return SourceMismatch(f'키트 원본 `{source}`의 sha256 `{digest}`이(가) golden의 `{want}`와 다릅니다. '
+                          '다른 키트로는 같은 변형본을 만들 수 없어 비교하지 않았습니다(실패).')
+
+
 def _rebuild(golden, corpus, kit, core_gds, klayout):
-    """Rebuild golden's corpus into corpus; returns {source: reason} for checkpoint-only sources left out."""
+    """Rebuild golden's corpus into corpus; returns {source: reason} for checkpoint-only sources left out.
+
+    Raises SourceMismatch when a kit source differs from the golden's (before generating, and again for
+    the generated manifest), ValueError for an unknown generator."""
     meta = golden['meta']
     if meta['generator'] == 'scripts/asic/mutate.py':
         import mutate
@@ -509,20 +523,25 @@ def _rebuild(golden, corpus, kit, core_gds, klayout):
     if meta['generator'] != 'scripts/asic/mutate_v2.py':
         raise ValueError('golden names an unknown generator: '+str(meta['generator']))
     import mutate_v2
+    for relative in (mutate_v2.STD_GDS, mutate_v2.GPIO_GDS):
+        source, path = Path(relative).name, Path(kit)/relative
+        digest = _sha256(path) if path.is_file() else 'missing'
+        if digest != meta['sources'][source]:
+            raise _kit_mismatch(source, digest, meta['sources'][source])
     unavailable, core = {}, None
     for source in meta.get('checkpoint_only_sources', []):
         want = meta['sources'][source]
         if core_gds is None:
             unavailable[source] = f'`{source}` not given (--core-gds); checkpoint-only source'
         elif _sha256(core_gds) != want:
-            unavailable[source] = (f'given core GDS sha256 {_sha256(core_gds)[:12]}… is not the golden '
-                                   f'`{source}` {want[:12]}… (different RTL or flow); checkpoint-only source')
+            unavailable[source] = (f'given core GDS sha256 {_sha256(core_gds)} is not the golden `{source}` {want} '
+                                   '(different RTL or flow); checkpoint-only source')
         else:
             core = core_gds
     manifest = mutate_v2.run_generate(kit, corpus, meta['seed'], core, klayout=klayout)
     for source, digest in manifest['sources'].items():
-        if source in meta['sources'] and meta['sources'][source] != digest:
-            raise ValueError(f'kit source {source} sha256 {digest} is not the golden {meta["sources"][source]}')
+        if source in meta['sources'] and source not in unavailable and meta['sources'][source] != digest:
+            raise _kit_mismatch(source, digest, meta['sources'][source])
     return unavailable
 
 
@@ -536,12 +555,21 @@ def check_mutations(golden_path, out, kit=None, gds_dir=None, rules_json=RULES_J
     unavailable = {}
     if gds_dir is None:
         gds_dir = out/'gds'
-        unavailable = _rebuild(golden, gds_dir, kit, core_gds, klayout)
+        try:
+            unavailable = _rebuild(golden, gds_dir, kit, core_gds, klayout)
+        except SourceMismatch as error:
+            return _write_mutation_result(out, golden, dict(
+                status='fail', error=str(error), rules=[], compared_gds=0, counts=dict(both=0, none=0, klayout_only=0,
+                calibre_only=0), disagreements=[], mutations=[]), started, version)
     geometry = _mutation_geometry(gds_dir, out/'geometry.json', klayout)
     targets = mutation_targets(golden, geometry, unavailable)
     klayout_rules = _run_drc(gds_dir, targets, out/'klayout', jobs or os.cpu_count() or 1, klayout)
     verified = verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8')))
     result = compare_mutations(golden, geometry, klayout_rules, verified, unavailable)
+    return _write_mutation_result(out, golden, result, started, version)
+
+
+def _write_mutation_result(out, golden, result, started, version):
     result['wall_seconds'] = round(time.monotonic()-started, 1)
     result['klayout_version'] = version
     result['golden_klayout_version'] = golden['meta'].get('klayout_version')
@@ -577,6 +605,10 @@ def check_all_mutations(goldens, out, kit=None, gds_dir=None, rules_json=RULES_J
         lines.append(f'| `{name}` | {"통과" if r["status"] == "pass" else "실패"} | {r["compared_gds"]} | '
                      f'{len(r["disagreements"])} | {verdicts["excluded"]} | {verdicts["not_regenerated"]} | {failed} | '
                      f'{r["wall_seconds"]} |')
+    for name, r in results.items():
+        if r.get('error'):
+            combined['goldens'][name]['error'] = r['error']
+            lines += ['', f'- `{name}`: {r["error"]}']
     if not results:
         lines += ['', '변형본 golden이 없어 아무것도 확인하지 않았다. 게이트는 실패로 본다.']
     (out/'result.json').write_text(json.dumps(combined, indent=2, ensure_ascii=False)+'\n', encoding='utf-8', newline='\n')

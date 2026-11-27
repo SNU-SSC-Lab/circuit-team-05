@@ -613,6 +613,8 @@ class EdgeGoldenFileTests(unittest.TestCase):
         for needle in ('v2023.4_17.10', drc_catalog.SOURCE_SHA, '756b384', '2026-11-28'):
             self.assertIn(needle, text)
         self.assertIsNone(SERVER_TRACE.search(text))
+        self.assertIsNone(LOCAL_PATH.search(text))
+        self.assertIsNone(LOCAL_PATH.search((self.FOLDER/'golden.json').read_text(encoding='utf-8')))
 
 
 class MutationGoldenFileTests(unittest.TestCase):
@@ -641,7 +643,10 @@ class MutationGoldenFileTests(unittest.TestCase):
                        '20261128', 'scripts/asic/mutate.py', '2026-11-28'):
             self.assertIn(needle, text)
         self.assertIsNone(SERVER_TRACE.search(text))
-        self.assertIsNone(SERVER_TRACE.search(MUTATION_GOLDEN.read_text(encoding='utf-8')))
+        self.assertIsNone(LOCAL_PATH.search(text))
+        data = MUTATION_GOLDEN.read_text(encoding='utf-8')
+        self.assertIsNone(SERVER_TRACE.search(data))
+        self.assertIsNone(LOCAL_PATH.search(data))
 
 
 ANT_RULES = {'ANT_01', 'ANT_02_1', 'ANT_02_2', 'ANT_02_3', 'ANT_03_1', 'ANT_03_2', 'ANT_03_3', 'ANT_04',
@@ -1030,7 +1035,117 @@ class WaveTwoGoldenFileTests(unittest.TestCase):
                        '20261129', 'scripts/asic/mutate_v2.py', '--core-gds', '2026-11-28'):
             self.assertIn(needle, text)
         self.assertIsNone(SERVER_TRACE.search(text))
-        self.assertIsNone(SERVER_TRACE.search((self.FOLDER/'golden.json').read_text(encoding='utf-8')))
+        self.assertIsNone(LOCAL_PATH.search(text))
+        data = (self.FOLDER/'golden.json').read_text(encoding='utf-8')
+        self.assertIsNone(SERVER_TRACE.search(data))
+        self.assertIsNone(LOCAL_PATH.search(data))
+
+def sha(data):
+    import hashlib
+    return hashlib.sha256(data).hexdigest()
+
+
+class MutationRebuildTests(unittest.TestCase):
+    """`_rebuild` sha guards, with the KLayout generators mocked (runs without KLayout)."""
+    STD, GPIO, CORE = b'std library', b'gpio library', b'core gds'
+
+    def setUp(self):
+        import mutate_v2
+        self.mutate_v2 = mutate_v2
+        self.tmp = tempfile.TemporaryDirectory()
+        tmp = Path(self.tmp.name)
+        self.kit = tmp/'kit'
+        for relative, data in ((mutate_v2.STD_GDS, self.STD), (mutate_v2.GPIO_GDS, self.GPIO)):
+            (self.kit/relative).parent.mkdir(parents=True, exist_ok=True)
+            (self.kit/relative).write_bytes(data)
+        self.core, self.other = tmp/'core.gds', tmp/'other.gds'
+        self.core.write_bytes(self.CORE)
+        self.other.write_bytes(b'core from another RTL')
+        self.std_name, self.gpio_name = Path(mutate_v2.STD_GDS).name, Path(mutate_v2.GPIO_GDS).name
+        self.golden = {'meta': {'generator': 'scripts/asic/mutate_v2.py', 'seed': 20261129,
+                                'checkpoint_only_sources': ['v_ternary8_top.gds'],
+                                'sources': {self.std_name: sha(self.STD), self.gpio_name: sha(self.GPIO),
+                                            'v_ternary8_top.gds': sha(self.CORE)}}}
+        self.calls = []
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def fake_generate(self, kit, out, seed, core, klayout='klayout', **kw):
+        self.calls.append(core)
+        sources = {self.std_name: sha((Path(kit)/self.mutate_v2.STD_GDS).read_bytes()),
+                   self.gpio_name: sha((Path(kit)/self.mutate_v2.GPIO_GDS).read_bytes())}
+        if core:
+            sources[Path(core).name] = sha(Path(core).read_bytes())
+        return {'sources': dict(sources, **self.manifest_sources)}
+
+    manifest_sources = {}
+
+    def rebuild(self, core=None, golden=None):
+        with mock.patch.object(self.mutate_v2, 'run_generate', side_effect=self.fake_generate):
+            return reliability._rebuild(golden or self.golden, Path(self.tmp.name)/'corpus', self.kit, core, 'klayout')
+
+    def test_without_core_the_windows_are_not_regenerated(self):
+        self.assertEqual(list(self.rebuild()), ['v_ternary8_top.gds'])
+        self.assertEqual(self.calls, [None])
+
+    def test_core_with_the_golden_sha_is_generated_and_compared(self):
+        self.assertEqual(self.rebuild(self.core), {})
+        self.assertEqual(self.calls, [self.core])
+
+    def test_core_with_another_sha_is_not_regenerated_and_names_both_hashes(self):
+        reason = self.rebuild(self.other)['v_ternary8_top.gds']
+        self.assertIn(sha(self.other.read_bytes()), reason)
+        self.assertIn(sha(self.CORE), reason)
+        self.assertEqual(self.calls, [None])
+
+    def test_kit_source_with_another_sha_stops_before_generating(self):
+        (self.kit/self.mutate_v2.GPIO_GDS).write_bytes(b'patched gpio')
+        with self.assertRaises(reliability.SourceMismatch) as caught:
+            self.rebuild()
+        self.assertIn(sha(b'patched gpio'), str(caught.exception))
+        self.assertEqual(self.calls, [])
+
+    def test_generated_manifest_with_another_kit_sha_fails(self):
+        self.manifest_sources = {self.std_name: 'f'*64}
+        with self.assertRaises(reliability.SourceMismatch):
+            self.rebuild()
+
+    def test_unknown_generator_fails(self):
+        golden = {'meta': dict(self.golden['meta'], generator='scripts/asic/mutate_v9.py')}
+        with self.assertRaises(ValueError):
+            self.rebuild(golden=golden)
+        self.assertEqual(self.calls, [])
+
+    def test_wave_one_generator_is_called_with_its_seed(self):
+        import mutate
+        golden = {'meta': {'generator': 'scripts/asic/mutate.py', 'seed': 20261128, 'per_cell': 6,
+                           'sources': [self.std_name, self.gpio_name]}}
+        with mock.patch.object(mutate, 'generate') as generate:
+            self.assertEqual(reliability._rebuild(golden, Path(self.tmp.name)/'c', self.kit, None, 'klayout'), {})
+        generate.assert_called_once_with(self.kit, Path(self.tmp.name)/'c', 20261128, 6, 'klayout')
+
+    def test_kit_mismatch_writes_a_failing_result_instead_of_a_traceback(self):
+        (self.kit/self.mutate_v2.STD_GDS).write_bytes(b'another kit')
+        out = Path(self.tmp.name)/'out'
+        (Path(self.tmp.name)/'golden'/'g').mkdir(parents=True)
+        golden_path = Path(self.tmp.name)/'golden'/'g'/'golden.json'
+        golden_path.write_text(json.dumps(dict(self.golden, mutations=[mutation('a.gds')])), encoding='utf-8')
+        rules_file(Path(self.tmp.name)/'drc-rules.json', R='verified')
+        with mock.patch.object(self.mutate_v2, 'run_generate', side_effect=self.fake_generate), \
+                mock.patch.object(reliability, 'klayout_version', return_value='K'), \
+                contextlib.redirect_stdout(io.StringIO()):
+            code = reliability.main(['check-mutations', '--golden', str(golden_path), '--kit', str(self.kit),
+                                     '--out', str(out), '--rules', str(Path(self.tmp.name)/'drc-rules.json')])
+        self.assertEqual(code, 1)
+        self.assertEqual(self.calls, [])
+        result = json.loads((out/'g'/'result.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'], 'fail')
+        self.assertIn('키트', result['error'])
+        self.assertEqual(json.loads((out/'result.json').read_text(encoding='utf-8'))['status'], 'fail')
+        summary = (out/'summary.md').read_text(encoding='utf-8')
+        self.assertIn('키트 원본', summary)
+        self.assertIn(sha(b'another kit'), summary)
 
 if __name__ == '__main__':
     unittest.main()

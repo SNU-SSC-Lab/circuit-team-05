@@ -30,7 +30,6 @@ SEED = 20261129
 STD_GDS = 'NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_PnR/GDS/NSPL_0p5um_Digital_CMOS_2P3M_5V_V1p1_12T_std.gds'
 GPIO_GDS = 'ETRI_NSPL_GPIO_250610.gds'
 CORE_TOP = 'v_ternary8_top'
-PARAMS = dict(std_per=8, gpio_per=3, windows=28, win_per=6, win_um=30.0)
 
 GRID_UM = 0.01            # deck: PRECISION 1000, OFFGRID <layer> 10  -> 0.01 um
 # min width (um) per GDS layer, deck rule names in MINW_RULE
