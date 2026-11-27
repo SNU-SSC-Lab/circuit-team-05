@@ -1,7 +1,7 @@
 # SPEC 0019 baseline-guard: a PR may not move verification baselines (verification/reliability/**,
 # rule states in verification/asic/drc-rules.json, the guard, gate workflows and CODEOWNERS) without
 # 도재겸's bypass merge. The repository is public and pull_request_target runs for fork PRs too, with
-# this file as it is on the DEFAULT branch (main): since 2025-11 GitHub takes the workflow file and
+# this file as it is on the DEFAULT branch (main): since 2025-12-08 GitHub takes the workflow file and
 # GITHUB_SHA of pull_request_target from the default branch, whatever the PR's base. So the first PR
 # that adds this file does not run it. NO PR code runs here: the guard and reliability.py come
 # from the workflow's own commit ($GITHUB_SHA) and read base and head only as git blobs (bytes/JSON).

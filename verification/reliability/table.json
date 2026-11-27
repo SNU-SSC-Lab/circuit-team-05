@@ -22,7 +22,7 @@
       "verdict": "match",
       "scope": "1차 695개(mutate.py: 키트 표준셀·GPIO 셀 도형 하나 변형) + 2차 800개(mutate_v2.py: 키트 셀 604개 + 오픈소스 흐름 코어 30×30 µm 창 196개), GDS마다 verified 규칙 발동 여부",
       "note": "1차: Calibre가 읽은 614개 중 최상위 셀이 빈 5개를 뺀 609개 × 96개 규칙 = 58,464 판정, 불일치 0(첫 대조의 7.CONT.E1/E2/E3 일부 겹침 13건은 KLayout 쪽을 고침). 81개는 자기 교차 다각형이라 Calibre가 입력을 거부해 사유가 붙은 제외. 2차: Calibre 거부 0, 빈 최상위 셀 2개 제외, 798개 × 96개 = 76,608 판정 중 둘 다 위반 2,022·둘 다 없음 74,586·한쪽만 위반 0",
-      "pr_check": "DRC 코드·golden·drc-rules.json·asic.yml이 바뀐 PR과 main push에서 reliability-table이 키트 부분을 다시 만들어 대조(reliability.py check-mutations, 약 30분). 코어 창 196개는 코어 GDS가 저장소에 없어 기준점 전용",
+      "pr_check": "DRC 코드·golden·drc-rules.json·asic.yml이 바뀐 PR과 main push에서 reliability-table이 키트 부분을 다시 만들어 대조(reliability.py check-mutations, GitHub 실행기에서 약 8~13분). 코어 창 196개는 코어 GDS가 저장소에 없어 기준점 전용",
       "evidence": ["golden/drc-mutations-20261128/golden.json", "golden/drc-mutations-20261128b/golden.json"],
       "unverified": [],
       "updated": "2026-11-28"
