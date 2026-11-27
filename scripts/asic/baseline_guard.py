@@ -38,6 +38,7 @@ a timeout, after the same strict scan. The scan is defence in depth, not a sandb
 """
 import argparse
 import ast
+import builtins
 import hashlib
 import io
 import json
@@ -87,6 +88,15 @@ PENDING_NAME = re.compile(r'drc_cases_pending(_[a-z0-9]+)?')  # only when the tr
 MODULE_ATTRS = {'reliability', 'math', 'collections', 'sys', 'os', 'subprocess', 'builtins', 'modules', 'importlib',
                 'json', 'hashlib', 'Path', 'pathlib', 'csv', 're', 'time', 'argparse', 'loader', 'spec'}
 REGULAR = {'100644', '100755'}
+# Names a fixture source may use without binding them itself: exactly the builtins the 2026-11-28
+# drc_cases.py and drc_cases_pending*.py use. Every other builtin (help, getattr, type, object, iter, ...)
+# and every name the file does not bind is a violation; binding a builtin name does not make it allowed
+# (the scan does not follow scopes). FORBIDDEN_NAMES above stays as the documented worst cases.
+ALLOWED_BUILTINS = frozenset({'ValueError', 'all', 'any', 'dict', 'enumerate', 'int', 'isinstance', 'len', 'list',
+                              'map', 'max', 'min', 'print', 'range', 'round', 'set', 'sorted', 'str', 'tuple'})
+BUILTIN_NAMES = frozenset(dir(builtins))
+# The only attributes a pending file may read from another pending module.
+PENDING_MODULE_ATTRS = {'cases', 'records', 'cases_with_meta'}
 # New files under scripts/asic with these names change what `import` finds for reliability.py and the
 # DRC harness (stdlib modules, KLayout's pya).
 SHADOWED = set(sys.stdlib_module_names) | {'pya', 'klayout'}
@@ -122,13 +132,20 @@ def empty():
             'sources': {}, 'duplicate_rules': [], 'entries': {}}
 
 
-def _node_problem(node, strict, parents, aliases, pending_modules):
-    """Why one AST node is not allowed in a fixture source, or None. strict: drc_cases.py rules."""
+def _node_problem(node, strict, parents, aliases, pending_modules, bound, own):
+    """Why one AST node is not allowed in a fixture source, or None. strict: drc_cases.py rules.
+
+    aliases: imported module names; bound: every name the file binds; own: the file's module name."""
     if isinstance(node, (ast.Import, ast.ImportFrom)):
         if strict:
             return 'import 문'
         if isinstance(node, ast.ImportFrom):
             return 'from … import 문'
+        if any(alias.name == own for alias in node.names):
+            return f'자기 자신 import {own}'
+        renamed = [f'{alias.name} as {alias.asname}' for alias in node.names if alias.asname]
+        if renamed:
+            return f'import … as 별칭 {", ".join(renamed)}'
         bad = [alias.name for alias in node.names
                if alias.name not in PENDING_MODULES and not (
                    PENDING_NAME.fullmatch(alias.name) if pending_modules is None else alias.name in pending_modules)]
@@ -143,9 +160,20 @@ def _node_problem(node, strict, parents, aliases, pending_modules):
     if isinstance(node, ast.Name):
         if strict and node.id.startswith('_') or not strict and node.id.startswith('__') and node.id != '__name__':
             return f'밑줄로 시작하는 이름 {node.id}'
-        if node.id in FORBIDDEN_NAMES and (strict or node.id != '__name__') or strict and node.id == 'type':
-            return f'내부 기능 {node.id}'
+        if node.id == '__name__' and not strict:
+            return None
+        if node.id in BUILTIN_NAMES and node.id not in ALLOWED_BUILTINS:
+            return f'허용 목록 밖의 이름 {node.id}'
+        if node.id not in bound and node.id not in ALLOWED_BUILTINS:
+            return f'파일 안에서 정의하지 않은 이름 {node.id}'
         module = aliases.get(node.id)
+        if module is not None and module not in PENDING_MODULES:  # another pending file
+            parent = parents.get(node)
+            if not (isinstance(parent, ast.Attribute) and parent.value is node and isinstance(parent.ctx, ast.Load)
+                    and parent.attr in PENDING_MODULE_ATTRS):
+                attr = f'.{parent.attr}' if isinstance(parent, ast.Attribute) and parent.value is node else ''
+                return (f'모듈 {module}{attr}은(는) 허용한 속성({", ".join(sorted(PENDING_MODULE_ATTRS))})으로만 '
+                        '씁니다')
         if module in PENDING_MODULES:
             parent = parents.get(node)
             if not (isinstance(parent, ast.Attribute) and parent.value is node and isinstance(parent.ctx, ast.Load)
@@ -166,11 +194,14 @@ def source_problems(relpath, data, pending_modules=None):
     """Korean problems of a fixture source given as bytes. Parsed with ast only: never compiled or run.
 
     The bytes are parsed as Python reads them (a coding cookie other than UTF-8 is rejected: UTF-7 or
-    unicode_escape can hide code from a reader of the text). drc_cases.py (strict): no import, match,
-    class, lambda, global/nonlocal, names or function names starting with `_`, `type`, `_`/frame/forbidden
-    attributes, attribute assignment or FORBIDDEN_NAMES. drc_cases_pending*.py: imports only of
-    PENDING_MODULES and the pending files of the same tree (`pending_modules`), those modules only through
-    the listed attributes, no attribute leading to a module, `_name` locals and reading `__name__` allowed.
+    unicode_escape can hide code from a reader of the text). Names are allow-listed in both modes: a
+    name must be bound in the file or be one of ALLOWED_BUILTINS; any other builtin (help, getattr, type,
+    ...) is reported even when the file binds it. drc_cases.py (strict): also no import, match, class,
+    lambda, global/nonlocal, names or function names starting with `_`, `_`/frame/forbidden attributes
+    or attribute assignment. drc_cases_pending*.py: imports only of PENDING_MODULES and the pending files
+    of the same tree (`pending_modules`), without `as` and never itself; PENDING_MODULES only through the
+    listed attributes, other pending modules only through PENDING_MODULE_ATTRS, no attribute leading to
+    a module; `_name` locals and reading `__name__` allowed.
     Anything that cannot be read fails closed."""
     if len(data) > MAX_SOURCE_BYTES:
         return [f'파일이 너무 큽니다({len(data)}바이트, 한도 {MAX_SOURCE_BYTES}).']
@@ -193,8 +224,25 @@ def source_problems(relpath, data, pending_modules=None):
         parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
         aliases = {alias.asname or alias.name: alias.name for node in ast.walk(tree)
                    if isinstance(node, ast.Import) for alias in node.names}
+        bound = set(aliases)
         for node in ast.walk(tree):
-            why = _node_problem(node, strict, parents, aliases, pending_modules)
+            if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+                bound.add(node.id)
+            elif isinstance(node, ast.arg):
+                bound.add(node.arg)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                bound.add(node.name)
+            elif isinstance(node, ast.ExceptHandler) and node.name:
+                bound.add(node.name)
+        own = relpath.rsplit('/', 1)[-1].removesuffix('.py')
+        for node in ast.walk(tree):
+            # A bound builtin name (`def f(help)`) is still reported: the scan does not follow scopes.
+            if isinstance(node, ast.arg) and node.arg in BUILTIN_NAMES - ALLOWED_BUILTINS:
+                problems.append(f'{node.lineno}번째 줄: 허용 목록 밖의 이름 {node.arg}')
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) \
+                    and node.name in BUILTIN_NAMES - ALLOWED_BUILTINS:
+                problems.append(f'{node.lineno}번째 줄: 허용 목록 밖의 이름 {node.name}')
+            why = _node_problem(node, strict, parents, aliases, pending_modules, bound, own)
             if why:
                 problems.append(f'{getattr(node, "lineno", 0)}번째 줄: {why}')
     except RecursionError:
@@ -422,7 +470,7 @@ def violations(base, head):
     base_sources = base.get('sources', {})
     for path, (digest, problems) in sorted(head.get('sources', {}).items()):
         if problems and base_sources.get(path, (None,))[0] != digest:
-            found.append(f'fixture 정의 파일 `{_c(path)}`에 정의 밖의 코드가 있습니다: '+'; '.join(_c(p) for p in problems)
+            found.append(f'fixture 정의 파일 `{_c(path)}`에 정의 밖의 코드가 있습니다: '+'; '.join(_c(p).rstrip('.') for p in problems)
                          +'. 이 파일은 시험 과정에서 reliability.py와 같은 프로세스로 실행되므로 fixture 정의만 둘 수 있습니다.')
     base_files = dict(base['golden'], **base['baseline_files'])
     head_files = dict(head['golden'], **head['baseline_files'])

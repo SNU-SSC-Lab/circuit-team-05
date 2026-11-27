@@ -20,9 +20,11 @@ port. When a rule is ported, move its fixtures to `drc_cases.py` and its golden 
 import json
 
 import reliability
-import drc_cases_pending_c1a as c1a
-import drc_cases_pending_c1b as c1b
-import drc_cases_pending_c1c as c1c
+# No `as` aliases and no module objects in variables: baseline_guard.py's scan allows only
+# <pending module>.cases / .records / .cases_with_meta (SPEC 0019).
+import drc_cases_pending_c1a
+import drc_cases_pending_c1b
+import drc_cases_pending_c1c
 
 # (group, GDS name Calibre ran) -> fields replaced by the Calibre verdict, and why.
 CORRECTIONS = {
@@ -37,16 +39,17 @@ CORRECTIONS = {
 
 def _decks(group):
     if group == 'C1b':
-        return [record['deck'] for record in c1b.records()]
+        return [record['deck'] for record in drc_cases_pending_c1b.records()]
     return None
 
 
 def records():
     """One dict per fixture: group, index (in its group), gds, deck, case, run_case_sha256, correction."""
     result, used = [], set()
-    for group, module in (('C1a', c1a), ('C1b', c1b), ('C1c', c1c)):
+    for group, group_cases_of in (('C1a', drc_cases_pending_c1a.cases), ('C1b', drc_cases_pending_c1b.cases),
+                                  ('C1c', drc_cases_pending_c1c.cases)):
         # JSON round trip: plain lists and dicts, so the hash and the GDS see the same shapes.
-        group_cases, decks = json.loads(json.dumps(module.cases())), _decks(group)
+        group_cases, decks = json.loads(json.dumps(group_cases_of())), _decks(group)
         for index, case in enumerate(group_cases):
             gds = reliability.fixture_name(index, case)+'.gds'
             change, why = CORRECTIONS.get((group, gds), ({}, None))

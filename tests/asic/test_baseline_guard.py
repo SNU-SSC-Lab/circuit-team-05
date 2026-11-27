@@ -417,7 +417,7 @@ class SourceScanTests(unittest.TestCase):
                 self.assertTrue(scan(CASES_PATH, source), source)
 
     def test_pending_rules_allow_known_imports_only(self):
-        self.assertEqual(scan(PENDING_PATH, 'import math\nimport reliability\nimport drc_cases_pending_c1b as b\n'
+        self.assertEqual(scan(PENDING_PATH, 'import math\nimport reliability\nimport drc_cases_pending_c1b\n'
                                             '_n = 1\nif __name__ == "__main__":\n    import collections\n'), [])
         for source in ('import os\n', 'from os import path\n', 'from . import x\n', LOADER,
                        'import reliability\nreliability.case_sha256 = len\n',
@@ -487,20 +487,83 @@ class Round3ScanTests(unittest.TestCase):
 
     def test_pending_modules_are_reached_only_through_allowed_attributes(self):
         for source in (PENDEXEC, PEND_SETATTR, 'import reliability\nr = reliability\n',
-                       'import drc_cases_pending_c1b as b\nx = b.reliability\n', 'import math\nx = math.pi.real\n'):
+                       'import drc_cases_pending_c1b\nx = drc_cases_pending_c1b.reliability\n',
+                       'import drc_cases_pending_c1b\nx = (drc_cases_pending_c1b,)\n',
+                       'import math\nx = math.pi.real\n'):
             with self.subTest(source=source):
                 self.assertTrue(scan(PENDING_PATH, source), source)
-        ok = ('import math\nimport collections\nimport reliability\nimport drc_cases_pending_c1b as b\n'
+        ok = ('import math\nimport collections\nimport reliability\nimport drc_cases_pending_c1b\n'
               'a = math.floor(1.5) + math.sqrt(4)\nc = collections.Counter()\n'
-              'h = reliability.case_sha256({})\nn = reliability.fixture_name(0, {})\nr = b.records\n'
-              'for group, module in (("g", b),):\n    module.cases()\n')
+              'h = reliability.case_sha256({})\nn = reliability.fixture_name(0, {})\n'
+              'r = drc_cases_pending_c1b.records\n'
+              'for group, make in (("g", drc_cases_pending_c1b.cases),):\n    make()\n')
         self.assertEqual(scan(PENDING_PATH, ok), [])
 
     def test_pending_imports_must_be_pending_files_of_the_same_tree(self):
         source = b'import drc_cases_pending_zz\n'
         self.assertTrue(baseline_guard.source_problems(PENDING_PATH, source, {'drc_cases_pending_c1a'}))
-        self.assertEqual(baseline_guard.source_problems(PENDING_PATH, b'import drc_cases_pending_c1a\n',
-                                                        {'drc_cases_pending_c1a'}), [])
+        self.assertEqual(baseline_guard.source_problems(PENDING_PATH, b'import drc_cases_pending_c1b\n',
+                                                        {'drc_cases_pending_c1a', 'drc_cases_pending_c1b'}), [])
+
+
+# Round-4 probes (re-review of 9fb2426).
+HELPBYPASS = 'def cases():\n    return []\n\n\nhelp("drc_zz")\n'  # help -> pydoc.locate -> __import__
+PENDCHAIN = ('import math\n\n\ndef cases():\n    return []\n\n\nimport reliability as helper\n'
+             'import drc_cases_pending_c1c as me\nme.helper.ROOT.joinpath("g4-pending-wrote-this").write_text("x")\n'
+             'me.helper.VERDICT_KO.update(mismatch="x")\n')
+PENDING_C1C = 'scripts/asic/drc_cases_pending_c1c.py'
+TREE = {'drc_cases_pending_c1a', 'drc_cases_pending_c1b', 'drc_cases_pending_c1c'}
+
+
+class Round4ScanTests(unittest.TestCase):
+    def test_helpbypass_is_reported_in_both_modes(self):
+        self.assertTrue(scan(CASES_PATH, HELPBYPASS))
+        self.assertTrue(scan(PENDING_PATH, HELPBYPASS))
+
+    def test_pendchain_is_reported(self):
+        found = baseline_guard.source_problems(PENDING_C1C, PENDCHAIN.encode('utf-8'), TREE)
+        self.assertTrue(any('as' in why for why in found), found)
+        self.assertTrue(any('자기 자신' in why for why in found), found)
+
+    def test_names_outside_the_allow_list_are_reported(self):
+        for name in ('help', 'breakpoint', 'getattr', 'memoryview', 'object', 'type', 'super', 'iter', 'next',
+                     'classmethod', 'staticmethod', 'property', 'license', 'copyright', 'credits'):
+            with self.subTest(name=name):
+                self.assertTrue(scan(CASES_PATH, f'def cases():\n    return [{name}]\n'))
+                self.assertTrue(scan(PENDING_PATH, f'x = {name}\n'))
+        self.assertTrue(scan(CASES_PATH, 'def cases():\n    return [undefined_name]\n'))
+
+    def test_binding_a_builtin_name_does_not_make_it_allowed(self):  # scope-insensitive binding check
+        self.assertTrue(scan(PENDING_PATH, 'def f(help):\n    return help\nhelp("drc_zz")\n'))
+        self.assertTrue(scan(PENDING_PATH, 'help = 1\n'))
+
+    def test_allowed_names_and_local_bindings_pass(self):
+        self.assertEqual(scan(CASES_PATH, 'def cases():\n    out = []\n    for i in range(len(out)):\n'
+                                          '        out.append(dict(rule=str(i), shapes=list(), fail=round(1.5) > 1))\n'
+                                          '    return [c for c in out if isinstance(c, dict)]\n'), [])
+
+    def test_attributes_on_pending_modules_are_limited(self):
+        for attr in ('cases', 'records', 'cases_with_meta'):
+            with self.subTest(attr=attr):
+                self.assertEqual(baseline_guard.source_problems(
+                    PENDING_PATH, f'import drc_cases_pending_c1b\nx = drc_cases_pending_c1b.{attr}\n'.encode(),
+                    TREE), [])
+        for attr in ('helper', 'DECK_LINE', 'json'):
+            with self.subTest(attr=attr):
+                self.assertTrue(baseline_guard.source_problems(
+                    PENDING_PATH, f'import drc_cases_pending_c1b\nx = drc_cases_pending_c1b.{attr}\n'.encode(),
+                    TREE))
+
+    def test_no_import_aliases_in_pending_files(self):
+        for source in ('import math as m\n', 'import reliability as helper\n', 'import drc_cases_pending_c1b as b\n'):
+            with self.subTest(source=source):
+                self.assertTrue(baseline_guard.source_problems(PENDING_PATH, source.encode(), TREE))
+
+    def test_non_regular_message_has_one_full_stop(self):
+        head = baseline_guard._build(lambda rel: None, [], entries={'drc_cases.py': '120000'})
+        found = baseline_guard.violations(baseline_guard.empty(), head)
+        self.assertTrue(found)
+        self.assertFalse(any('..' in text for text in found), found)
 
 
 def git(repo, *args, data=None):
@@ -519,7 +582,7 @@ class TreeTests(unittest.TestCase):
         git(cls.repo, 'config', 'user.name', 't')
         git(cls.repo, 'config', 'user.email', 't@t')
         files = {CASES_PATH: (ROOT/CASES_PATH).read_bytes(), PENDING_PATH: b'import math\n',
-                 'scripts/asic/drc_cases_pending.py': b'import drc_cases_pending_c1a as c1a\n',
+                 'scripts/asic/drc_cases_pending.py': b'import drc_cases_pending_c1a\n',
                  baseline_guard.RULES: b'{"rules": []}'}
         for path, data in files.items():
             blob = git(cls.repo, 'hash-object', '-w', '--stdin', data=data)
@@ -580,8 +643,8 @@ class NormaliseTests(unittest.TestCase):
         class Lying(list):
             def __iter__(self):
                 return iter([])
-        real = drc_cases_pending.c1a.cases
-        with mock.patch.object(drc_cases_pending.c1a, 'cases',
+        real = drc_cases_pending.drc_cases_pending_c1a.cases
+        with mock.patch.object(drc_cases_pending.drc_cases_pending_c1a, 'cases',
                                lambda: [dict(case, shapes=Lying(case['shapes'])) for case in real()]):
             records = drc_cases_pending.records()
         lying = [dict(case, shapes=Lying(case['shapes'])) for case in real()]
@@ -675,6 +738,21 @@ class WorkflowTextTests(unittest.TestCase):
                     self.assertIn('python -I -E -s', code, line)
         self.assertIn('od -An -N16 -tx1 /dev/urandom', self.text)
         self.assertNotIn('import secrets', self.text)
+
+    def test_exact_guard_invocation(self):  # round 4
+        self.assertIn('working-directory: ${{ runner.temp }}', self.text)
+        self.assertIn('repo="$GITHUB_WORKSPACE/head"', self.text)
+        self.assertIn('python -I -E -s "$guard/baseline_guard.py" --base "$BASE_SHA" --head "$HEAD_SHA" --root "$repo"',
+                      self.text)
+        runs = '\n'.join(self.run_blocks())
+        self.assertEqual(len(re.findall(r'\bpython', runs)), 1, runs)  # exactly the guard command
+        for pattern in (r'python3', r'\$pythonLocation', r'which\s+python', r'\buv\s+run', r'\bpip\b',
+                        r'cd\s+"?\$\{?GITHUB_WORKSPACE', r'cd\s+"?\$repo', r'cd\s+"?head'):
+            with self.subTest(pattern=pattern):
+                self.assertIsNone(re.search(pattern, runs), pattern)
+        for line in self.text.splitlines():
+            if 'working-directory:' in line:
+                self.assertEqual(line.strip(), 'working-directory: ${{ runner.temp }}', line)
 
     def test_run_blocks_take_event_values_only_through_env(self):
         blocks = self.run_blocks()
