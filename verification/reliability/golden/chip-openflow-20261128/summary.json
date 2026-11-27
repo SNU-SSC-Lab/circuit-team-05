@@ -13,7 +13,9 @@
       "drc": 209,
       "ant": 12
     },
-    "header": "키트 drc_header.cal·ant_header.cal·lvs_header.cal에서 최상위 셀 이름만 바꿈. DRC MAXIMUM RESULTS ALL"
+    "header": "키트 drc_header.cal·ant_header.cal·lvs_header.cal에서 최상위 셀 이름만 바꿈. DRC MAXIMUM RESULTS ALL",
+    "klayout_version": "0.28.16",
+    "klayout_drc": "scripts/asic/drc_audit.py 확장 profile, 구현 규칙 96개, 2026-11-28"
   },
   "designs": {
     "v_ternary8_top": {
@@ -36,7 +38,8 @@
       "open_source": {
         "lvs": "match",
         "lvs_tool": "KLayout 추출 + Netgen (흐름의 asic-lvs, 같은 GDS·같은 schematic.spice)",
-        "drc_routing_subset_errors": 0
+        "drc_routing_subset_errors": 0,
+        "klayout_drc_implemented_rules": 0
       }
     },
     "ternary8_sop28": {
@@ -45,6 +48,9 @@
       "calibre": {
         "drc": 0,
         "ant": 0
+      },
+      "open_source": {
+        "klayout_drc_implemented_rules": 0
       }
     }
   }

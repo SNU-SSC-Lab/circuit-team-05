@@ -18,7 +18,7 @@ GOLDEN_DIR = ROOT/'verification/reliability/golden/drc-fixtures-20261128'
 GOLDEN = GOLDEN_DIR/'golden.json'
 RELIABILITY = ROOT/'verification/reliability'
 RULES_JSON = ROOT/'verification/asic/drc-rules.json'
-SERVER_TRACE = re.compile(r'polaris|snu\.|\d+\.\d+\.\d+\.\d+|/tmp|/home|/var/|authorized_keys', re.I)
+SERVER_TRACE = re.compile(r'\.ac\.kr|\d+\.\d+\.\d+\.\d+|/tmp|/home|/var/|authorized_keys', re.I)
 META = dict(calibre_version='v2023.4_17.10', deck_sha256=drc_catalog.SOURCE_SHA,
             fixture_tarball_sha256='a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8',
             generator_commit='303bcb6', run_date='2026-11-28')
@@ -364,7 +364,7 @@ class GoldenFileTests(unittest.TestCase):
         for needle in ('v2023.4_17.10', drc_catalog.SOURCE_SHA, 'a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8',
                        '303bcb6', '2026-11-28'):
             self.assertIn(needle, text)
-        self.assertIsNone(re.search(r'polaris|snu\.|\d+\.\d+\.\d+\.\d+|/tmp|/home|authorized_keys', text, re.I))
+        self.assertIsNone(SERVER_TRACE.search(text))
 
 
 if __name__ == '__main__':

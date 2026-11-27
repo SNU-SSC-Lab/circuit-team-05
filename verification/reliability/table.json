@@ -28,6 +28,19 @@
       "updated": "2026-11-28"
     },
     {
+      "id": "drc-chip-openflow",
+      "stage": "DRC 실제 칩",
+      "open_source": "KLayout 0.28.16 구현 규칙 96개",
+      "commercial": "Calibre v2023.4_17.10, 키트 DRC deck 무수정(sha256 6c012073…c4f0f)",
+      "verdict": "match",
+      "scope": "오픈소스 흐름 코어·SOP28 칩 2건, 구현 규칙 범위",
+      "note": "코어 v_ternary8_top: KLayout 0 ↔ Calibre 0. SOP28 칩 ternary8_sop28: KLayout 0 ↔ Calibre 0",
+      "pr_check": "구현 규칙 DRC 0건은 ASIC gate가 PR마다 새 GDS로 확인. Calibre 대조는 기준점에서만",
+      "evidence": ["golden/chip-openflow-20261128/summary.json"],
+      "unverified": ["drc-unported-rules"],
+      "updated": "2026-11-28"
+    },
+    {
       "id": "lvs-core",
       "stage": "LVS 코어",
       "open_source": "KLayout 추출 + Netgen",
