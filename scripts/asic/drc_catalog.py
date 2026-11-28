@@ -7,8 +7,10 @@ from pathlib import Path
 import re
 try:
     from .drc_ports import PORTS
+    from .drc_antenna import ANT_SOURCE, ANT_SOURCE_SHA, RULES as ANTENNA
 except ImportError:
     from drc_ports import PORTS
+    from drc_antenna import ANT_SOURCE, ANT_SOURCE_SHA, RULES as ANTENNA
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT/'verification/asic/drc-rules.json'
@@ -59,9 +61,12 @@ def strip_comments(text, line_comment='//'):
         i = end
     return ''.join(result)
 
-def parse_checks(text):
+def parse_checks(text, indented=False):
+    """Checks `NAME { ... }` of an SVRF deck. indented: a header may follow spaces (the ANT deck indents
+    ANT_02_3 and ANT_03_3); the DRC deck is parsed without, as its catalog was made."""
     clean = strip_comments(text)
-    header = re.compile(r'(?m)^([A-Za-z0-9_][A-Za-z0-9_.]*)\s*\{')
+    header = re.compile(r'(?m)^[ \t]*([A-Za-z0-9_][A-Za-z0-9_.]*)\s*\{' if indented else
+                        r'(?m)^([A-Za-z0-9_][A-Za-z0-9_.]*)\s*\{')
     result = {}
     previous_end = 0
     for match in header.finditer(clean):
@@ -132,6 +137,25 @@ def compare_rules(actual, disabled, catalog, ports=None):
         raise ValueError('catalog executable-check set differs from geometry implementation')
     return catalog
 
+def compare_antenna(actual, catalog, implemented=None):
+    """ANT deck RULECHECKs against drc-rules.json `antenna_rules` and drc_antenna.RULES (same checks, lines)."""
+    rules = catalog.get('antenna_rules', [])
+    expected = {r['id']: r for r in rules}
+    if len(expected) != len(rules) or set(expected) != set(actual):
+        raise ValueError('antenna catalog missing, extra or duplicate checks')
+    for name, value in actual.items():
+        for key in ['body_sha256', 'source_line']:
+            if expected[name][key] != value[key]:
+                raise ValueError('antenna catalog/source mismatch: '+name+' '+key)
+    implemented = ANTENNA if implemented is None else implemented
+    ported = {name for name, rule in expected.items() if rule['implementation'] == 'antenna_port'}
+    if ported != set(implemented):
+        raise ValueError('catalog antenna-check set differs from drc_antenna.py')
+    for name in ported:
+        if implemented[name]['line'] != expected[name]['source_line']:
+            raise ValueError('drc_antenna.py cites another deck line for '+name)
+    return catalog
+
 def validate(pdk, catalog=None):
     catalog = catalog or json.loads(CATALOG.read_text(encoding='utf-8'))
     source = (Path(pdk)/CALIBRE).read_bytes()
@@ -141,6 +165,10 @@ def validate(pdk, catalog=None):
     if sha(assura) != catalog['sources']['assura']['sha256'] or sha(assura) != ASSURA_SHA:
         raise ValueError('unreviewed Assura DRC source')
     compare_rules(parse_checks(source.decode()), disabled_checks(source.decode()), catalog)
+    antenna = (Path(pdk)/ANT_SOURCE).read_bytes()
+    if sha(antenna) != catalog['sources']['calibre_ant']['sha256'] or sha(antenna) != ANT_SOURCE_SHA:
+        raise ValueError('unreviewed Calibre ANT source')
+    compare_antenna(parse_checks(antenna.decode(), indented=True), catalog)
     labels = assura_labels(assura.decode())
     for rule in catalog['rules']:
         if rule['assura_label'] != (rule['id'] in labels):
@@ -162,13 +190,20 @@ def markdown(catalog):
                  '기하 검사·Calibre 일치(verified)' if rule.get('golden_compared') else '기하 검사·Calibre 대조 전(ported)')
         lines.append(f'| {rule["id"]} | {rule["source_line"]} | {rule["legacy_coverage"]} | {state} | '
                      f'{rule["assura_label"]} | {rule["converted_label"]} | {rule["remaining"]} |')
+    lines += ['', '## 키트 ANT deck', '', f'`{ANT_SOURCE}` RULECHECK {len(catalog.get("antenna_rules", []))}개. '
+              'KLayout 구현은 `scripts/asic/drc_antenna.py`(deck 문장 그대로 넷마다 비율 계산).', '',
+              '| 원본 검사 | 줄 | 구현 | 설명 |', '| --- | --- | --- | --- |']
+    for rule in catalog.get('antenna_rules', []):
+        state = ('미구현' if rule['implementation'] != 'antenna_port' else
+                 'antenna 검사·Calibre 일치(verified)' if rule.get('golden_compared') else 'antenna 검사·Calibre 대조 전(ported)')
+        lines.append(f'| {rule["id"]} | {rule["source_line"]} | {state} | {rule["remaining"]} |')
     lines += ['', '원본 비활성: '+', '.join(catalog['disabled_rules']), '',
               'Assura에서만 같은 이름이 잡힌 항목: '+', '.join(catalog['assura_unmatched_ids']), '',
               '공개 변환본에서 다른 이름을 쓴 항목: '+', '.join(catalog['converted_unmatched_ids']), '',
               '아직 옮기지 않은 전역 입력 플래그: '+', '.join(catalog['global_flags_unported']), '',
               '동일 ID는 이름 대조이며 같은 식·조건의 증거가 아니다. 변환본에서 ID를 나누거나 바꾼 경우도 있다. '
-              'Calibre 결과와의 대조는 verification/reliability/(신뢰성 대응표)에 있다: verified 규칙은 fixture와 '
-              '실제 형상 변형본에서 KLayout 판정이 Calibre golden과 같다. Assura 결과와의 대조는 하지 않았다. '
+              'Calibre 결과와의 대조는 verification/reliability/(신뢰성 대응표)에 있다: verified DRC 규칙은 fixture와 '
+              '실제 형상 변형본에서, verified ANT 검사는 fixture에서 KLayout 판정이 Calibre golden과 같다. Assura 결과와의 대조는 하지 않았다. '
               'verified도 공정 전체 DRC 통과나 제출 승인이 아니다.', '']
     return '\n'.join(lines)
 
@@ -181,7 +216,8 @@ def main():
     catalog = validate(args.pdk)
     (args.out/'catalog.json').write_text(json.dumps(catalog, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     (args.out/'rules.md').write_text(markdown(catalog), encoding='utf-8')
-    print(f'{len(catalog["rules"])} active checks exactly matched the pinned source.')
+    print(f'{len(catalog["rules"])} active checks and {len(catalog["antenna_rules"])} ANT RULECHECKs exactly matched '
+          'the pinned sources.')
 
 if __name__ == '__main__':
     main()

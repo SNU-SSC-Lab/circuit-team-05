@@ -12,6 +12,7 @@ scripts/asic/drc_cases_pending*.py @Dojaegyum
 scripts/asic/drc_fixture_test.py @Dojaegyum
 scripts/asic/drc_selftest.py @Dojaegyum
 scripts/asic/drc_geometry.py @Dojaegyum
+scripts/asic/drc_antenna.py @Dojaegyum
 scripts/asic/drc_ports.py @Dojaegyum
 scripts/asic/drc.py @Dojaegyum
 scripts/asic/flow.py @Dojaegyum

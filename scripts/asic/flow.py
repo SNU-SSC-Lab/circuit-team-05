@@ -20,10 +20,11 @@ from .pinplan import make_plan, tcl as pin_tcl
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
+# asic-antenna / asic-chip-antenna: the kit ANT deck's 12 RULECHECKs (drc_antenna.py) on the core / chip GDS.
 CORE_CHECKS = {'asic-input', 'asic-synth', 'asic-pnr', 'asic-cts', 'asic-route',
-               'asic-gds', 'asic-drc-subset', 'asic-extract', 'asic-lvs', 'asic-gate',
+               'asic-gds', 'asic-drc-subset', 'asic-antenna', 'asic-extract', 'asic-lvs', 'asic-gate',
                'asic-pex', 'asic-drc', 'asic-estimated-sta'}
-CHIP_CHECKS = {'asic-chip-gds', 'asic-chip-connectivity', 'asic-chip-lvs',
+CHIP_CHECKS = {'asic-chip-gds', 'asic-chip-connectivity', 'asic-chip-antenna', 'asic-chip-lvs',
                'asic-chip-timing', 'asic-pinmap'}
 # --experimental: the fixed set of process-qualification gaps a manual trial may leave unsupported.
 UNQUALIFIED_DEFAULT = frozenset({'asic-pex', 'asic-drc', 'asic-chip-lvs', 'asic-chip-timing', 'asic-pinmap'})
@@ -217,6 +218,19 @@ set_load 0.5 [all_outputs]
             if not (out/'drc-subset.json').is_file():
                 raise
         checks['asic-drc-subset']['errors'] = json.loads((out/'drc-subset.json').read_text())['errors']
+
+        def antenna(stage, gds, cell, report):
+            # Kit ANT deck, all 12 RULECHECKs; a violating net fails the check, report keeps the nets.
+            try:
+                command(stage, ['klayout', '-b', '-r', HERE/'drc.py'], env=dict(
+                    env, SSC_DRC_PROFILE='antenna', SSC_GDS=str(gds), SSC_TOP=cell, SSC_DRC_OUT=str(out/report)))
+            except RuntimeError:
+                if not (out/report).is_file():
+                    raise
+            found = json.loads((out/report).read_text())
+            checks[stage].update(errors=found['errors'], report=report, rulechecks=len(found['rules']))
+            write()
+        antenna('asic-antenna', out/(top+'.gds'), top, 'antenna.json')
         if args.target == 'chip':
             try:
                 env.update(SSC_PAD_ROOT=str(args.pdk.resolve()), SSC_CORE_GDS=str(out/(top+'.gds')),
@@ -226,6 +240,7 @@ set_load 0.5 [all_outputs]
                 env.update(SSC_CHIP_GDS=str(out/'ternary8_sop28.gds'), SSC_CHIP_ASSEMBLY=str(out/'ternary8_sop28.json'),
                            SSC_CHIP_CHECK_OUT=str(out/'chip-connectivity.json'))
                 command('asic-chip-connectivity', ['klayout', '-b', '-r', HERE/'chip_check.py'], env=env)
+                antenna('asic-chip-antenna', out/'ternary8_sop28.gds', 'ternary8_sop28', 'chip-antenna.json')
             except Exception as error:
                 result['chip_error'] = str(error)
                 if not any(checks.get(name, {}).get('status') == 'fail' for name in CHIP_CHECKS):

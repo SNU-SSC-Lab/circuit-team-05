@@ -8,6 +8,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pya
+from drc_antenna import RULES as ANTENNA, check as antenna_check
 from drc_cases import cases
 from drc_geometry import check
 from drc_ports import PORTS
@@ -18,8 +19,9 @@ def main():
     # A JSON round trip gives plain lists and dicts: the builder below sees exactly what case_sha256
     # hashes, so a list or dict subclass in drc_cases.py cannot show the hash one shape and KLayout another.
     fixtures = json.loads(json.dumps(cases()))
-    if {case['rule'] for case in fixtures} != set(PORTS):
-        raise ValueError('a geometry port has no fixture or a fixture names an unknown check')
+    # DRC deck geometry ports (drc_geometry.py) and ANT deck RULECHECKs (drc_antenna.py).
+    if {case['rule'] for case in fixtures} != set(PORTS) | set(ANTENNA):
+        raise ValueError('a geometry port or antenna RULECHECK has no fixture or a fixture names an unknown check')
     by_rule, records, failures = {}, [], []
     started = time.monotonic()
     for index, case in enumerate(fixtures):
@@ -47,7 +49,8 @@ def main():
         record['gds'] = path.name
         record['case_sha256'] = reliability.case_sha256(case)
         try:
-            result = check(saved, saved.cell('fixture'), [case['rule']])
+            run = antenna_check if case['rule'] in ANTENNA else check
+            result = run(saved, saved.cell('fixture'), [case['rule']])
             value = result['rules'][case['rule']]
             record.update(value)
             passed = (value['errors'] > 0) == case['fail'] and not case['raises']
