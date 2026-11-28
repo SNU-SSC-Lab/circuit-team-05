@@ -1,6 +1,6 @@
 # SPEC 0019 머지 게이트와 신뢰성 대응표
 
-- 상태: 구현. 설계 승인(2026-11-28) 후 PR #11 `feat/nspl-drc-rule-tests`의 `303bcb6` 위 `feat/merge-gate`에서 스크립트·대응표·워크플로를 구현했다. 로컬 검사 결과와 GitHub 실행 기록(PR #12)은 "2026-11-28 실행 결과"에 나눠 적었다. main ruleset은 아직이다(이 작업이 main에 들어온 뒤 건다).
+- 상태: 구현. 설계 승인(2026-11-28) 후 PR #11 `feat/nspl-drc-rule-tests`의 `303bcb6` 위 `feat/merge-gate`에서 스크립트·대응표·워크플로를 구현했다. 로컬 검사 결과와 GitHub 실행 기록(PR #12)은 "2026-11-28 실행 결과"에 나눠 적었다. 2026-11-28 #10 → #11 → #12 순서로 main에 merge commit으로 합쳤고, 같은 날 main ruleset을 걸고 확인 PR 세 개로 끝단을 확인했다("2026-11-28 main 적용과 끝단 확인").
 - 작성일: 2026-11-28.
 - 관련 규약: RFC 0001 HW01~HW06, RFC 0002 DOC01~DOC04·PR01·AUTO01.
 
@@ -81,7 +81,7 @@ SPEC 0017·0018로 실제 5팀 코어와 제안 SOP28 GDS를 만들고 검사하
 - 물리 흐름은 PR이 `src/`, `mychip/constraints/`, `scripts/`, `verification/`, `tests/asic/`, `tests/physical/`, `tests/rtl/`, `requirements-ci.txt`, `.github/workflows/asic.yml` 중 하나를 바꿀 때만 돈다(`git diff --name-only 기준SHA HEAD`). main push와 수동 실행은 항상 돈다. 그 밖의 PR(문서만 바꾼 PR 등)에서는 `asic-gate`가 단계를 건너뛰고 요약에 "물리 흐름 대상 변경 없음"을 쓴 뒤 통과한다. 필수 체크가 대기 상태로 남지 않게 job은 항상 생성하고 워크플로에 `paths:` 필터를 두지 않는다. `tests/` 세 폴더는 원래 계획 목록에 없었지만 `asic-gate`가 실행하는 시험이라 더했다. (구현자 판단)
 - `reliability-table`의 fixture 대조(`drc_selftest.py` → `reliability.py check`)와 `check-pending`은 매 PR 실행한다(수 분). 변형본 대조 `reliability.py check-mutations`는 키트를 받아 1차 695개와 2차 키트 셀 604개 GDS를 다시 만들고 KLayout DRC를 돌려 GitHub 실행기에서 약 8~13분 걸린다(PR #12 실측, 실행마다 다름. 로컬 12 CPU에서 두 golden 422초). 그래서 `scripts/asic/drc*.py`, `scripts/asic/mutate*.py`, `scripts/asic/reliability.py`, `verification/reliability/golden/`, `verification/asic/drc-rules.json`, `.github/workflows/asic.yml`을 바꾼 PR과 main push에서만 실행하고, 건너뛸 때는 요약에 이유를 쓴다. (구현자 판단)
 - 보호 방식: main에 **저장소 ruleset**을 건다. PR 필수, 위 필수 체크 통과 필수, 브랜치 최신 상태 필수, 리뷰 승인 수 0(사람 승인보다 CI를 게이트로 삼는다).
-- **기준 파일의 승인자는 도재겸(Dojaegyum) 한 명이다.** 우회 권한(bypass)은 저장소 admin 역할에만, **PR 화면에서만** 준다(`bypass_mode: pull_request`). 현재 admin은 Dojaegyum뿐이다. 근거 파일·미검증 목록을 바꾸는 기준점 PR은 `baseline-guard`가 막고, 도재겸이 근거를 확인한 뒤 PR에서 우회 머지한다. 우회 머지는 PR 기록에 남는다. **우회 머지는 `baseline-guard`만 실패하고 나머지 필수 체크가 모두 통과한 PR에만 한다.**
+- **기준 파일의 승인자는 도재겸(Dojaegyum) 한 명이다.** 우회 권한(bypass)은 저장소 admin 역할에만, **PR 화면에서만** 준다(`bypass_mode: pull_request`). ruleset은 우회 대상을 사람이 아니라 역할로만 지정할 수 있다. 2026-11-28 확인한 admin은 Dojaegyum, pearsj1128, hjan04, snu-ssc 네 계정이고, 도재겸이 네 계정 모두 우회할 수 있는 상태로 두기로 정했다. 기준점 PR의 우회 머지는 도재겸이 PR 화면에서 직접 한다. 근거 파일·미검증 목록을 바꾸는 기준점 PR은 `baseline-guard`가 막고, 도재겸이 근거를 확인한 뒤 PR에서 우회 머지한다. 우회 머지는 PR 기록에 남는다. **우회 머지는 `baseline-guard`만 실패하고 나머지 필수 체크가 모두 통과한 PR에만 한다.**
 - 그 밖의 PR에서 우회는 쓰지 않는다. 우회 머지가 기준점 PR이 아닌 곳에 쓰였는지는 PR 기록으로 확인할 수 있다.
 - **golden 출처 커밋 보존:** golden·README·이 SPEC은 기능 브랜치 커밋(`303bcb6`, `2476d87`, `756b384`, `5b1f8bf`, `84eb91b` 등)을 출처로 가리킨다. 그래서 #11 → #10 → main → 이 PR은 merge commit으로 병합하고, 이 브랜치는 rebase하지 않고 main을 merge해 갱신한다.
 - `integration.yml` 삭제: 칩 연결 검사는 circuit-integration 야간 작업이 이 저장소를 읽어 맡는다(이 야간 작업은 2026-11-26부터 결제 문제로 일시 중지되어 재개 전까지는 연결 검사가 없다. 재개 후 매일 실행). `README.md`의 CI 목록·맨 위 폴더 규칙 설명, `mychip/README.md`, `pdk.yml` 머리 주석, `docs/verification/rtl-to-gds-guide.md`의 `MyChip integration` 언급, SPEC 0017 그림의 `MyChip integration · 유지`를 고치고, SPEC 0013에 폐지 메모를 남긴다.
@@ -295,7 +295,7 @@ ruleset 설정 JSON은 저장소에 커밋하지 않고 적용 후 내용을 이
 - 저장소 공개 전환. 사용자 지시, 2026-11-28 완료.
 - 상용 도구는 기준점에서만 수동 실행. CI 자동 실행 없음.
 - `integration.yml` 삭제와 관련 문서 정리. circuit-integration 관리 쪽 요청, 사용자 동의.
-- 기준 파일 승인자는 도재겸 한 명. 사용자 결정.
+- 기준 파일 승인자는 도재겸 한 명. 사용자 결정. 우회 권한은 admin 역할 네 계정에 열려 있는 상태로 둔다(2026-11-28 사용자 결정). 기준점 PR의 우회 머지는 도재겸이 PR 화면에서 하고 에이전트는 하지 않는다(2026-11-28 사용자 결정).
 - v2 칩 GDS는 저장소에 넣지 않는다(11-27 결정 유지).
 
 ### 구현자 판단 (검토 요청)
@@ -313,7 +313,8 @@ ruleset 설정 JSON은 저장소에 커밋하지 않고 적용 후 내용을 이
 ### 구현 단계에서 정할 것
 
 - 정한 것: `asic.yml`의 job 분할(`asic-gate`, `reliability-table`)과 변경 경로 필터(1절), golden 세부 스키마(각 golden 폴더의 `README.md`와 `CHECKPOINT.md` 5절), `physical.yml`은 필수에서 빼고 유지(1절), 이 작업은 #11 위에 쌓음.
-- 남은 것: #10 → #11 → 이 작업의 머지 순서(도재겸), ruleset 적용과 그 내용 기록, GitHub 실행기에서 `check-mutations` 실제 시간.
+- 끝난 것: #11 → #10 → 이 작업 순서로 merge commit 병합(2026-11-28), ruleset 적용과 그 내용 기록, GitHub 실행기의 `check-mutations` 시간(PR #14, `reliability-table` 9분 23초).
+- 남은 것: 2026-12-02 전 저장소 Actions 이벤트 정책에서 `baseline.yml`의 `pull_request_target` 허용(1절).
 
 ### 합격 조건과 검증
 
@@ -352,6 +353,41 @@ ruleset 설정 JSON은 저장소에 커밋하지 않고 적용 후 내용을 이
 다른 체크: `rtl` 약 3분, `pdk (pr)` 약 5분, `physical-selftest` 30초 안팎. `baseline-guard`는 main에 `baseline.yml`이 없어 이 PR에서는 돌지 않았다(1절).
 
 흐름 변경: 있음
+
+### 2026-11-28 main 적용과 끝단 확인
+
+**병합.** #11(`df75df4`) → #10(`f5d2101`) → main을 `feat/merge-gate`에 합침(`e40b661`, 필수 체크 8개 통과) → #12(`5515c17`). 모두 merge commit이고 기능 브랜치는 지우지 않았다(golden이 기능 브랜치 커밋을 가리킨다).
+
+**ruleset.** 이름 `main merge gate`, 상태 active. 대상 `~DEFAULT_BRANCH`. 아래 내용으로 `gh api -X POST repos/SNU-SSC-Lab/circuit-team-05/rulesets`에 넣었다.
+
+```json
+{
+  "name": "main merge gate", "target": "branch", "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
+  "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}],
+  "rules": [
+    {"type": "deletion"}, {"type": "non_fast_forward"},
+    {"type": "pull_request", "parameters": {"required_approving_review_count": 0, "dismiss_stale_reviews_on_push": false,
+      "require_code_owner_review": false, "require_last_push_approval": false, "required_review_thread_resolution": false}},
+    {"type": "required_status_checks", "parameters": {"strict_required_status_checks_policy": true, "do_not_enforce_on_create": false,
+      "required_status_checks": [
+        {"context": "pr-policy", "integration_id": 15368}, {"context": "policy-unit (ubuntu-24.04)", "integration_id": 15368},
+        {"context": "policy-unit (windows-2022)", "integration_id": 15368}, {"context": "rtl", "integration_id": 15368},
+        {"context": "pdk (pr)", "integration_id": 15368}, {"context": "asic-gate", "integration_id": 15368},
+        {"context": "reliability-table", "integration_id": 15368}, {"context": "baseline-guard", "integration_id": 15368}]}}
+  ]
+}
+```
+
+`integration_id` 15368은 GitHub Actions 앱이다. 다른 앱이나 토큰이 같은 이름의 commit status를 올려 필수 체크를 채우지 못하게 고정했다. `actor_id` 5는 admin 역할이다.
+
+**끝단 확인 PR(GitHub, 확인 후 닫음).** `pull_request_target`으로 도는 `baseline-guard`는 PR head 커밋의 check run으로 붙었고(GitHub Actions 앱), 그래서 필수 체크로 인정된다. `statuses: write` 대안은 필요 없었다.
+
+| PR | 바꾼 것 | 결과 |
+| --- | --- | --- |
+| #13 | `docs/ci.md` 한 줄 | 필수 체크 8개 모두 생성·통과. `asic-gate` 12초, 요약 "물리 흐름 대상 변경 없음". 머지 상태 `CLEAN`(ruleset 적용 뒤) |
+| #14 | `golden.json` fixture `0001-OFFGRID_CHIPBOUNDARY-positive-half-grid`의 `calibre` `fired`→`clean` | `baseline-guard` 실패("기준 파일 … 수정되었습니다", "우회 머지가 필요합니다"), `baseline-change` 라벨. `reliability-table` 실패(불일치 1, 변형본 대조 포함 9분 23초). `asic-gate`도 실패(단위 시험 `test_import_real_batch`가 golden의 fired 수 253을 고정). 머지 상태 `BLOCKED` |
+| #15 | `src/adder12.v` 맨 위 주석 한 줄 | `asic-gate`가 물리 흐름 전체 실행 후 통과(전체 3분 30초, 빌드·게이트 판정 1분 53초). 나머지 체크 모두 통과. 머지 상태 `CLEAN` |
 
 ## RFC 확인
 
