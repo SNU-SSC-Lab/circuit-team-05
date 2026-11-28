@@ -88,26 +88,38 @@ def flop_outputs(netlist_text, flops):
     return found
 
 
-def gate_clock_problems(netlist_text, sequential, clock):
-    """Problems with the gate's sequential cells: wrong kind, edge, async pins, or clock not the clock port."""
-    problems, flops = [], 0
-    for cell, instance, body in INSTANCE.findall(netlist_text):
-        info = sequential.get(cell)
+def gate_clock_problems(gate, top, sequential, clock):
+    """Problems with the gate's sequential cells, read from Yosys write_json (read_liberty -lib), not from the
+    netlist text: wrong kind, edge, async pins, or clock pin not wired to the clock port.
+    Returns (problems, number of sequential cells seen)."""
+    module = gate['modules'][top]
+    clock_bits = module['ports'].get(clock, {}).get('bits')
+    names = {}
+    for net, info in module['netnames'].items():
+        for bit in info['bits']:
+            names.setdefault(bit, net)
+    problems, seen = [], 0
+    if clock_bits is None:
+        problems.append(f'gate has no clock port {clock}')
+    for name, cell in sorted(module['cells'].items()):
+        info = sequential.get(cell['type'])
         if info is None:
             continue
-        name = instance.lstrip('\\')
+        seen += 1
+        kind = cell['type']
         if info['kind'] != 'ff':
-            problems.append(f'{name}: {cell} is a latch')
+            problems.append(f'{name}: {kind} is a latch')
             continue
-        flops += 1
         pin = info['clocked_on']
         if not re.fullmatch(r'\w+', pin):
-            problems.append(f'{name}: {cell} is clocked on "{pin}", not a rising edge')
+            problems.append(f'{name}: {kind} is clocked on "{pin}", not a rising edge')
         elif info['async']:
-            problems.append(f'{name}: {cell} has an asynchronous clear/preset')
-        elif (net := _pin(body, pin)) not in (clock, '\\' + clock):
-            problems.append(f'{name}: {cell}.{pin} on {net!r}, not the clock port {clock}')
-    return problems, flops
+            problems.append(f'{name}: {kind} has an asynchronous clear/preset')
+        elif cell['connections'].get(pin) != clock_bits:
+            bits = cell['connections'].get(pin) or []
+            net = names.get(bits[0], bits[0]) if len(bits) == 1 else bits
+            problems.append(f'{name}: {kind}.{pin} on {net!r}, not the clock port {clock}')
+    return problems, seen
 
 
 def gold_clock_problems(gold, top, clock):
@@ -348,14 +360,23 @@ def check(netlist, liberty, out, sources=None, top=None, models=None, synth_log=
 
     # 2. clocks (structure; the SAT models below do not see clock pins)
     gold_problems, gold_flops = gold_clock_problems(gold, top, clock)
-    gate_problems, gate_flops = gate_clock_problems(text, sequential, clock)
+    gate_json = json.loads((out/'gate_ports.json').read_text(encoding='utf-8'))
+    gate_problems, gate_seq = gate_clock_problems(gate_json, top, sequential, clock)
+    # Every count must agree: Yosys stat, Yosys write_json, and the text reader used for the aliases below.
+    # A flop the text reader misses (attributes, comments, unusual layout) fails the check (2026-11-28 I6).
+    stat_seq = sum(n for c, n in by_type.items() if c in sequential)
+    outputs = flop_outputs(text, flops)
+    text_flops = len(outputs)
+    if not (gate_seq == stat_seq == text_flops + sum(n for c, n in by_type.items()
+                                                      if sequential.get(c, {}).get('kind') == 'latch')):
+        gate_problems.append(f'sequential cell counts differ: Yosys stat {stat_seq}, write_json {gate_seq}, '
+                             f'netlist text {text_flops} flops; netlist notation not understood')
     result['clocks'] = {'status': 'fail' if gold_problems or gate_problems else 'pass',
-                        'rtl_register_bits': gold_flops, 'gate_flops': gate_flops,
-                        'problems': (gold_problems + gate_problems)[:40]}
+                        'rtl_register_bits': gold_flops, 'gate_flops': gate_seq, 'stat_sequential': stat_seq,
+                        'text_flops': text_flops, 'problems': (gold_problems + gate_problems)[:40]}
     problems += result['clocks']['problems']
 
     # 3. next-state functions, 4. start condition
-    outputs = flop_outputs(text, flops)
     lines, paired, unpaired = aliases(outputs, gold_wires(out/'gold.json', top), declared(text))
     gate = Path(netlist)
     if lines:

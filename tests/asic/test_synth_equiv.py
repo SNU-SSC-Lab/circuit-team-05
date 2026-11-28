@@ -157,6 +157,7 @@ class ProofTests(unittest.TestCase):
         self.assertEqual((result['ports']['status'], result['clocks']['status']), ('pass', 'pass'))
         self.assertEqual(result['base_case']['status'], 'pass')
         self.assertEqual(result['clocks']['gate_flops'], 2)
+        self.assertEqual((result['clocks']['stat_sequential'], result['clocks']['text_flops']), (2, 2))
 
     def test_one_wrong_gate_fails(self):
         wrong = GATE.replace('XOR2X1 g4(.A (Q), .B (n1), .Y (n2));', 'AND2X1 g4(.A (Q), .B (n1), .Y (n2));')
@@ -200,6 +201,22 @@ class ProofTests(unittest.TestCase):
         result = self.run_check(wrong)
         self.assertEqual(result['status'], 'fail')
         self.assertTrue(any('asynchronous' in p for p in result['clocks']['problems']))
+
+    # Notation the text reader does not parse (2026-11-28 re-review I6): attribute or comment before the instance.
+    def test_falling_edge_flop_in_unusual_notation_fails(self):
+        for prefix in ('(* keep *) DFFNEGX1 ', 'DFFNEGX1 /* c */ '):
+            wrong = GATE.replace('  DFFPOSX1 \\u_cnt_C_reg[1] (', '  ' + prefix + '\\u_cnt_C_reg[1] (')
+            self.assertNotEqual(wrong, GATE)
+            result = self.run_check(wrong)
+            self.assertEqual(result['status'], 'fail', prefix)
+            self.assertTrue(any('rising edge' in p for p in result['clocks']['problems']), (prefix, result['clocks']))
+
+    def test_flop_the_text_reader_misses_fails_the_count(self):
+        hidden = GATE.replace('  DFFPOSX1 \\u_cnt_C_reg[1] (', '  (* keep *) DFFPOSX1 \\u_cnt_C_reg[1] (')
+        self.assertNotEqual(hidden, GATE)
+        result = self.run_check(hidden)
+        self.assertEqual(result['status'], 'fail')
+        self.assertTrue(any('counts differ' in p for p in result['clocks']['problems']), result['clocks'])
 
     # Ports (review I2): an output dropped from the port list but kept as a net must fail.
     def test_output_dropped_from_port_list_fails(self):
