@@ -225,7 +225,8 @@ def _regions(layout, top):
     numbers = set(LAYERS.values())
     for index in layout.layer_indexes():
         info = layout.get_info(index)
-        if info.layer in numbers and info.datatype != 0 and not pya.Region(top.begin_shapes_rec(index)).is_empty():
+        # count(), not is_empty(): a Region built from text labels only is "not empty" but has no polygon
+        if info.layer in numbers and info.datatype != 0 and pya.Region(top.begin_shapes_rec(index)).count():
             raise AntennaInputError(f'shapes on {info.layer}/{info.datatype}: the deck reads every datatype of '
                                     f'layer {info.layer}, this port only datatype 0')
     for name, number in LAYERS.items():

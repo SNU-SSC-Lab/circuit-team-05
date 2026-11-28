@@ -191,7 +191,9 @@ for case in json.load(open(os.environ['SSC_TEST_CASES'])):
     for name, shapes in case['cells'].items():
         for layer, shape, *datatype in shapes:
             target = cells[name].shapes(layout.layer(layer, datatype[0] if datatype else 0))
-            if isinstance(shape[0], list):
+            if isinstance(shape, str):  # a text label at the origin
+                target.insert(pya.DText(shape, 0, 0))
+            elif isinstance(shape[0], list):
                 target.insert(pya.DPolygon([pya.DPoint(*p) for p in shape]))
             else:
                 target.insert(pya.DBox(*shape))
@@ -310,13 +312,16 @@ class FailClosedTests(unittest.TestCase):
             case('diode-vertex-touch', GATE+DIODE+[[32, [20, 5, 21.7, 21.7]]]),      # one shared corner
             case('big-gate-overlap', GATE+BIG_GATE+[[32, [300, 5.5, 302, 205.4]]], ['ANT_02_1']),
             case('big-gate-edge-touch', GATE+BIG_GATE+[[32, [300, 5.5, 302, 205]]], ['ANT_02_1']),
-            case('wire-on-datatype-1', GATE[:-1]+[[32, [-.5, 3.5, 1000, 5.5], 1]], ['ANT_02_1'])])
+            case('wire-on-datatype-1', GATE[:-1]+[[32, [-.5, 3.5, 1000, 5.5], 1]], ['ANT_02_1']),
+            # a pin label on 32/1 is text, not a shape the deck measures: still judged (review R1-M1)
+            case('label-on-datatype-1', GATE+[[32, 'VDD', 1]], ['ANT_02_1'])])
         self.assertEqual(result['alone']['ANT_02_1'][0], 1)
         self.assertEqual(result['diode-overlap']['ANT_02_1'][0], 0)   # a real diode protects the gate
         self.assertEqual(result['big-gate-overlap']['ANT_02_1'][0], 0)  # 500 um2 of gate dilutes the ratio
         for name in ('diode-edge-touch', 'diode-vertex-touch', 'big-gate-edge-touch'):
             self.assertIn('without overlapping', result[name].get('error', ''), (name, result[name]))
         self.assertIn('every datatype', result['wire-on-datatype-1'].get('error', ''))
+        self.assertEqual(result['label-on-datatype-1'], result['alone'])
 
 
 if __name__ == '__main__':
