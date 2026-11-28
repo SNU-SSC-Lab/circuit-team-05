@@ -21,7 +21,7 @@ Fixture checks that need `drc_cases.py` evaluated (a verified rule losing or cha
 a fixture added without golden, only refused fixtures left) run in `reliability.py check` inside the
 unprivileged `pull_request` job `reliability-table`. That job runs PR code by design: drc_fixture_test.py
 imports `drc_cases.py`, check-pending imports `drc_cases_pending*.py`, and the DRC harness itself
-(drc_fixture_test.py, drc_geometry.py, drc_ports.py, drc.py) comes from the PR. Accepted residual risk: a
+(drc_fixture_test.py, drc_geometry.py, drc_antenna.py, drc_ports.py, drc.py) comes from the PR. Accepted residual risk: a
 PR that edits that harness can fake its own results there; CODEOWNERS asks 도재겸 to review those files.
 As defence in depth the guard scans the fixture sources as data (`ast.parse(bytes)` only, never compile
 or exec; see `source_problems`) and reports a new or changed source that does more than define fixtures,

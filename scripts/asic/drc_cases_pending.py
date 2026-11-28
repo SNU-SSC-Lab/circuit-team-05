@@ -17,10 +17,13 @@ drc_cases.py, and the golden marks those two `refused` with Calibre's reason (ex
 These fixtures are not in `drc_cases.py`: `drc_fixture_test.py` requires every fixture rule to be a KLayout
 port. When a rule is ported, move its fixtures to `drc_cases.py` and its golden entries with them: the
 entries are copied unchanged into a new fixture golden folder (golden files are never edited), the rule
-goes into MOVED_RULES, and `check-pending` reads the pending golden's entries of that rule as moved.
+goes into MOVED_RULES and is verified in drc-rules.json, and only then `check-pending` reads the pending
+golden's entries of that rule as moved (`reliability.check_pending`).
 
 Moved so far: the 12 ANT deck RULECHECKs (102 fixtures, drc_antenna.py; golden/ant-fixtures-20261128),
-including the two ANT_06 equality fixtures Calibre fired on (now `fail=True` in drc_cases.py).
+including the two ANT_06 equality fixtures Calibre fired on (now `fail=True` in drc_cases.py). Their
+definitions stay in drc_cases_pending_c1b.py only as the record of what Calibre ran (the file is the
+verbatim generator); records() leaves them out and nothing checks them there. drc_cases.py is the source.
 """
 import json
 

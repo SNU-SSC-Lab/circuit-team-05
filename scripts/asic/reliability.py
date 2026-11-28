@@ -201,18 +201,23 @@ def load_golden(directory):
     return {'sources': sources, 'fixtures': fixtures}
 
 
-def check_pending(golden_dir, records=None):
+def check_pending(golden_dir, records=None, moved_rules=None, rules_json=RULES_JSON):
     """Pending golden (meta.pending) against drc_cases_pending.records(): one entry per fixture, same hashes.
 
     Only the binding is checked: the rules have no KLayout port yet, so there is no verdict to compare.
     A corrected fixture's entry keeps the hash of the definition Calibre ran as run_case_sha256. An entry
     Calibre refused is an exclusion with a reason: its intent (fail/raises) is not compared.
-    Golden files are never edited, so the pending golden keeps the entries of rules ported since: such an
-    entry is `moved` when it has no pending definition and a fixture golden (which `check` compares with
-    drc_cases.py) holds the same case_sha256, rule and Calibre verdict."""
+    Golden files are never edited, so the pending golden keeps the entries of rules ported since. Such an
+    entry is `moved` only when all hold: its rule is in drc_cases_pending.MOVED_RULES, that rule is verified
+    in drc-rules.json (so `check` compares every fixture golden entry of it with drc_cases.py and fails on a
+    lost one), it has no pending definition, and a fixture golden holds the same case_sha256, rule and
+    Calibre verdict. Anything else without a definition is a problem."""
     if records is None:
         from drc_cases_pending import records as pending_records
         records = pending_records()
+    if moved_rules is None:
+        from drc_cases_pending import MOVED_RULES as moved_rules
+    verified = set(verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8'))))
     golden_dir = Path(golden_dir)
     sources, entries, problems, excluded, moved, ported = [], {}, [], 0, 0, {}
     for path in sorted(golden_dir.glob('**/golden.json')):
@@ -235,8 +240,12 @@ def check_pending(golden_dir, records=None):
     for key in sorted(set(entries)-set(wanted)):
         entry = entries[key]
         there = ported.get(entry['case_sha256'])
-        if there is not None and there['rule'] == entry['rule'] and there['calibre'] == entry['calibre']:
+        if entry['rule'] in moved_rules and entry['rule'] in verified and there is not None \
+                and there['rule'] == entry['rule'] and there['calibre'] == entry['calibre']:
             moved += 1
+        elif there is not None and (entry['rule'] not in moved_rules or entry['rule'] not in verified):
+            problems.append(f'{key[0]}/{key[1]}: copied to a fixture golden, but {entry["rule"]} is not a moved, '
+                            'verified rule, so no check would compare it')
         else:
             problems.append(f'{key[0]}/{key[1]}: golden entry has no fixture definition')
     for key in sorted(set(wanted) & set(entries)):

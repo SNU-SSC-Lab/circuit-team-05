@@ -18,6 +18,15 @@ How one RULECHECK is evaluated (`DRC INCREMENTAL CONNECT YES`, deck line 69):
    short-circuits: a net without gate area gives 0. Equality does not fire, except where the double
    arithmetic itself lands above the limit (ANT_06 with the inexact coefficient 83.33, as Calibre did).
 
+Fail closed where KLayout and the deck could differ (the check raises AntennaInputError, the report gets
+`error` and the RULECHECKs are not judged):
+- CONNECT joins layers where they overlap with positive area. KLayout's extractor also joins shapes that
+  only touch (an edge or a vertex). Any touch-only contact between two connected layers is reported: the
+  nets there are not the deck's, and no Calibre result fixes what the deck does with them.
+- The deck's `LAYER MET1 32` reads every datatype; this port reads datatype 0. A shape of a deck layer on
+  another datatype is reported instead of being left out silently.
+- The deck has `PRECISION 1000`; Calibre refuses a GDS of another dbu (golden 0169/0170), so this does too.
+
 KLayout's `antenna_check` is not used: it has no per-RULECHECK connectivity (diode area is summed
 before poly joins the net in ANT_02/03_1/05), no `!AREA(diode)` factor, no way to measure only the top
 layer's perimeter of a multi-layer net, and its own ratio arithmetic would decide the equality cases.
@@ -34,6 +43,11 @@ ANT_SOURCE_SHA = '80dc257e6778121ab9a61a444d0e82c79999dc785d8e6aa5a6a2a5318c7b94
 LAYERS = dict(ACT=11, POLY1=12, POLY2=13, NSD=14, PSD=15, CONT=31, MET1=32, VIA1=33, MET2=34, VIA2=35,
               MET3=36, CAP=53, BJT=56, DIODE=57)
 DIODE_MIN_AREA = 0.202  # `ACTIVE_DIODE* = NET AREA ALL_SD >= 0.202`, um2
+DECK_PRECISION = 1000  # deck line 6
+
+
+class AntennaInputError(ValueError):
+    """The input is outside what this port can judge like the deck; the antenna check must fail."""
 
 # `CONNECT a b BY c` -> (a, b, c); `CONNECT a b` -> (a, b, None). 'DIODE' is the block's ACTIVE_DIODE*.
 GATE_POLY = ('GATE', 'POLY', None)
@@ -127,8 +141,51 @@ def precision(dbu):
     """Database units per um; the deck's AREA/PERIMETER are dbu^2 / precision^2 and dbu / precision."""
     grid = .01/dbu
     if abs(grid-round(grid)) > 1e-7 or grid < 1:
-        raise ValueError('GDS dbu cannot represent the 0.01 um process grid exactly')
-    return round(1/dbu)
+        raise AntennaInputError('GDS dbu cannot represent the 0.01 um process grid exactly')
+    if round(1/dbu) != DECK_PRECISION:
+        raise AntennaInputError(f'GDS dbu {dbu} differs from the ANT deck PRECISION {DECK_PRECISION} '
+                                '(Calibre refuses such input)')
+    return DECK_PRECISION
+
+
+def connected_pairs(connections):
+    """Layer pairs the CONNECTs join: (a, b) for `CONNECT a b`, (a, by) and (by, b) for `BY by`.
+    ACTIVE_DIODE ('DIODE') is part of ALL_SD, so its pairs are covered by ALL_SD's."""
+    pairs = set()
+    for a, b, by in connections:
+        for pair in ([(a, by), (by, b)] if by else [(a, b)]):
+            if 'DIODE' not in pair:
+                pairs.add(tuple(sorted(pair)))
+    return pairs
+
+
+def touch_only(a, b):
+    """Places where a shape of b touches a shape of a (edge or vertex) without an overlap next to it.
+
+    The part of b within 1 dbu outside a is found; a piece of it that does not touch an a-b overlap is a
+    contact KLayout would connect and the deck's CONNECT would not. A b shape that overlaps a and also
+    touches it elsewhere is reported too (fail closed)."""
+    near = (a.sized(1) & b) - a
+    return near.not_interacting(a & b)
+
+
+def report_problems(report, expected=None):
+    """Why an antenna report (drc_antenna.main JSON) cannot count as a pass in the flow; [] if it can."""
+    expected = set(RULES) if expected is None else set(expected)
+    problems = []
+    if report.get('error'):
+        problems.append('antenna check could not judge the input: '+str(report['error']))
+        return problems
+    if report.get('deck_sha256') != ANT_SOURCE_SHA:
+        problems.append('report is not for the reviewed ANT deck')
+    rules = report.get('rules') or {}
+    if set(rules) != expected:
+        problems.append(f'{len(rules)} RULECHECKs ran, expected {len(expected)}')
+    if not any((item or {}).get('nets_with_gate') for item in rules.values()):
+        problems.append('no net with gate area: the GDS has no transistor on the deck layers')
+    if report.get('errors'):
+        problems.append(f'{report["errors"]} antenna violations')
+    return problems
 
 
 class _Nets:
@@ -165,6 +222,12 @@ class _Nets:
 def _regions(layout, top):
     import pya
     raw = {}
+    numbers = set(LAYERS.values())
+    for index in layout.layer_indexes():
+        info = layout.get_info(index)
+        if info.layer in numbers and info.datatype != 0 and not pya.Region(top.begin_shapes_rec(index)).is_empty():
+            raise AntennaInputError(f'shapes on {info.layer}/{info.datatype}: the deck reads every datatype of '
+                                    f'layer {info.layer}, this port only datatype 0')
     for name, number in LAYERS.items():
         index = layout.find_layer(number, 0)
         raw[name] = pya.Region() if index is None else pya.Region(top.begin_shapes_rec(index)).merged()
@@ -187,6 +250,18 @@ def check(layout, top, selected=None):
         raise ValueError('missing or empty DRC top')
     scale = precision(layout.dbu)
     reg = _regions(layout, top)
+    names = sorted(RULES if selected is None else selected)
+    pairs = set()
+    for name in names:
+        pairs |= connected_pairs(RULES[name]['connect'])
+    for a, b in sorted(pairs):
+        for one, other in ((a, b), (b, a)):
+            found = touch_only(reg[one], reg[other])
+            if not found.is_empty():
+                box = found.bbox()
+                where = [round(v*layout.dbu, 6) for v in [box.left, box.bottom, box.right, box.top]]
+                raise AntennaInputError(f'{other} touches {one} without overlapping ({found.count()} places, '
+                                        f'first near {where} um): CONNECT needs overlap, KLayout would join them')
     cache = {}
 
     def nets(connections, regions):
@@ -208,7 +283,6 @@ def check(layout, top, selected=None):
                     found += shapes
             diodes[key] = found.merged()
         return diodes[key]
-    names = sorted(RULES if selected is None else selected)
     rules = {}
     for name in names:
         spec = RULES[name]
@@ -248,7 +322,14 @@ def main():
     import pya
     layout = pya.Layout()
     layout.read(os.environ['SSC_GDS'])
-    result = check(layout, layout.cell(os.environ['SSC_TOP']))
+    try:
+        result = check(layout, layout.cell(os.environ['SSC_TOP']))
+    except AntennaInputError as error:
+        # The report says why nothing was judged; the flow fails the check on `error`.
+        Path(os.environ['SSC_DRC_OUT']).write_text(json.dumps({
+            'top': os.environ['SSC_TOP'], 'profile': 'antenna', 'deck_sha256': ANT_SOURCE_SHA, 'status': 'error',
+            'error': str(error), 'rules': {}, 'errors': None}, indent=2)+'\n')
+        raise
     result['status'] = 'fail' if result['errors'] else 'pass'
     Path(os.environ['SSC_DRC_OUT']).write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps({k: v for k, v in result.items() if k not in ['rules', 'selected_rules']}))

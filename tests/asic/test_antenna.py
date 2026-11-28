@@ -50,11 +50,48 @@ class DeckTests(unittest.TestCase):
         for name in ('ANT_03_2', 'ANT_03_3', 'ANT_06_01', 'ANT_06_02'):
             self.assertIn(poly, RULES[name]['diode_connect'], name)
 
-    def test_precision_follows_the_gds_dbu(self):
+    def test_precision_is_the_deck_precision(self):
         self.assertEqual(precision(.001), 1000)
-        self.assertEqual(precision(.0005), 2000)
-        with self.assertRaisesRegex(ValueError, 'dbu cannot represent'):
+        # deck PRECISION 1000: Calibre refuses another dbu (golden 0169/0170), so the port fails too
+        with self.assertRaisesRegex(drc_antenna.AntennaInputError, 'PRECISION 1000'):
+            precision(.0005)
+        with self.assertRaisesRegex(drc_antenna.AntennaInputError, 'dbu cannot represent'):
             precision(.003)
+
+    def test_touch_checks_cover_every_connected_pair(self):
+        self.assertEqual(drc_antenna.connected_pairs(RULES['ANT_05_2']['connect']),
+                         {('MET2', 'VIA2'), ('MET2', 'VIA1'), ('MET1', 'VIA1'), ('CONT', 'MET1'), ('ALL_SD', 'CONT'),
+                          ('CONT', 'POLY'), ('GATE', 'POLY')})
+        everything = set().union(*(drc_antenna.connected_pairs(spec['connect']) for spec in RULES.values()))
+        self.assertIn(('CONT', 'CONT_ANTENNA'), everything)
+        self.assertFalse([pair for pair in everything if 'DIODE' in pair])
+
+
+class ReportTests(unittest.TestCase):
+    """What the flow accepts from an antenna report (asic-antenna, asic-chip-antenna): fail closed."""
+
+    def report(self, **change):
+        rules = {name: {'errors': 0, 'nets_with_gate': 3} for name in RULES}
+        return dict({'deck_sha256': drc_antenna.ANT_SOURCE_SHA, 'rules': rules, 'errors': 0}, **change)
+
+    def test_clean_report_passes(self):
+        self.assertEqual(drc_antenna.report_problems(self.report()), [])
+
+    def test_reports_that_cannot_pass(self):
+        some = {name: {'errors': 0, 'nets_with_gate': 3} for name in list(RULES)[:11]}
+        no_gate = {name: {'errors': 0, 'nets_with_gate': 0} for name in RULES}
+        for name, report in [('input error', {'error': 'shapes on 32/1', 'rules': {}, 'errors': None}),
+                             ('other deck', self.report(deck_sha256='0'*64)),
+                             ('11 RULECHECKs', self.report(rules=some)),
+                             ('no net with a gate', self.report(rules=no_gate)),
+                             ('violation', self.report(errors=1))]:
+            with self.subTest(name):
+                self.assertTrue(drc_antenna.report_problems(report))
+
+    def test_flow_uses_the_report_check(self):
+        from asic import flow
+        from asic import drc_antenna as packaged
+        self.assertIs(flow.antenna_problems, packaged.report_problems)
 
 
 class LimitTests(unittest.TestCase):
@@ -143,7 +180,7 @@ BATCH = '''
 import json, os, sys
 sys.path.insert(0, os.environ['SSC_TEST_ASIC'])
 import pya
-from drc_antenna import check
+from drc_antenna import check, AntennaInputError
 result = {}
 for case in json.load(open(os.environ['SSC_TEST_CASES'])):
     layout = pya.Layout()
@@ -152,15 +189,19 @@ for case in json.load(open(os.environ['SSC_TEST_CASES'])):
     for name in case['cells']:
         cells.setdefault(name, layout.create_cell(name))
     for name, shapes in case['cells'].items():
-        for layer, shape in shapes:
-            target = cells[name].shapes(layout.layer(layer, 0))
+        for layer, shape, *datatype in shapes:
+            target = cells[name].shapes(layout.layer(layer, datatype[0] if datatype else 0))
             if isinstance(shape[0], list):
                 target.insert(pya.DPolygon([pya.DPoint(*p) for p in shape]))
             else:
                 target.insert(pya.DBox(*shape))
     for parent, child, rot, mirror, x, y in case['instances']:
         cells[parent].insert(pya.DCellInstArray(cells[child].cell_index(), pya.DCplxTrans(1, rot, mirror, x, y)))
-    rules = check(layout, cells['top'], case['rules'])['rules']
+    try:
+        rules = check(layout, cells['top'], case['rules'])['rules']
+    except AntennaInputError as error:
+        result[case['name']] = {'error': str(error)}
+        continue
     result[case['name']] = {rule: [rules[rule]['errors'], rules[rule]['first_boxes_um']] for rule in case['rules']}
 with open(os.environ['SSC_TEST_OUT'], 'w') as stream:
     json.dump(result, stream)
@@ -246,6 +287,36 @@ class KLayoutTests(unittest.TestCase):
         self.assertEqual(result['no-diode']['ANT_02_1'][0], 1)   # ratio 800 > 400
         self.assertEqual(result['diode']['ANT_02_1'][0], 0)      # net has 1 um2 of diode: not WO_DIODE
         self.assertEqual(result['diode']['ANT_03_1'][0], 0)      # 800 < 400 * 1 + 2200
+
+
+# Review 2026-11-28 counterexamples: a 1 um2 gate under a 1000 um M1 (ANT_02_1 value 1052.6 > 400) and
+# contacts that only touch. KLayout's extractor joins touching shapes; the deck's CONNECT needs overlap.
+GATE = [[11, [-1.5, 0, 2, 2]], [14, [-2, -.5, 2.5, 2.5]], [12, [0, -.6, .5, 4]], [12, [-.3, 3.6, .8, 4.7]],
+        [31, [-.05, 3.85, .55, 4.45]], [32, [-.5, 3.5, 1000, 5.5]]]
+DIODE = [[11, [20, 20, 24, 24]], [14, [19.5, 19.5, 24.5, 24.5]], [31, [21.7, 21.7, 22.3, 22.3]]]
+BIG_GATE = [[11, [100, 0, 600, 200]], [14, [99, -1, 601, 201]], [12, [300, -1, 301, 210]],
+            [31, [300.2, 205, 300.8, 205.6]]]
+
+
+@unittest.skipUnless(shutil.which('klayout'), 'KLayout is not installed')
+class FailClosedTests(unittest.TestCase):
+    def test_touch_only_contacts_and_other_datatypes_fail(self):
+        def case(name, shapes, rules=('ANT_02_1', 'ANT_03_1')):
+            return {'name': name, 'rules': list(rules), 'instances': [], 'cells': {'top': shapes}}
+        result = run_cases([
+            case('alone', GATE),
+            case('diode-overlap', GATE+DIODE+[[32, [21, 5, 23, 23]]]),
+            case('diode-edge-touch', GATE+DIODE+[[32, [21, 5, 23, 21.7]]]),          # M1 ends on the CONT edge
+            case('diode-vertex-touch', GATE+DIODE+[[32, [20, 5, 21.7, 21.7]]]),      # one shared corner
+            case('big-gate-overlap', GATE+BIG_GATE+[[32, [300, 5.5, 302, 205.4]]], ['ANT_02_1']),
+            case('big-gate-edge-touch', GATE+BIG_GATE+[[32, [300, 5.5, 302, 205]]], ['ANT_02_1']),
+            case('wire-on-datatype-1', GATE[:-1]+[[32, [-.5, 3.5, 1000, 5.5], 1]], ['ANT_02_1'])])
+        self.assertEqual(result['alone']['ANT_02_1'][0], 1)
+        self.assertEqual(result['diode-overlap']['ANT_02_1'][0], 0)   # a real diode protects the gate
+        self.assertEqual(result['big-gate-overlap']['ANT_02_1'][0], 0)  # 500 um2 of gate dilutes the ratio
+        for name in ('diode-edge-touch', 'diode-vertex-touch', 'big-gate-edge-touch'):
+            self.assertIn('without overlapping', result[name].get('error', ''), (name, result[name]))
+        self.assertIn('every datatype', result['wire-on-datatype-1'].get('error', ''))
 
 
 if __name__ == '__main__':

@@ -50,10 +50,20 @@ KLayout의 `antenna_check`는 쓰지 않는다. deck은 검사마다 연결(CONN
 
 유도 층은 deck 61~67번째 줄 그대로다(`POLY = POLY1 OR POLY2`, `GATE = ACTIVE_ALL AND POLY`, `ALL_SD = ACTIVE_ALL NOT POLY`, `ACTIVE_ALL`은 CAP·BJT·DIODE 표시층을 뺀 N+/P+ ACT). 계층은 평평하게 펴서 넷을 만든다(`LayoutToNetlist`, 한 셀). 위반 수는 위반한 넷의 수다(Calibre는 결과 다각형 수를 세므로 수는 다르다. 판정에는 발동 여부만 쓴다).
 
+### 판정할 수 없는 입력은 실패 (fail closed)
+
+다음 경우 `drc_antenna.py`는 검사를 판정하지 않고 오류(`AntennaInputError`)를 낸다. 리포트에는 `error`만 남고, 흐름은 `asic-antenna`·`asic-chip-antenna`를 실패로 둔다.
+
+- **겹침 없이 맞닿은 연결.** deck의 `CONNECT`는 두 층이 넓이를 갖고 겹친 곳에서만 잇는 것으로 읽었다. KLayout 넷 추출은 변이나 꼭짓점만 닿아도 잇는다. 그래서 연결하는 층 쌍(`BY` 층 포함)마다, 한 층 바깥 1 dbu 안에 있는 다른 층 도형 중 겹친 곳과 붙어 있지 않은 조각이 있으면 오류다. 다이오드 CONT가 M1에 변·꼭짓점만 닿은 경우, 큰 게이트를 변만 닿은 CONT로 붙인 경우가 여기에 걸린다(리뷰 반례, `tests/asic/test_antenna.py`). 이런 도형의 Calibre 판정은 아직 없다.
+- **datatype 0이 아닌 도형.** deck의 `LAYER MET1 32`는 모든 datatype을 읽는다. 이 구현은 datatype 0만 읽으므로 deck 층 번호에 다른 datatype 도형이 있으면 오류다.
+- **deck 정밀도와 다른 dbu.** deck은 `PRECISION 1000`이다. Calibre는 다른 dbu의 GDS를 거부하므로(golden 0169·0170) 이 구현도 거부한다.
+
+흐름은 리포트를 `drc_antenna.report_problems`로 다시 확인한다. 오류가 있거나, deck 해시가 다르거나, 실행한 검사가 12개가 아니거나, 게이트가 있는 넷이 하나도 없으면(층 번호가 틀린 GDS) 종료 코드와 관계없이 실패다.
+
 ### 기존 방식을 그대로 따름
 
 - fixture 102개는 `drc_cases_pending_c1b.py`에서 `drc_cases.py`로 옮겼다. 코드는 그대로이고 이름만 `drc_cases.py` 규칙(밑줄 없음)에 맞췄다. 102개의 `case_sha256`은 Calibre가 읽은 정의와 같다. `ANT_06` 등호 경계 2개는 Calibre 판정(`fail=True`)으로 고친 정의다.
-- golden은 고치지 않는다. pending golden(`drc-unported-20261128/golden.json`)에서 ANT 항목 102개를 그대로 새 폴더 `golden/ant-fixtures-20261128/golden.json`으로 옮겼다. `check-pending`은 pending golden에 남은 이 항목을 `moved`로 센다: pending 정의가 없고(`MOVED_RULES`), fixture golden에 같은 해시·규칙·Calibre 판정이 있어야 한다.
+- golden은 고치지 않는다. pending golden(`drc-unported-20261128/golden.json`)에서 ANT 항목 102개를 그대로 새 폴더 `golden/ant-fixtures-20261128/golden.json`으로 옮겼다. `check-pending`은 pending golden에 남은 항목 중 다음을 모두 만족하는 것만 `moved`로 센다: 규칙이 `MOVED_RULES`에 있고, `drc-rules.json`에서 verified이며(그래서 `check`가 그 규칙의 fixture golden 항목을 모두 `drc_cases.py`와 대조하고 하나라도 사라지면 실패한다), pending 정의가 없고, fixture golden에 같은 해시·규칙·Calibre 판정이 있다. 하나라도 어긋나면 실패다. 미구현 규칙의 항목을 새 폴더에 복사하고 정의를 지우는 변경은 실패한다(2026-11-28 리뷰 반례, 시험 있음).
 - `drc-rules.json`에 `sources.calibre_ant`와 `antenna_rules`(12개, `implementation: antenna_port`, `golden_compared: true`)를 더했다. 상태 체계(unported → ported → verified)와 guard·`reliability.py check`의 실패 조건(golden fixture 사라짐, golden 없는 fixture, 제외만 남음, verified 0개)이 그대로 ANT 검사에도 걸린다. 변형본 대조(`check-mutations`)는 DRC deck 결과만 있으므로 ANT 검사를 넣지 않는다.
 - `drc_catalog.py`는 키트 ANT deck의 해시와 12개 검사의 줄·본문 해시를 `antenna_rules`와, 구현(`drc_antenna.RULES`)의 줄 번호와 맞춘다. ANT deck은 `ANT_02_3`·`ANT_03_3` 머리줄이 들여쓰기되어 있어 이 deck만 들여쓴 머리줄을 읽는다.
 - `baseline_guard.py`는 `antenna_rules`도 규칙 상태로 읽고, 처음부터 verified로 들어오는 새 규칙을 위반으로 알린다.
@@ -130,7 +140,7 @@ flowchart TD
 | 명령 | 결과 |
 | --- | --- |
 | 프로토타입(C1b 정의 그대로 GDS) | 102개 대상 검사 일치, 대상 밖 검사 발동도 102개 모두 Calibre와 같음 |
-| 칩 GDS 4개 | 모두 0건(sha256은 `golden/ant-fixtures-20261128/README.md`). 코어 4초, 칩 약 25초 |
+| 칩 GDS 4개 | 모두 0건(sha256은 `golden/ant-fixtures-20261128/README.md`). 맞닿음·datatype 오류 없음. 코어 약 7초, 칩 약 50초(맞닿음 검사 포함) |
 
 흐름·CI 명령의 실행 결과는 PR 본문에 적는다.
 

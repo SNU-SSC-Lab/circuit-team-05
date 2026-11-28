@@ -7,7 +7,7 @@
 - 2026-11-28 C1b 묶음의 Calibre 실행 결과다. 처음에는 미구현 규칙의 pending golden(`../drc-unported-20261128/golden.json`)에 있었다.
 - ANT deck을 KLayout으로 옮기면서, 그 파일에서 `deck`이 `ANT`인 항목 102개를 순서·내용 그대로 이 파일로 옮겼다. 원본 파일은 고치지 않았다(기존 golden 폴더는 고치지 않는다, `../../CHECKPOINT.md` 3절). 원본 파일 sha256(줄 끝 LF)은 `meta.moved_from_sha256` = `cd3c3c67a37b82dc131a2e80a747c28a3fd1c8dc0176d936f21d01a0c12e02c1`이다.
 - 새 Calibre 실행은 없다. 도구(`v2023.4_17.10`), ANT deck(키트 `Calibre/ANT/NSPL_0p5um_Analog_CMOS_2P3M_5V_V1.1_ANT.cal` 무수정, sha256 `80dc257e6778121ab9a61a444d0e82c79999dc785d8e6aa5a6a2a5318c7b94b5`), header, 실행 방식(GDS 하나마다 `calibre -drc -hier` 한 번)은 원본 README와 같다.
-- `python scripts/asic/reliability.py check-pending`은 pending golden에 남은 이 102개를 `moved`로 센다. pending 정의(`drc_cases_pending.py`의 `MOVED_RULES`로 빠짐)가 없고, 이 파일에 같은 `case_sha256`·규칙·Calibre 판정이 있어야 한다.
+- `python scripts/asic/reliability.py check-pending`은 pending golden에 남은 이 102개를 `moved`로 센다. 12개 규칙이 `drc_cases_pending.py`의 `MOVED_RULES`에 있고 `drc-rules.json`의 `antenna_rules`에서 verified이며, pending 정의가 없고, 이 파일에 같은 `case_sha256`·규칙·Calibre 판정이 있어야 한다. 하나라도 어긋나면 실패다.
 
 ## 항목
 

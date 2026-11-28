@@ -5,6 +5,7 @@ import io
 import json
 from pathlib import Path
 import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -892,16 +893,42 @@ class PendingGoldenTests(unittest.TestCase):
         kept, gone = record('a.gds'), record('b.gds')
         entries = [{'group': 'G', 'gds': r['gds'], 'rule': 'R', 'deck': 'DRC', 'case_sha256': r['run_case_sha256'],
                     'calibre': 'fired', 'refused_reason': None} for r in (kept, gone)]
-        for there, status, moved in [(None, 'fail', 0), ('fired', 'pass', 1), ('clean', 'fail', 0)]:
-            with self.subTest(there=there), tempfile.TemporaryDirectory() as tmp:
+        verified = {'rules': [{'id': 'R', 'implementation': 'geometry_port', 'golden_compared': True}]}
+        unported = {'rules': [{'id': 'R', 'implementation': 'unported', 'golden_compared': False}]}
+        for there, moved_rules, rules, status, moved in [
+                (None, {'R'}, verified, 'fail', 0), ('fired', {'R'}, verified, 'pass', 1),
+                ('clean', {'R'}, verified, 'fail', 0),
+                # review 2026-11-28: an unported rule's entry copied into a new folder, definition dropped
+                ('fired', set(), unported, 'fail', 0), ('fired', {'R'}, unported, 'fail', 0),
+                ('fired', set(), verified, 'fail', 0)]:
+            with self.subTest(there=there, moved_rules=moved_rules, rules=rules['rules'][0]['implementation']), \
+                    tempfile.TemporaryDirectory() as tmp:
                 (Path(tmp)/'p').mkdir()
                 (Path(tmp)/'p'/'golden.json').write_text(json.dumps(pending_doc(entries)), encoding='utf-8')
+                (Path(tmp)/'rules.json').write_text(json.dumps(rules), encoding='utf-8')
                 if there:
                     (Path(tmp)/'f').mkdir()
                     (Path(tmp)/'f'/'golden.json').write_text(json.dumps(dict(meta=META, **golden(
                         ('b.gds', 'R', gone['run_case_sha256'], there)))), encoding='utf-8')
-                result = reliability.check_pending(Path(tmp), [kept])
+                result = reliability.check_pending(Path(tmp), [kept], moved_rules, Path(tmp)/'rules.json')
                 self.assertEqual((result['status'], result['moved']), (status, moved), result['problems'])
+
+    def test_unported_entry_copied_out_of_the_real_pending_golden_fails(self):
+        # review 2026-11-28 counterexample on the real files: copy a pending entry of an unported rule into
+        # a new non-pending golden and drop its definition.
+        import drc_cases_pending
+        records = drc_cases_pending.records()
+        victim = next(r for r in records if r['case']['rule'] == '1.NWL.S.1')
+        entry = next(e for e in self.golden['fixtures'] if (e['group'], e['gds']) == (victim['group'], victim['gds']))
+        with tempfile.TemporaryDirectory() as tmp:
+            shutil.copytree(RELIABILITY/'golden', Path(tmp)/'golden')
+            (Path(tmp)/'golden'/'x').mkdir()
+            (Path(tmp)/'golden'/'x'/'golden.json').write_text(json.dumps({'meta': META, 'fixtures': [entry]}),
+                                                               encoding='utf-8')
+            result = reliability.check_pending(Path(tmp)/'golden', [r for r in records if r is not victim])
+        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['moved'], 102)
+        self.assertTrue(any('1.NWL.S.1' in p for p in result['problems']), result['problems'])
 
     def test_check_pending_without_pending_golden_fails(self):
         with tempfile.TemporaryDirectory() as tmp:

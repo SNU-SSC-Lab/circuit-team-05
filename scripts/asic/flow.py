@@ -17,6 +17,7 @@ import run_physical
 from .nspl import prepare, sha
 from .reference import convert
 from .pinplan import make_plan, tcl as pin_tcl
+from .drc_antenna import report_problems as antenna_problems
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -228,7 +229,12 @@ set_load 0.5 [all_outputs]
                 if not (out/report).is_file():
                     raise
             found = json.loads((out/report).read_text())
-            checks[stage].update(errors=found['errors'], report=report, rulechecks=len(found['rules']))
+            checks[stage].update(errors=found.get('errors'), report=report, rulechecks=len(found.get('rules') or {}))
+            # Fail closed: an input error, a wrong deck, missing RULECHECKs or a GDS without any gate net
+            # cannot be a pass even when the tool exits 0.
+            problems = antenna_problems(found)
+            if problems:
+                checks[stage].update(status='fail', detail='; '.join(problems))
             write()
         antenna('asic-antenna', out/(top+'.gds'), top, 'antenna.json')
         if args.target == 'chip':
