@@ -58,7 +58,10 @@ def main():
                            stdout=log, stderr=subprocess.STDOUT, timeout=90, check=True)
         report = (out/(cell+'.lvs.log')).read_text()
         data = json.loads((out/(cell+'.lvs.json')).read_text())
-        results[cell] = {'pass': lvs_verdict(report, data, cell),
+        # Netgen prints and skips a failing setup command ("Error ... (ignoring)"); treat it as a failure.
+        console = (out/(cell+'.netgen.log')).read_text(errors='replace')
+        results[cell] = {'pass': lvs_verdict(report, data, cell)
+                         and not re.search(r'^Error\b|SSC_NETGEN_ERROR', console, re.M),
                          'final': report.rsplit('Final result:', 1)[-1].strip()}
         print(cell, results[cell]['pass'], flush=True)
     (out/'qualification.json').write_text(json.dumps(results, indent=2)+'\n')

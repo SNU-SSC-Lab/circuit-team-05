@@ -255,7 +255,10 @@ set_load 0.5 [all_outputs]
         command('asic-netgen', [run_physical.executable('netgen'), '-batch', 'source', lvs/'run.tcl'], lvs, env)
         report = (lvs/'lvs.log').read_text()
         cells = json.loads((lvs/'lvs.json').read_text())
-        match = (lvs/'netgen-complete.txt').is_file() and run_physical.lvs_verdict(report, cells, top)
+        # Netgen prints and skips a failing setup command ("Error ... (ignoring)"); treat it as a failure.
+        console = (out/'asic-netgen.log').read_text(errors='replace')
+        match = ((lvs/'netgen-complete.txt').is_file() and run_physical.lvs_verdict(report, cells, top)
+                 and not re.search(r'^Error\b|SSC_NETGEN_ERROR', console, re.M))
         checks['asic-lvs'] = {'status': 'pass' if match else 'fail', 'report': 'lvs/lvs.log'}
         checks['asic-lvs']['devices'] = json.loads((lvs/'layout.json').read_text())['devices']
         write()

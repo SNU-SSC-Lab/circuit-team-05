@@ -18,10 +18,26 @@ them on each netlist before Netgen reads it, with the same rules on both sides:
 
 A chain is a path of two or more transistors of one model and bulk, joined by
 nets that touch nothing else: exactly two source/drain pins, no gate, no bulk,
-not a subcircuit port, not a global net, not used by any other line. Chains
-whose gates repeat, whose two ends are the same net, or that close a loop are
-left untouched. Only W and L are traced (deck ``TRACE PROPERTY ... W``/``L``);
-AS/AD/PS/PD are dropped. Any other device parameter is an error.
+not a subcircuit port, not a global net, not used by any other line. Only
+chains of the shape the kit's Calibre results show as order-free are
+rewritten: one end is the deck's power or ground net (``LVS POWER NAME "VDD"``,
+``LVS GROUND NAME "VSS"``, deck lines 92-93) and no gate is tied to a chain
+end. Every series object Calibre formed in the 34 kit cells has that shape.
+A pass chain between two signal nets, or a diode-connected member moved along
+the chain, can be electrically different and has no Calibre evidence, so those
+stay transistor by transistor (stricter). Chains whose gates repeat, whose two
+ends are the same net, or that close a loop are left untouched too.
+
+Stricter than the deck on purpose: ``LVS REDUCE SERIES MOS YES`` (deck line 77,
+series MOS sharing one gate merged into one longer device) is not done, and
+parallel MOS are merged only when L is equal. Both can only turn a Calibre
+match into a mismatch, never the other way.
+
+Names are compared without case, like Netgen. Two spellings of one name that
+differ only in case in one subcircuit (net, instance, or .GLOBAL name) or two
+spellings of one model name stop with an error instead of being guessed. Only
+W and L are traced (deck ``TRACE PROPERTY ... W``/``L``); AS/AD/PS/PD are
+dropped. Any other device parameter is an error.
 """
 import argparse
 from decimal import Decimal, InvalidOperation
@@ -32,8 +48,12 @@ SCALE = {'f': Decimal('1e-15'), 'p': Decimal('1e-12'), 'n': Decimal('1e-9'), 'u'
          'm': Decimal('1e-3'), 'k': Decimal('1e3'), 'meg': Decimal('1e6'), 'g': Decimal('1e9'),
          't': Decimal('1e12')}
 MICRON = Decimal('1e-6')
+SUPPLIES = {'vdd', 'vss'}  # deck lines 92-93: LVS POWER NAME "VDD", LVS GROUND NAME "VSS"
 DROPPED = {'AS', 'AD', 'PS', 'PD'}
 SUFFIXES = ('_chain', '_chain_gate')
+# The ordinary 5 V core MOS that extract.py and the kit CDL use. netgen_setup.tcl sets W/L
+# tolerance 0 on exactly these classes; any other model would keep Netgen's 1 %, so stop.
+MODELS = {'nmos4', 'pmos4'}
 
 
 def number(text):
@@ -53,7 +73,13 @@ def micron(value):
 
 
 def logical_lines(path, seen=None):
-    """Lines with '+' continuations joined and .include files inlined."""
+    """Statements with '+' continuations joined and .include files inlined.
+
+    As in SPICE (and Netgen), comment and blank lines between a statement and
+    its '+' continuation are skipped: the continuation belongs to the last
+    statement. A '+' with no statement before it in the same file, or after
+    .include/.end, is an error rather than a guess.
+    """
     path = Path(path).resolve()
     seen = set() if seen is None else seen
     if path in seen:
@@ -62,9 +88,11 @@ def logical_lines(path, seen=None):
     lines = []
     for raw in path.read_text(encoding='utf-8', errors='strict').splitlines():
         line = raw.strip()
+        if not line or line.startswith('*'):
+            continue
         if line.startswith('+'):
-            if not lines:
-                raise ValueError('continuation line without a statement')
+            if not lines or lines[-1].split()[0].lower() in ('.include', '.end'):
+                raise ValueError('continuation line without a statement to continue: '+line)
             lines[-1] += ' '+line[1:].strip()
             continue
         lines.append(line)
@@ -85,6 +113,22 @@ class Subckt:
         self.mos = []
         self.other = []
         self.fixed = set()
+
+
+def check_spelling(cell, global_nets):
+    """Netgen reads names without case. One spelling per name, or stop."""
+    nets = list(cell.ports) + [d[r] for d in cell.mos for r in ('d', 'g', 's', 'b')]
+    nets += list(cell.fixed) + list(global_nets)
+    instances = [d['name'] for d in cell.mos] + [line.split()[0] for line in cell.other]
+    for kind, names in (('net', nets), ('instance', instances)):
+        spellings = {}
+        for name in names:
+            spellings.setdefault(name.casefold(), set()).add(name)
+        mixed = sorted(sorted(s) for s in spellings.values() if len(s) > 1)
+        if mixed:
+            raise ValueError(f'{kind} names differ only in case in {cell.header.split()[1]}: {mixed}')
+    if len({name.casefold() for name in instances}) != len(instances):
+        raise ValueError('duplicate instance name in '+cell.header.split()[1])
 
 
 def parse(lines):
@@ -124,8 +168,15 @@ def parse(lines):
             current.fixed |= {w for w in words[1:] if '=' not in w}
     if current is not None:
         raise ValueError('missing .ENDS')
+    models = {}
     for cell in cells:
+        check_spelling(cell, global_nets)
         cell.fixed |= global_nets
+        for device in cell.mos:
+            models.setdefault(device['model'].casefold(), set()).add(device['model'])
+    mixed = sorted(sorted(s) for s in models.values() if len(s) > 1)
+    if mixed:
+        raise ValueError(f'model names differ only in case: {mixed}')
     return outside, cells
 
 
@@ -135,6 +186,8 @@ def mos(words):
     name, d, g, s, b, model = words[:6]
     if model.lower().endswith(SUFFIXES):
         raise ValueError('model name reserved for reduced chains: '+model)
+    if model.casefold() not in MODELS:
+        raise ValueError('only nmos4/pmos4 core MOS are qualified: '+model)
     values = {}
     for word in words[6:]:
         if '=' not in word:
@@ -207,6 +260,10 @@ def chains(cell, devices):
         gates = [devices[i]['g'] for i in path]
         if len(set(gates)) != len(gates) or ends[0] == ends[1]:
             continue
+        # Only the shape the kit's Calibre results show as order-free: one end
+        # on the deck's power/ground net, no gate tied to a chain end.
+        if not any(end.casefold() in SUPPLIES for end in ends) or set(gates) & set(ends):
+            continue
         found.append((path, ends))
     # Devices only in loops (no end device) are never visited and stay as-is.
     return found
@@ -235,8 +292,9 @@ def reduce_cell(cell):
             groups[key] = {'model': first['model'], 'b': first['b'], 'ends': ends,
                            'members': members, 'name': first['name'], 'count': 1}
             order.append(key)
-    names = {d['name'] for d in cell.mos} | {line.split()[0] for line in cell.other}
-    nets = set(cell.ports) | cell.fixed | {d[r] for d in cell.mos for r in ('d', 'g', 's', 'b')}
+    names = {d['name'].casefold() for d in cell.mos} | {line.split()[0].casefold() for line in cell.other}
+    nets = {net.casefold() for net in set(cell.ports) | cell.fixed
+            | {d[r] for d in cell.mos for r in ('d', 'g', 's', 'b')}}
     lines = [cell.header]
     for device in plain:
         lines.append(f"{device['name']} {device['d']} {device['g']} {device['s']} {device['b']} "
@@ -257,11 +315,12 @@ def reduce_cell(cell):
 
 
 def fresh(base, used):
+    """A name not in ``used`` (casefolded), compared without case like Netgen."""
     name, n = base, 1
-    while name in used:
+    while name.casefold() in used:
         n += 1
         name = f'{base}_{n}'
-    used.add(name)
+    used.add(name.casefold())
     return name
 
 
@@ -272,7 +331,7 @@ def reduce_netlist(source, target):
     summary = {}
     for cell in cells:
         name = cell.header.split()[1]
-        if name in summary:
+        if name.casefold() in {known.casefold() for known in summary}:
             raise ValueError('duplicate .SUBCKT: '+name)
         cell_lines, summary[name] = reduce_cell(cell)
         lines += cell_lines + ['']

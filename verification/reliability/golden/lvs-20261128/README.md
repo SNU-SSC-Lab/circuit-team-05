@@ -45,7 +45,29 @@ source CDL은 Virtuoso IC6.1.8 `auCdl`로 키트 OA 라이브러리 `ETRI_NSPL_G
 - 최상위 핀 맞춤 실패 4종(AOI21X1, NOR2X1, OAI21X1, OAI22X1): 직렬 2개의 순서가 반대다. 예: NOR2X1 layout `VDD-B-x-A-Y`, CDL `VDD-A-x-B-Y`. Netgen은 이름을 무시하면 같은 회로라서 A↔B를 바꿔 맞춘 뒤 핀 이름이 다르다고 실패했다. Calibre 보고서는 이 직렬을 `_smn2v`·`_sup2v`처럼 입력 순서가 없는 묶음으로 바꾼다(`LVS RECOGNIZE GATES ALL`). 같은 묶음이 DFF·LATCH·MUX·TBUF에도 있다.
 - 불일치 1종(TBUFX2): CDL은 출력 직렬을 `Y-[EN m=2]-net43-[A m=2]-VSS`처럼 중간점 하나로 쓰고, layout은 중간점이 따로인 직렬 두 줄이다. 그래프가 달라 Netgen은 소자 수 10↔6으로 불일치였다. deck은 `LVS REDUCE SPLIT GATES YES`와 위 직렬 묶음으로 둘을 같게 본다.
 
-고친 방법: `scripts/asic/lvs_reduce.py`가 두 netlist에 같은 줄이기(병렬 합치기, 직렬 순서 없애기, 같은 직렬 두 줄 합치기)를 하고, `verification/asic/netgen_setup.tcl`이 W/L 허용오차를 deck의 `TRACE PROPERTY ... 0`과 같은 0으로 둔다(Netgen 기본은 1%). W/L 비교·핀·소자는 그대로 비교한다. 같은 키트 셀에서 W·m·L·게이트 연결을 일부러 틀리게 고친 CDL 12개는 모두 불일치였고(W 0.44% 차이 포함), 고치지 않은 셀은 모두 일치였다. 같은 줄이기와 설정은 흐름의 코어 LVS(`asic-lvs`)에도 쓰인다.
+고친 방법: `scripts/asic/lvs_reduce.py`가 두 netlist에 같은 줄이기(병렬 합치기, 직렬 순서 없애기, 같은 직렬 두 줄 합치기)를 하고, `verification/asic/netgen_setup.tcl`이 W/L 허용오차를 deck의 `TRACE PROPERTY ... 0`과 같은 0으로 둔다(Netgen 기본은 1%). W/L 비교·핀·소자는 그대로 비교한다. 같은 줄이기와 설정은 흐름의 코어 LVS(`asic-lvs`)에도 쓰인다.
+
+직렬 순서를 없애는 범위는 Calibre 결과로 확인한 모양으로 좁혔다(2026-11-28 리뷰 반영). 한 끝이 deck의 전원·접지 net(`LVS POWER NAME "VDD"`, `LVS GROUND NAME "VSS"`, 92–93행)이고, 사슬의 게이트가 사슬 끝 net에 붙지 않은 것만 바꾼다. 키트 34종에서 Calibre가 직렬 묶음으로 바꾼 사슬은 모두 이 모양이고, 흐름 코어의 사슬 1041개도 모두 이 모양이다. 두 끝이 모두 신호선인 사슬이나 다이오드 연결 소자의 위치가 바뀐 사슬은 전기적으로 다를 수 있고 Calibre 근거가 없어 트랜지스터 그대로 비교한다(더 엄격). deck의 `LVS REDUCE SERIES MOS YES`(77행, 같은 게이트 직렬을 긴 소자 하나로)는 하지 않고, 병렬 합치기도 L이 같을 때만 한다. 둘 다 Calibre보다 엄격한 쪽이다. 이름은 Netgen처럼 대소문자 없이 비교하고, 한 회로 안에서 대소문자만 다른 철자가 함께 나오면 오류로 멈춘다. 주석·빈 줄 뒤의 `+` 이어쓰기는 SPICE처럼 앞 문장에 붙인다. MOS는 `nmos4`·`pmos4`만 받는다(허용오차 0을 거는 class).
+
+틀린 회로 시험(저장소에서 재현): 키트 GDS에서 KLayout으로 뽑은 셀과, 한 셀만 고친 키트 CDL을 위 경로로 비교한다. `SSC_TEST_NSPL_KIT=<압축 푼 키트 폴더> python -m unittest tests.asic.test_lvs_reduce`(Netgen·KLayout 필요, 없으면 건너뜀)의 `KitMutationTests`가 이 표를 그대로 확인한다. 2026-11-28 결과는 표와 같다. 고치지 않은 셀은 모두 일치였다.
+
+| # | 셀 | 고친 것 | 결과 |
+| --- | --- | --- | --- |
+| m1 | INVX2 | nmos W 3u→2.9u (m=2) | 불일치 |
+| m2 | INVX8 | pmos m 8→7 | 불일치 |
+| m3 | AND2X2 | 출력 pmos m 2→1 | 불일치 |
+| m4 | NOR2X1 | 직렬 pmos W 9u→9.04u (0.44%, Netgen 기본 1% 안) | 불일치 |
+| m5 | AOI21X1 | 병렬 C와 직렬 B를 바꿈 | 불일치 |
+| m6 | AOI22X1 | 두 직렬의 짝을 바꿈 | 불일치 |
+| m7 | OAI21X1 | 직렬 pmos L 0.5u→0.6u | 불일치 |
+| m8 | OAI22X1 | 두 pmos 직렬의 짝을 바꿈 | 불일치 |
+| m9 | TBUFX2 | 출력 nmos m 2→1 | 불일치 |
+| m10 | TBUFX2 | 출력 pmos 게이트 ENB→EN | 불일치 |
+| m11 | DFFPOSX1 | 직렬 pmos W 9u→6u | 불일치 |
+| m12 | DFFPOSX1 | 직렬 nmos 게이트 CLK→CLKB | 불일치 |
+| m13 | OAI21X1 | pmos 직렬 순서만 반대(허용되는 변환, 대조) | 일치 |
+
+리뷰가 찾은 반례(대소문자만 다른 이름, 주석 뒤 이어쓰기, 신호선 사이 사슬, 다이오드 연결 소자 위치, 대문자 모델의 허용오차, 생성 이름 충돌)도 같은 파일의 `CounterexampleTests`에 있다. 모두 불일치이거나 오류로 멈추고, 같은 회로 쌍(이름만 다른 것, finger 합)만 일치다.
 
 ## 이 결과로 말할 수 있는 것과 없는 것
 
