@@ -8,7 +8,7 @@
 | --- | --- |
 | 새 DRC 규칙 묶음을 KLayout으로 옮겼을 때 | 새 규칙의 fixture Calibre 판정. 대응하는 규칙을 `ported`에서 `verified`로 올린다 |
 | 도구 버전을 바꿨을 때(KLayout 0.30.x 등) | 모든 `verified` 규칙의 fixture 판정, 변형본 판정과 실제 칩 대조. 변형본 golden의 형상 해시는 KLayout 0.28.16으로 계산했으므로(`meta.klayout_version`) 버전이 바뀌어 해시가 달라지면 `check-mutations`가 실패한다 |
-| 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정 |
+| 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정. RTL이 `golden/synth-*`의 RTL과 다르면 그 RTL로 Genus를 다시 돌려 합성 대조(PR마다는 흐름 검사 `asic-synth-equiv`가 Yosys netlist만 본다) |
 
 생성기(`scripts/asic/drc_cases.py`)를 고쳐 `verified` 규칙의 fixture 정의가 바뀐 경우도 그 fixture의 golden이 사라지므로 기준점이 필요하다. 변형본 생성기(`scripts/asic/mutate.py`, `scripts/asic/mutate_v2.py`)를 고쳐 같은 seed에서 다른 형상이 나오는 경우도 같다.
 
@@ -88,6 +88,19 @@ KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fi
 
 규칙을 KLayout으로 옮기면 그 fixture를 `scripts/asic/drc_cases.py`로 옮기고(같은 `case_sha256`), 규칙을 `drc_cases_pending.py`의 `MOVED_RULES`에 넣는다. golden 항목은 pending 파일을 고치지 않고 새 fixture golden 폴더로 그대로 복사한다(`meta.moved_from`·`moved_from_sha256`). `check-pending`은 pending golden에 남은 항목 중 다음을 모두 만족하는 것만 `moved`로 센다: 규칙이 `MOVED_RULES`에 있고, `drc-rules.json`에서 verified이며(그래서 `check`가 그 규칙의 fixture golden 항목을 모두 `drc_cases.py`와 대조하고 하나라도 사라지면 실패한다), pending 정의가 없고, fixture golden에 같은 해시·규칙·Calibre 판정이 있다. 하나라도 어긋나면 실패다. 첫 사례는 키트 ANT deck 12개 검사(102개, `golden/ant-fixtures-20261128/`, SPEC 0020)다.
 
+### 합성 대조 (`golden/synth-YYYYMMDD/summary.json`)
+
+같은 RTL로 Genus netlist를 받고(서버), 로컬에서 Genus netlist와 Yosys netlist를 각각 RTL과 대조한다. 흐름 검사 `asic-synth-equiv`와 같은 스크립트다. 검사는 포트·클록 구조 검사, 다음 상태 형식 증명, 리셋 뒤 출발 조건(유계 SAT)이다. Genus netlist는 저장소에 넣지 않고 sha256만 적는다. 판정은 오픈소스 형식 검증이므로 상용 LEC(Conformal) 결과를 받으면 함께 적는다.
+
+```
+python scripts/asic/synth_equiv.py --netlist <Genus netlist> --liberty <키트 tt Liberty> --out <새 폴더> --cell-models <키트 Verilog 셀 모델>
+python scripts/asic/synth_equiv.py --netlist <결과>/synth/netlist.v --liberty <키트 tt Liberty> --out <새 폴더> --synth-log <결과>/synth/synth.log --cell-models <키트 Verilog 셀 모델>
+```
+
+- 두 실행 모두 `summary.json`의 `status`가 `pass`여야 한다(포트·클록 구조 통과, 모든 짝 증명, 리셋 뒤 출발 조건 통과, 셀 모델 다름 없음). `problems`가 비어 있어야 한다.
+- Yosys가 FSM을 다시 부호화하면 합성 로그(`synth.log`)의 `FSM_RECODE` 표가 필요하다. 없으면 상태 레지스터를 짝짓지 못해 실패한다.
+- 같은 팀 시험을 두 netlist에 돌린 결과(시험, 증명 아님)와 일부러 고친 netlist가 실패하는 확인을 함께 적는다. golden에는 상용 출력(Genus netlist 해시·`report_gates`)과 오픈소스 판정 기록을 나눠 적는다. 예시는 `golden/synth-20261128/`이다.
+
 ## 6. 첫 사례
 
 2026-11-28 실행이 첫 기준점이다. Calibre `v2023.4_17.10`, 키트 deck 무수정으로 다음을 받았다.
@@ -98,7 +111,7 @@ KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fi
 - 키트 셀 604개 + 코어 창 196개 변형본 800개(2차, `mutate_v2.py`): Calibre 거부 0 → `golden/drc-mutations-20261128b/`
 - 오픈소스 흐름 코어·SOP28 칩의 DRC·ANT·LVS → `golden/chip-openflow-20261128/`
 - v2 칩의 DRC·ANT·LVS → `golden/chip-v2-20261128/`
-- 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`(ANT 102개는 KLayout 이식 뒤 `golden/ant-fixtures-20261128/`로 옮김), 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`
+- 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`(ANT 102개는 KLayout 이식 뒤 `golden/ant-fixtures-20261128/`로 옮김), 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`, 같은 RTL의 Genus·Yosys netlist ↔ RTL 형식 증명(Genus netlist는 저장소 밖) → `golden/synth-20261128/`
 
 ## 7. 2026-11-28 실행에서 배운 절차
 

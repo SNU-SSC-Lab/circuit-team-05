@@ -27,26 +27,18 @@
       "docs": ["docs/specs/0017-rtl-to-gds.md", "docs/specs/0019-merge-gate.md", "verification/reliability/golden/lvs-20261128/README.md"]
     },
     {
-      "id": "synth-vs-genus",
-      "what": "합성 결과 대응: Yosys netlist와 Genus netlist",
-      "why": "Genus 325셀 결과는 있지만 같은 RTL의 두 netlist를 같은 시험이나 형식 동치로 대조하지 않았다.",
-      "exit_evidence": "기준점에서 같은 RTL로 만든 Yosys·Genus netlist의 같은 기능 시험 통과 또는 형식 동치 결과",
-      "allows_checks": [],
-      "docs": ["docs/specs/0019-merge-gate.md"]
-    },
-    {
       "id": "pnr-sta-vs-innovus-tempus",
-      "what": "P&R·STA 대응: OpenROAD + OpenSTA와 Innovus + Tempus, 그리고 GPIO·패키지 지연을 넣은 칩 단위 타이밍",
-      "why": "STA 계산은 대조했다: 같은 netlist·Liberty·Calibre SPEF(3 corner)·제약에서 OpenSTA와 Tempus의 끝점 72개 slack 차가 setup 최대 0.253 ns, hold 최대 0.353 ns다(golden/sta-20261128). 남은 것: Innovus P&R과 OpenROAD P&R의 비교가 없고, GPIO·패키지 지연을 넣은 칩 단위 타이밍과 검증된 GPIO·패키지 타이밍 모델이 없다.",
-      "exit_evidence": "같은 RTL·제약으로 OpenROAD와 Innovus P&R 결과(면적·배선·slack) 비교 기록, GPIO·패키지 지연을 넣은 칩 타이밍 결과",
+      "what": "GPIO·패키지 지연을 넣은 칩 단위 타이밍",
+      "why": "흐름의 타이밍은 코어 경계에서 끝난다. GPIO 패드·본딩·패키지 지연을 넣은 칩 단위 타이밍과 그 근거가 되는 검증된 GPIO·패키지 타이밍 모델이 없다. 2026-11-28 도재겸 승인으로 범위를 이것으로 줄였다. OpenROAD와 Innovus는 같은 입력에서도 원래 다른 배치를 만들므로 두 배치를 맞추는 것은 판정의 신뢰성 근거가 아니다. 우리 배치 자체는 상용 도구로 검사했다: 같은 GDS의 Calibre DRC·LVS(golden/chip-openflow-20261128, golden/lvs-20261128), 같은 netlist·Liberty·Calibre SPEF·제약의 OpenSTA ↔ Tempus 끝점 72개 대조(golden/sta-20261128).",
+      "exit_evidence": "근거 있는 GPIO·패키지 타이밍 모델을 넣은 칩 단위 타이밍 결과(asic-chip-timing)와, 같은 입력의 Tempus 결과와 대조한 기록",
       "allows_checks": ["asic-chip-timing"],
-      "docs": ["docs/specs/0019-merge-gate.md", "docs/verification/pnr-methodology.md", "verification/reliability/golden/sta-20261128/README.md"]
+      "docs": ["docs/specs/0019-merge-gate.md", "docs/verification/pnr-methodology.md", "verification/reliability/golden/sta-20261128/README.md", "verification/reliability/golden/chip-openflow-20261128/README.md"]
     },
     {
       "id": "sdc-portability",
-      "what": "흐름의 constraints.sdc 2행 delete_from_list는 OpenSTA 전용 명령이다",
-      "why": "Tempus는 이 줄을 건너뛰어 set_input_delay·set_driving_cell이 빠지고 입력이 지연 0으로 들어간다(hold −4.958 ns로 보임). 2026-11-28 대조는 2행을 remove_from_collection으로 바꾼 Tempus용 사본으로 했다(golden/sta-20261128). 흐름의 SDC 그대로는 상용 도구와 같은 제약이 아니다.",
-      "exit_evidence": "흐름 SDC를 OpenSTA와 Tempus가 모두 오류·경고 없이 읽는 문법으로 바꾸고, 두 도구에서 같은 입력 지연이 걸린 기록",
+      "what": "흐름의 새 constraints.sdc 2행(get_ports로 입력 6개를 나열)을 Tempus가 읽은 기록이 없다",
+      "why": "2026-11-28 흐름 SDC 2행을 OpenSTA 전용 delete_from_list에서 표준 get_ports {IN[0] IN[1] IN[2] IN[3] IN_VALID RST_N}로 바꿨다. OpenSTA에서는 바꾸기 전후의 제약(write_sdc)과 끝점 72개 setup·hold slack이 같다(SPEF 없음·Calibre 3 corner, 흐름 STA 49.145/1.636 ns 그대로). Tempus는 옛 2행을 건너뛰었고(hold −4.958 ns), 2026-11-28 Tempus 대조는 2행을 remove_from_collection으로 바꾼 사본으로 했다(golden/sta-20261128). 그 사본은 같은 입력 6개에 50 ns가 걸린 Tempus 결과이지만, 새 파일의 버스 비트 이름(IN[0])을 Tempus가 같은 포트로 읽는다는 기록은 아니다.",
+      "exit_evidence": "Tempus가 흐름의 새 constraints.sdc를 오류·경고 없이 읽고, write_sdc에서 입력 6개에 set_input_delay 50·driving cell BUFX2가 걸리고, 끝점 slack이 같은 날 remove_from_collection 사본 실행과 같은 기록",
       "allows_checks": [],
       "docs": ["verification/reliability/golden/sta-20261128/README.md", "docs/specs/0019-merge-gate.md"]
     },

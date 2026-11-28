@@ -179,12 +179,40 @@ def gate_level(netlist, top, lib, work, tier='pr'):
     return team_tests([model], work / 'sim', tier)
 
 
+def input_ports(netlist, top, lib, work):
+    """Input port names of `top` in a netlist of kit cells, bus bits as `IN[0]`, sorted."""
+    work.mkdir(parents=True, exist_ok=True)
+    out = work / 'ports.json'
+    code, err = yosys([f'read_liberty -lib {q(lib)}', f'read_verilog {q(netlist)}', f'hierarchy -check -top {top}',
+                       f'write_json {q(out)}'], work, 'ports')
+    if code != 0:
+        raise RuntimeError('cannot read the top-level ports: ' + err[-400:])
+    names = []
+    for name, port in json.loads(out.read_text(encoding='utf-8'))['modules'][top]['ports'].items():
+        if port['direction'] != 'input':
+            continue
+        width, offset = len(port['bits']), int(port.get('offset', 0))
+        names += [name] if width == 1 else [f'{name}[{i}]' for i in range(offset, offset + width)]
+    return sorted(names, key=lambda n: (n.split('[')[0], int(n[n.index('[')+1:-1]) if '[' in n else -1))
+
+
+def sdc_data_inputs(ports, clock='CLK'):
+    """SDC line naming every input but the clock explicitly. Plain `get_ports` is standard SDC, so OpenSTA and
+    Tempus read the same ports; OpenSTA's `delete_from_list` is skipped by Tempus (SPEC 0019, sdc-portability)."""
+    data = [p for p in ports if p != clock]
+    if not data or len(data) == len(ports):
+        raise ValueError(f'expected the clock {clock} and at least one other input, got {ports}')
+    if any(not re.fullmatch(r'[A-Za-z_]\w*(\[\d+\])?', p) for p in data):
+        raise ValueError(f'port names need escaping in SDC: {data}')
+    return 'set data_in [get_ports {' + ' '.join(data) + '}]'
+
+
 STA_SCRIPT = """\
 read_liberty {lib}
 read_verilog {netlist}
 link_design {top}
 {spef_line}create_clock -name CLK -period {period} [get_ports CLK]
-set data_in [delete_from_list [all_inputs] [get_ports CLK]]
+{data_in}
 set_input_delay {input_delay} -clock CLK $data_in
 set_output_delay {output_delay} -clock CLK [all_outputs]
 set_driving_cell -lib_cell {drive_cell} -pin {drive_pin} $data_in
@@ -211,8 +239,13 @@ def timing(netlist, top, lib, work, period=None, spef=None):
     period = period or CLOCK_NS
     work.mkdir(parents=True, exist_ok=True)
     script = work / 'sta.tcl'
+    try:
+        data_in = sdc_data_inputs(input_ports(netlist, top, lib, work))
+    except (RuntimeError, ValueError) as exc:
+        return {'status': 'fail', 'detail': str(exc)[:500]}
     script.write_text(STA_SCRIPT.format(
         lib=lib, netlist=netlist, top=top, period=period, spef_line=f'read_spef {spef}\n' if spef else '',
+        data_in=data_in,
         input_delay=t['input_delay_ns'], output_delay=t['output_delay_ns'], drive_cell=t['driving_cell'][0],
         drive_pin=t['driving_cell'][1], load=t['output_load_pf'], late=t['late_derate'],
         early=t['early_derate']), encoding='utf-8')

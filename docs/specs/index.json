@@ -392,6 +392,8 @@
         "scripts/asic/drc_antenna.py",
         "scripts/asic/drc_cases.py",
         "scripts/asic/drc_cases_pending*.py",
+        "scripts/asic/synth_equiv.py",
+        "scripts/pdk.py",
         "verification/reliability/**",
         "verification/asic/drc-rules.json",
         "tests/asic/**",
