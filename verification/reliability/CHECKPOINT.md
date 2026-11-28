@@ -9,6 +9,9 @@
 | 새 DRC 규칙 묶음을 KLayout으로 옮겼을 때 | 새 규칙의 fixture Calibre 판정. 대응하는 규칙을 `ported`에서 `verified`로 올린다 |
 | 도구 버전을 바꿨을 때(KLayout 0.30.x 등) | 모든 `verified` 규칙의 fixture 판정, 변형본 판정과 실제 칩 대조. 변형본 golden의 형상 해시는 KLayout 0.28.16으로 계산했으므로(`meta.klayout_version`) 버전이 바뀌어 해시가 달라지면 `check-mutations`가 실패한다 |
 | 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정 |
+| 제출 GDS가 바뀌었을 때 | 바뀐 제출 GDS의 키트 Calibre DRC·ANT·LVS 전체. 아래 "제출 조건" |
+
+**제출 조건.** 제출 GDS가 바뀌면, 상용 서버를 쓸 수 있는 동안 키트 Calibre DRC·ANT·LVS 전체를 다시 돌려 결과를 기준점으로 남긴다. ETRI는 제출 DB의 DRC를 재수행하지 않는다(2026-11-28 운영기관 회신). 그래서 제출본 DRC는 전부 팀 책임이다. KLayout은 PR마다 verified 규칙만 판정하고, 아직 옮기지 않은 규칙이 남아 있는 동안 Calibre 전체 결과를 대신하지 못한다. 결과는 칩 결과 형식(5절, `golden/chip-<이름>-YYYYMMDD/`)으로 넣고, 같은 GDS의 KLayout 판정을 함께 적는다.
 
 생성기(`scripts/asic/drc_cases.py`)를 고쳐 `verified` 규칙의 fixture 정의가 바뀐 경우도 그 fixture의 golden이 사라지므로 기준점이 필요하다. 변형본 생성기(`scripts/asic/mutate.py`, `scripts/asic/mutate_v2.py`)를 고쳐 같은 seed에서 다른 형상이 나오는 경우도 같다.
 
