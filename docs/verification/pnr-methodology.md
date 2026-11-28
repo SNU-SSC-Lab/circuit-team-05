@@ -20,7 +20,7 @@
 | 현재 확인한 내용 | 공개 4차 NSPL 키트의 고정 해시, 기존 Yosys·게이트 회귀·OpenSTA 실행. 공개 Magic·Netgen 설정은 현재 키트 지원 확인이 더 필요 |
 | 아직 확인하지 않은 내용 | 학교 서버 제공 여부, 공정 RC 보정·전체 DRC·GPIO LVS/타이밍과 제출 핀맵 |
 | 첫 실행 환경 후보 | 로컬 Linux/WSL에서 비교·재현한 뒤 GitHub Linux 실행기. 별도 VM은 실제 자원 측정 후 판단 |
-| GitHub 연동 | `ASIC RTL to GDS`: PR에서 실제 GDS 생성·검사·리포트 보관. 미확인 공정 항목은 strict 실패 |
+| GitHub 연동 | `ASIC gate`(이전 `ASIC RTL to GDS`): PR에서 실제 GDS 생성·검사·리포트 보관. 미검증 목록에 적힌 항목만 미확인 허용(SPEC 0019) |
 
 ## RTL 검증에서 무엇이 더 필요한가요?
 

@@ -1,0 +1,115 @@
+# SPEC 0019 baseline-guard: a PR may not move verification baselines (verification/reliability/**,
+# rule states in verification/asic/drc-rules.json, the guard, gate workflows and CODEOWNERS) without
+# 도재겸's bypass merge. The repository is public and pull_request_target runs for fork PRs too, with
+# this file as it is on the DEFAULT branch (main): since 2025-12-08 GitHub takes the workflow file and
+# GITHUB_SHA of pull_request_target from the default branch, whatever the PR's base. So the first PR
+# that adds this file does not run it. NO PR code runs here: the guard and reliability.py come
+# from the workflow's own commit ($GITHUB_SHA) and read base and head only as git blobs (bytes/JSON).
+# Fixture checks that need drc_cases.py evaluated run in reliability-table (pull_request, asic.yml).
+# Read-only token, no cache, no secrets.
+name: Baseline guard
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  baseline-guard:
+    name: baseline-guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.guard.outputs.result }}
+    steps:
+      - name: Fetch base and PR head commits into head/ (files are read as data, never run)
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.12.3'
+      - name: baseline-guard (guard from the workflow commit; PR read as data)
+        id: guard
+        # Never the PR tree as working directory: `python` would put it first on sys.path (a PR
+        # secrets.py, json.py ... would run). Every command runs from the guard's temp folder.
+        working-directory: ${{ runner.temp }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          guard="$RUNNER_TEMP/baseline-guard"
+          repo="$GITHUB_WORKSPACE/head"
+          mkdir -p "$guard"
+          cd "$guard"
+          # Never the head's copy: the guard code comes from the commit that holds this workflow file.
+          git -C "$repo" show "$GITHUB_SHA:scripts/asic/baseline_guard.py" > baseline_guard.py
+          git -C "$repo" show "$GITHUB_SHA:scripts/asic/reliability.py" > reliability.py
+          {
+            echo "검사 코드: 워크플로 커밋 \`${GITHUB_SHA}\`의 \`baseline_guard.py\`·\`reliability.py\`. PR 코드는 실행하지 않고 파일 내용만 읽습니다."
+            echo "기준 \`${BASE_SHA}\` ↔ PR head \`${HEAD_SHA}\`"
+            echo ''
+          } >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          # -I: isolated (no script or working folder on sys.path, no PYTHON* variables, no user site).
+          python -I -E -s "$guard/baseline_guard.py" --base "$BASE_SHA" --head "$HEAD_SHA" --root "$repo" \
+            > out.txt || status=$?
+          # Messages quote PR file names and ids; pause workflow commands while printing them.
+          token="guard-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
+          echo "::stop-commands::${token}"
+          cat out.txt
+          echo "::${token}::"
+          if [ "$status" -eq 0 ]; then
+            result=clean
+          elif head -n 1 out.txt | grep -qx '# 기준 파일 확인: 실패'; then
+            result=violations
+          else
+            result=error
+          fi
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+  baseline-label:
+    name: baseline-label
+    needs: baseline-guard
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Label PRs that need the baseline bypass (runs no PR code)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          RESULT: ${{ needs.baseline-guard.outputs.result }}
+        run: |
+          label=baseline-change
+          case "$RESULT" in
+            violations)
+              gh label create "$label" --repo "$REPO" --color D93F0B \
+                --description '기준 파일 변경: 도재겸이 근거 확인 후 우회 머지 (SPEC 0019)' 2>/dev/null || true
+              gh pr edit "$NUMBER" --repo "$REPO" --add-label "$label" \
+                || gh api --method POST "repos/$REPO/issues/$NUMBER/labels" -f "labels[]=$label"
+              ;;
+            clean)
+              gh pr edit "$NUMBER" --repo "$REPO" --remove-label "$label" 2>/dev/null \
+                || gh api --method DELETE "repos/$REPO/issues/$NUMBER/labels/$label" 2>/dev/null || true
+              ;;
+            *)
+              echo "baseline-guard did not finish (result '${RESULT}'); label left as it is."
+              ;;
+          esac

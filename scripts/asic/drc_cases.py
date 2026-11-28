@@ -81,10 +81,11 @@ def cases():
         if context == 'stack':
             emit(rule, 'stacked', [rectangle(first, 0, 0, 4, 4), rectangle(second, 0, 0, 4, 4)], True)
 
-    for rule, first, others, threshold, context in [
+    enclosures = [
          ('2.ACT.E2', 11, [2], 1.4, 'pmos'), ('2.ACT.E3', 11, [2], .5, 'ntap'),
          ('7.CONT.E1', 31, [11], .5, ''), ('7.CONT.E2', 31, [12], .5, ''),
-         ('7.CONT.E3', 31, [32], .6, ''), ('13.PAD.E', 37, [32, 34, 36], 2.5, '')]:
+         ('7.CONT.E3', 31, [32], .6, ''), ('13.PAD.E', 37, [32, 34, 36], 2.5, '')]
+    for rule, first, others, threshold, context in enclosures:
         for label, delta, fail, hierarchy in [('below', -.01, True, False),
              ('boundary', 0, False, False), ('above', .01, False, False), ('child-rotated', -.01, True, True)]:
             margin = round(threshold+delta, 4)
@@ -134,4 +135,45 @@ def cases():
     emit('7.CONT.W', 'bar-vertical', [rectangle(31, 0, 0, .6, 1.2)], False)
     emit('7.CONT.W', 'bar-horizontal', [rectangle(31, 0, 0, 1.2, .6)], False)
     emit('7.CONT.W', 'bar-wrong-length', [rectangle(31, 0, 0, .6, 1.19)], True)
+
+    # Deck `ENC a b < v ... OVERLAP` (DMACRO Enc_check): an inner shape partly outside the enclosing
+    # layer fails; one that does not overlap it is not measured (other rules may fire). For 2.ACT.E3
+    # NTAP is clipped to NWELL, so the partial case is an NTAP edge on the NWELL edge. Appended last
+    # so earlier fixtures keep their numbered names.
+    for rule, first, others, threshold, context in enclosures:
+        size = 80 if first == 37 else 2
+        margin = threshold+1
+        for label, outer, fail in [('partial-overlap', [-margin, -margin, size/2, size+margin], True),
+                                   ('outside-no-overlap', [size+5, -margin, 2*size+5, size+margin], False)]:
+            shapes = [rectangle(first, 0, 0, size, size)]+[[layer, outer] for layer in others]
+            if context == 'pmos':
+                shapes += [rectangle(15, 0, 0, size, size), rectangle(12, .5, -1, 1.5, size+1)]
+            if context == 'ntap': shapes += [rectangle(14, 0, 0, size, size)]
+            emit(rule, label, shapes, fail)
+
+    # Enclosure edge cases (0439-0450). The expected values were first a reading of the deck; the
+    # 2026-11-28 Calibre run agreed with all of them (golden/drc-fixtures-20261128b in
+    # verification/reliability). outer-inside-inner: the outer shape lies wholly inside
+    # the inner one (for 13.PAD.E a hole in each metal under the PAD). No inner edge crosses an outer
+    # edge or faces its inside, so ENC ... OVERLAP is read as not firing. Exception 2.ACT.E3: NTAP is
+    # NACT AND NWELL, so NTAP equals the NWELL island and every edge coincides, which fired in Calibre
+    # for 0429 (coincident edge) -> expected to fire. near-outside: the inner shape is outside the outer
+    # one, closer than the rule value; facing outside edges are spacing, not enclosure -> expected not
+    # to fire. For 2.ACT.E3 NTAP is empty there (no NACT inside NWELL), so it is vacuous.
+    for rule, first, others, threshold, context in enclosures:
+        size = 80 if first == 37 else 2
+        margin = threshold+1
+        if first == 37:
+            low, high = -margin, size+margin
+            island = [[low, low, high, 30], [low, 50, high, high], [low, 30, 30, 50], [50, 30, high, 50]]
+        else:
+            island = [[size/4, size/4, size*3/4, size*3/4]]
+        gap = round(threshold-.2, 4)
+        for label, outers, fail in [('outer-inside-inner', island, context == 'ntap'),
+                                    ('near-outside', [[size+gap, -margin, 2*size+gap, size+margin]], False)]:
+            shapes = [rectangle(first, 0, 0, size, size)]+[[layer, box] for layer in others for box in outers]
+            if context == 'pmos':
+                shapes += [rectangle(15, 0, 0, size, size), rectangle(12, .5, -1, 1.5, size+1)]
+            if context == 'ntap': shapes += [rectangle(14, 0, 0, size, size)]
+            emit(rule, label, shapes, fail)
     return result

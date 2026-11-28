@@ -11,10 +11,13 @@ import pya
 from drc_cases import cases
 from drc_geometry import check
 from drc_ports import PORTS
+import reliability
 
 def main():
     out = Path(os.environ['SSC_DRC_TEST_OUT'])
-    fixtures = cases()
+    # A JSON round trip gives plain lists and dicts: the builder below sees exactly what case_sha256
+    # hashes, so a list or dict subclass in drc_cases.py cannot show the hash one shape and KLayout another.
+    fixtures = json.loads(json.dumps(cases()))
     if {case['rule'] for case in fixtures} != set(PORTS):
         raise ValueError('a geometry port has no fixture or a fixture names an unknown check')
     by_rule, records, failures = {}, [], []
@@ -42,6 +45,7 @@ def main():
         saved.read(str(path))
         record = {k:v for k,v in case.items() if k != 'shapes'}
         record['gds'] = path.name
+        record['case_sha256'] = reliability.case_sha256(case)
         try:
             result = check(saved, saved.cell('fixture'), [case['rule']])
             value = result['rules'][case['rule']]
@@ -65,7 +69,11 @@ def main():
     result = {'status': 'fail' if failures else 'pass', 'fixtures': len(records),
               'ported_rules': len(by_rule), 'failed_fixtures': failures,
               'wall_seconds': round(time.monotonic()-started, 3),
-              'golden_compared': False, 'records': records}
+              # Calibre agreement lives in verification/reliability (reliability.py check), not here;
+              # record the rule states drc-rules.json declares for the rules these fixtures test.
+              'rule_states': reliability.state_counts(
+                  json.loads(reliability.RULES_JSON.read_text(encoding='utf-8')), set(by_rule)),
+              'records': records}
     (out/'selftest.json').write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps({k:v for k,v in result.items() if k != 'records'}), flush=True)
     if failures:

@@ -1,0 +1,376 @@
+{
+  "meta": {
+    "calibre_version": "v2023.4_17.10",
+    "deck_sha256": "6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f",
+    "fixture_tarball_sha256": "c8-fixtures.tar.gz 15acbafef6f71fbf0b4357a3bb1aa82e502347fce9dc3f4e0033d011646ff8ef (0427-0438); c9-fixtures.tar.gz 58c6e44f8ef30c79cf2641356cc7ba5ae5840d7359a712e20f54aa0a5597fb02 (0439-0450)",
+    "generator_commit": "756b384",
+    "run_date": "2026-11-28",
+    "case_sha256_from": "selftest"
+  },
+  "fixtures": [
+    {
+      "gds": "0427-2.ACT.E2-partial-overlap.gds",
+      "rule": "2.ACT.E2",
+      "case_sha256": "a6d49b47c2a13d72a42eb16ccfbbf126fca3a67a3e3d911bcf35647178f64422",
+      "calibre": "fired",
+      "target_count": 2,
+      "other_rules": {
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "2.ACT.E1": 1,
+        "2.ACT.T1": 1,
+        "2.ACT.bad3": 1,
+        "2.ACT.bad4": 1,
+        "3.PL1.bad1": 1,
+        "6.PSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0428-2.ACT.E2-outside-no-overlap.gds",
+      "rule": "2.ACT.E2",
+      "case_sha256": "dc8485fb925569e5488632db5bfc6ecc5711e3e39b3143834ac6bfd4c55469ca",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.NWL.W": 1,
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "2.ACT.bad3": 1,
+        "2.ACT.bad4": 1,
+        "3.PL1.bad1": 1,
+        "6.PSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0429-2.ACT.E3-partial-overlap.gds",
+      "rule": "2.ACT.E3",
+      "case_sha256": "130a89dfe989f59bc8118fc1c38473fb378e10196221f34ae7af183fe1e71bcd",
+      "calibre": "fired",
+      "target_count": 1,
+      "other_rules": {
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "1.PWL.bad2": 1,
+        "2.ACT.bad4": 1,
+        "5.NSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0430-2.ACT.E3-outside-no-overlap.gds",
+      "rule": "2.ACT.E3",
+      "case_sha256": "3351a9d0833e9f2fd3ee12931389e1c046cce9386bbd174191ccb536232d2635",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.NWL.W": 1,
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "1.PWL.bad2": 1,
+        "2.ACT.bad4": 1,
+        "5.NSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0431-7.CONT.E1-partial-overlap.gds",
+      "rule": "7.CONT.E1",
+      "case_sha256": "b6611b8ca0a5d30dfacb46369185c892ac1b75e8a083ac6a420ae47c9ddbf932",
+      "calibre": "fired",
+      "target_count": 2,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "2.ACT.bad1": 2,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0432-7.CONT.E1-outside-no-overlap.gds",
+      "rule": "7.CONT.E1",
+      "case_sha256": "d0546986b9f429dc5ce55a6f16037a3cf4280ef594652b0db9762cf39e14a65e",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "2.ACT.bad1": 2,
+        "2.ACT.bad4": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2,
+        "7.CONT.bad2": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0433-7.CONT.E2-partial-overlap.gds",
+      "rule": "7.CONT.E2",
+      "case_sha256": "1833e347a1e925f13eb654c1d67fd2d6db5e69053545ac8ebf34f01f286eae04",
+      "calibre": "fired",
+      "target_count": 2,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0434-7.CONT.E2-outside-no-overlap.gds",
+      "rule": "7.CONT.E2",
+      "case_sha256": "a0d0a96d28d50f963f081b735e0334db961246076f8eb18cbdbc419e1ed347c1",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "3.PL1.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2,
+        "7.CONT.bad2": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0435-7.CONT.E3-partial-overlap.gds",
+      "rule": "7.CONT.E3",
+      "case_sha256": "44c8a49b001dbcccb4c3ff1672d8300aab9e549271a2209309d5b0478121472a",
+      "calibre": "fired",
+      "target_count": 2,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 1,
+        "7.CONT.bad2": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0436-7.CONT.E3-outside-no-overlap.gds",
+      "rule": "7.CONT.E3",
+      "case_sha256": "37ecd85a007344c5741f272dee1864d193a797afaf5206edc403b726f8264aa2",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2,
+        "7.CONT.bad2": 1,
+        "8.MET1.bad1": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0437-13.PAD.E-partial-overlap.gds",
+      "rule": "13.PAD.E",
+      "case_sha256": "6e459edec9e765b2bb17fb7f85fa778145b64837230c21d087883c0708e9eff2",
+      "calibre": "fired",
+      "target_count": 6,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "10.MET2.bad1": 1,
+        "12.MET3.bad1": 1,
+        "8.MET1.bad1": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0438-13.PAD.E-outside-no-overlap.gds",
+      "rule": "13.PAD.E",
+      "case_sha256": "8211f57f37850fe045e721e224a325ae9357c0d22e39beddfc039257b94d6bc8",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "10.MET2.bad1": 1,
+        "12.MET3.bad1": 1,
+        "8.MET1.bad1": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0439-2.ACT.E2-outer-inside-inner.gds",
+      "rule": "2.ACT.E2",
+      "case_sha256": "e8236c70f57969b508b091c958dff487d603291d852b570ccb2775ab563b0249",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.NWL.W": 1,
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "2.ACT.E1": 2,
+        "2.ACT.T1": 1,
+        "2.ACT.bad3": 1,
+        "2.ACT.bad4": 1,
+        "3.PL1.bad1": 1,
+        "6.PSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0440-2.ACT.E2-near-outside.gds",
+      "rule": "2.ACT.E2",
+      "case_sha256": "6a03e5dd9445618a124646ca56dc20a6d8ce68a8e1627f4b67f1735149af1dec",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.NWL.W": 1,
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "2.ACT.bad3": 1,
+        "2.ACT.bad4": 1,
+        "3.PL1.bad1": 1,
+        "6.PSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0441-2.ACT.E3-outer-inside-inner.gds",
+      "rule": "2.ACT.E3",
+      "case_sha256": "63ee95dd391f82fdbce66b2421bfb8cf6781ab1550e675ce2515ea2d11d9de35",
+      "calibre": "fired",
+      "target_count": 1,
+      "other_rules": {
+        "1.NWL.W": 1,
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "1.PWL.bad2": 1,
+        "2.ACT.bad4": 1,
+        "5.NSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0442-2.ACT.E3-near-outside.gds",
+      "rule": "2.ACT.E3",
+      "case_sha256": "19ab759ec600acd22896e4363c0f1edc34499140e2b7d810558ed19a22bed380",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.NWL.W": 1,
+        "1.NWL.bad1": 1,
+        "1.PWL.bad1": 1,
+        "1.PWL.bad2": 1,
+        "2.ACT.bad4": 1,
+        "5.NSD.E": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0443-7.CONT.E1-outer-inside-inner.gds",
+      "rule": "7.CONT.E1",
+      "case_sha256": "72559cba52974bfe54758f8b8136e3e0165120826852c153b5a6d50e42c243ae",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "2.ACT.bad1": 2,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0444-7.CONT.E1-near-outside.gds",
+      "rule": "7.CONT.E1",
+      "case_sha256": "e6a6d15b8e060f6a0901f4a004aa6c94df937b6c86258d7b1ac611f47210e489",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "2.ACT.bad1": 2,
+        "2.ACT.bad4": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2,
+        "7.CONT.bad2": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0445-7.CONT.E2-outer-inside-inner.gds",
+      "rule": "7.CONT.E2",
+      "case_sha256": "cfd39df2fbf497fe0155398740538cbf2d27a88190798035227ac0d7f0efe5e1",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0446-7.CONT.E2-near-outside.gds",
+      "rule": "7.CONT.E2",
+      "case_sha256": "7e53900b97fdd5a49821805572d3b5dc1b3a0398e386e141c5f9dc479ab402d4",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "3.PL1.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2,
+        "7.CONT.bad2": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0447-7.CONT.E3-outer-inside-inner.gds",
+      "rule": "7.CONT.E3",
+      "case_sha256": "99e28831c5afa18049ff333be42eda66a3c7000abc41c490a8ae96bf157bf3fd",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 1,
+        "7.CONT.bad2": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0448-7.CONT.E3-near-outside.gds",
+      "rule": "7.CONT.E3",
+      "case_sha256": "894f672880ce930fb0a2ddb06f26eca57ae7de910f5a973005fe07014cfa83df",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "7.CONT.W": 1,
+        "7.CONT.bad1": 2,
+        "7.CONT.bad2": 1,
+        "8.MET1.bad1": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0449-13.PAD.E-outer-inside-inner.gds",
+      "rule": "13.PAD.E",
+      "case_sha256": "086692c925acf066418bb84ca9e6f2d6cf89fd7cf78dcff84b3990739ae4420b",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "10.MET2.bad1": 1,
+        "12.MET3.bad1": 1,
+        "8.MET1.bad1": 1
+      },
+      "refused_reason": null
+    },
+    {
+      "gds": "0450-13.PAD.E-near-outside.gds",
+      "rule": "13.PAD.E",
+      "case_sha256": "e4d3a873c70816570fc545cac080300394387e0bf22e17f5efc9237c523870a6",
+      "calibre": "clean",
+      "target_count": 0,
+      "other_rules": {
+        "1.PWL.bad1": 1,
+        "10.MET2.bad1": 1,
+        "12.MET3.bad1": 1,
+        "8.MET1.bad1": 1
+      },
+      "refused_reason": null
+    }
+  ]
+}

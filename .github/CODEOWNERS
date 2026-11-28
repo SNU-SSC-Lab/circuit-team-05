@@ -1,0 +1,20 @@
+# SPEC 0019: baseline and gate files ask 도재겸 (Dojaegyum) for review.
+# This is a review request only; the main ruleset does not require code-owner approval.
+# Baseline PRs are merged by 도재겸 with the PR-only bypass after checking the evidence.
+verification/reliability/** @Dojaegyum
+scripts/asic/baseline_guard.py @Dojaegyum
+scripts/asic/reliability.py @Dojaegyum
+.github/workflows/** @Dojaegyum
+verification/asic/drc-rules.json @Dojaegyum
+.github/CODEOWNERS @Dojaegyum
+scripts/asic/drc_cases.py @Dojaegyum
+scripts/asic/drc_cases_pending*.py @Dojaegyum
+scripts/asic/drc_fixture_test.py @Dojaegyum
+scripts/asic/drc_selftest.py @Dojaegyum
+scripts/asic/drc_geometry.py @Dojaegyum
+scripts/asic/drc_ports.py @Dojaegyum
+scripts/asic/drc.py @Dojaegyum
+scripts/asic/flow.py @Dojaegyum
+scripts/run_asic.py @Dojaegyum
+scripts/asic/drc_audit.py @Dojaegyum
+scripts/asic/report.py @Dojaegyum

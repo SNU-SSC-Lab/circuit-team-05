@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "run_date": "2026-11-28",
+    "calibre_version": "v2023.4_17.10",
+    "decks_modified": false,
+    "rulechecks": {
+      "drc": 209
+    },
+    "design": "v_ternary8_chip_top",
+    "built_with": "Cadence 도구로 만든 v2 칩(오픈소스 흐름 출력이 아님)"
+  },
+  "gds": [
+    {
+      "name": "v_ternary8_chip_top_ns",
+      "seal_ring": false,
+      "sha256": "521a5010da74cd8ca75744ebef7141b9cadfd3c9fe155488d561f3132c622e58",
+      "calibre_drc": {},
+      "calibre_ant": 0,
+      "calibre_lvs": "CORRECT",
+      "klayout_drc_implemented_rules": 0
+    },
+    {
+      "name": "v_ternary8_chip_top",
+      "seal_ring": true,
+      "sha256": "be4720283cbfc23a9bdca9e9e65609ce1cff60982f90c904a7191d0a3574f9c1",
+      "calibre_drc": {
+        "1.PWL.bad1": 1
+      },
+      "calibre_ant": 0,
+      "calibre_lvs": "CORRECT",
+      "klayout_drc_implemented_rules": 0
+    }
+  ]
+}
