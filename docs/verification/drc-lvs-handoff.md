@@ -6,7 +6,7 @@
 
 | 구분 | 확인한 범위 | 남은 일 |
 | --- | --- | --- |
-| DRC | 원본 활성 209개 대조, 구현한 기하 검사 96개에서 코어·패드 포함 GDS 오류 0건. 도형 시험 451개 통과, 96개 규칙의 판정이 Calibre golden과 일치(2026-11-28, `verification/reliability/`). 키트 ANT deck 12개 검사도 옮겨 fixture 102개가 Calibre와 일치, 코어·칩 0건(SPEC 0020) | 113개 규칙·전역 입력 플래그 이식 |
+| DRC | 원본 활성 209개 대조, 구현한 기하 검사 113개에서 코어·패드 포함 GDS 오류 0건. DRC 도형 시험 679개 통과, 113개 규칙의 판정이 Calibre golden과 일치(2026-11-28, `verification/reliability/`, 금속·via·PAD 17개는 SPEC 0021). 키트 ANT deck 12개 검사도 옮겨 fixture 102개가 Calibre와 일치, 코어·칩 0건(SPEC 0020) | 96개 규칙·전역 입력 플래그 이식 |
 | LVS | 내적 코어의 실제 GDS 추출 회로와 독립 기준 CDL 일치 | GPIO·ESD를 포함한 전체 칩 LVS |
 | 기능 | 최종 netlist의 6개 시험·42,907작업 회귀 통과 | 실제 제작 칩·보드 시험 |
 | RC·PEX | 추정 배선 RC와 탐색용 SPEF 생성 | 공정에 맞춘 RC 모델·정밀 추출·정확도 대조 |
@@ -74,7 +74,7 @@ python -m json.tool "$TEAM05_OUT/result.json"
 | `pnr/final.v`, `v_ternary8_top.gds` | 같은 실행의 최종 netlist·코어 GDS |
 | `pnr/estimated.spef` | 보정 전 전역 배선 추정값. 정밀 PEX 결과가 아님 |
 
-## 5. 생성한 GDS에 확장 DRC 96개 적용
+## 5. 생성한 GDS에 확장 DRC 적용(2026-11-28 기준 113개 규칙)
 
 ```bash
 python scripts/asic/drc_audit.py --pdk "$TEAM05_PDK" --gds "$TEAM05_OUT/v_ternary8_top.gds" --top v_ternary8_top --out "$TEAM05_OUT/drc-expanded"
@@ -178,7 +178,7 @@ python scripts/run_physical.py report --result "$HOME/ssc-team05-runs/magic-prac
 
 ### 전체 DRC
 
-공개 키트에 Calibre·Assura 규칙 원본이 있다. 원본이 없어서 멈춘 작업이 아니다. 활성 209개 중 96개를 옮겼고, 나머지 113개와 전역 입력 플래그·별도 antenna deck 전체는 아직 지원하지 않는다. well의 전위·연결 조건, 넓은 금속의 조건부 간격, tap·guard ring·ESD 등은 단순 폭/간격 수치만 복사해서 구현할 수 없다.
+공개 키트에 Calibre·Assura 규칙 원본이 있다. 원본이 없어서 멈춘 작업이 아니다. 활성 209개 중 113개를 옮겼고(넓은 금속의 조건부 간격·via 둘러싸기는 SPEC 0021), 나머지 96개와 전역 입력 플래그는 아직 지원하지 않는다. 별도 antenna deck은 SPEC 0020에서 옮겼다. well의 전위·연결 조건, tap·guard ring·ESD 등은 단순 폭/간격 수치만 복사해서 구현할 수 없다.
 
 다음 실험은 [대조표](nspl-drc-rule-matrix.md)에서 미구현 규칙 하나를 골라 원본 식의 정상·위반·경계 예제를 만들고, KLayout 결과를 원본 도구 결과와 비교하는 것이다. 옮긴 96개 규칙은 2026-11-28 Calibre golden과 판정이 같다(fixture 451개 중 449개 일치·2개 제외, 실제 형상 변형본 1차 609개·2차 798개에서 불일치 0, `verification/reliability/table.md`). 113개 미구현 규칙의 fixture Calibre 판정도 받아 두었다(`verification/reliability/golden/drc-unported-20261128/`). Assura와의 대조는 하지 않았다. `96/209`를 공정 검증률로 해석하지 않는다.
 
@@ -206,7 +206,7 @@ PIC·POB4·PVDD·PVSS 중 작은 셀 하나부터 독립 기준 SPICE/CDL과 GDS
 
 ## 12. 지금 사용법에서 R&D를 시작하는 순서
 
-1. **3절의 451개 도형 시험, 4절의 코어 실행, 5절의 확장 DRC를 먼저 재현한다.** 기존 결과를 기준으로 보관한다. `--experimental`은 지정된 미확인 항목만 허용하며 실제 실패를 성공으로 바꾸지 않는다.
+1. **3절의 도형 시험, 4절의 코어 실행, 5절의 확장 DRC를 먼저 재현한다.** 기존 결과를 기준으로 보관한다. `--experimental`은 지정된 미확인 항목만 허용하며 실제 실패를 성공으로 바꾸지 않는다.
 2. **연구 질문 하나를 고른다.** 예를 들어 미구현 DRC 한 규칙, GPIO 한 셀, MET1 배선 한 패턴으로 범위를 좁힌다. PEX 연구라면 8절의 설정·명령·입출력 예제를 함께 받으면 출발점을 비교하기 좋다.
 3. **입력과 비교 조건을 고정하고 차이를 기록한다.** PDK·설정·입력 해시, 도구 버전, 명령, corner·단위, 기대 결과의 출처, 실제 출력과 오차·미지원 조건을 한 실험 묶음으로 남긴다. 현재 추출기의 결과를 다시 정답으로 넣지 않는다.
 4. **해당 범위가 확인된 뒤 전체 흐름에 연결한다.** 작은 예제 통과를 전체 공정 지원으로 확대하지 않는다. DRC 목록·시험, 셀별 LVS, RC 대조 근거를 함께 늘린다.

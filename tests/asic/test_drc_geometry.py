@@ -42,10 +42,10 @@ ENCLOSURES = [
 ]
 
 
-def run_cases(cases):
+def run_cases(cases, batch=BATCH):
     with tempfile.TemporaryDirectory() as tmp:
         script, out = Path(tmp)/'batch.py', Path(tmp)/'out.json'
-        script.write_text(BATCH, encoding='utf-8')
+        script.write_text(batch, encoding='utf-8')
         env = dict(os.environ, QT_QPA_PLATFORM='offscreen', PYTHONDONTWRITEBYTECODE='1', SSC_TEST_ASIC=str(ASIC),
                    SSC_TEST_CASES=json.dumps(cases), SSC_TEST_OUT=str(out))
         done = subprocess.run(['klayout', '-b', '-r', str(script)], env=env, capture_output=True, text=True, timeout=120)
@@ -117,6 +117,115 @@ class EnclosureOverlapTests(unittest.TestCase):
         shifted = self.result['c2-0023-shifted']
         self.assertGreater(shifted['7.CONT.E1'], 0)
         self.assertGreater(shifted['7.CONT.E3'], 0)
+
+
+# Runs inside KLayout: one MET1 box per case at the given dbu; records errors of the listed rules or the
+# ValueError text (SSC_TEST_CASES = [{name, dbu, rules, shapes}]).
+DBU_BATCH = '''
+import json, os, sys
+sys.path.insert(0, os.environ['SSC_TEST_ASIC'])
+import pya
+from drc_geometry import check
+result = {}
+for case in json.loads(os.environ['SSC_TEST_CASES']):
+    layout = pya.Layout()
+    layout.dbu = case['dbu']
+    top = layout.create_cell('t')
+    for layer, box in case['shapes']:
+        top.shapes(layout.layer(layer, 0)).insert(pya.DBox(*box))
+    try:
+        rules = check(layout, top, case['rules'])['rules']
+        result[case['name']] = {rule: rules[rule]['errors'] for rule in case['rules']}
+    except ValueError as error:
+        result[case['name']] = {'error': str(error)}
+with open(os.environ['SSC_TEST_OUT'], 'w') as stream:
+    json.dump(result, stream)
+'''
+
+
+@unittest.skipUnless(shutil.which('klayout'), 'KLayout is not installed')
+class WidthClassTests(unittest.TestCase):
+    """Deck `WITH WIDTH MET1 >= 10` (SPEC 0021): 10.00 um is wide, 9.99 um narrow; coarse dbu fails closed."""
+
+    @classmethod
+    def setUpClass(cls):
+        cases = []
+        for dbu in (.001, .0005, .01):
+            for width in (9.99, 10.0):
+                # a second wire 0.79 um away: S1 (narrow, 0.8) fires only for 9.99, S2 (wide, 1.0) only for 10.00
+                cases.append(dict(name=f'{dbu}/{width}', dbu=dbu, rules=['8.MET1.S1', '8.MET1.S2'],
+                                  shapes=[[32, [0, 0, width, 40]], [32, [width+.79, 0, width+2.79, 40]]]))
+        cls.result = run_cases(cases, DBU_BATCH)
+
+    def test_width_boundary(self):
+        for dbu in ('0.001', '0.0005'):
+            with self.subTest(dbu=dbu):
+                self.assertGreater(self.result[dbu+'/9.99']['8.MET1.S1'], 0)
+                self.assertEqual(self.result[dbu+'/9.99']['8.MET1.S2'], 0)
+                self.assertEqual(self.result[dbu+'/10.0']['8.MET1.S1'], 0)
+                self.assertGreater(self.result[dbu+'/10.0']['8.MET1.S2'], 0)
+
+    def test_one_dbu_per_grid_step_is_refused(self):
+        # 0.01 um dbu cannot place a sizing threshold between 9.99 and 10.00: no verdict, an input error.
+        for width in ('9.99', '10.0'):
+            with self.subTest(width=width):
+                self.assertIn('WITH WIDTH threshold', self.result['0.01/'+width].get('error', ''))
+
+
+# Runs inside KLayout: shapes are [layer, datatype, box] or [layer, datatype, 'text']; records errors or
+# the ValueError text.
+INPUT_BATCH = '''
+import json, os, sys
+sys.path.insert(0, os.environ['SSC_TEST_ASIC'])
+import pya
+from drc_geometry import check
+result = {}
+for case in json.loads(os.environ['SSC_TEST_CASES']):
+    layout = pya.Layout()
+    layout.dbu = .001
+    top = layout.create_cell('t')
+    for layer, datatype, shape in case['shapes']:
+        shapes = top.shapes(layout.layer(layer, datatype))
+        if shape == 'text':
+            shapes.insert(pya.DText('VDD', pya.DTrans(1, 1)))
+        else:
+            shapes.insert(pya.DBox(*shape))
+    try:
+        rules = check(layout, top, case['rules'])['rules']
+        result[case['name']] = {rule: rules[rule]['errors'] for rule in case['rules']}
+    except ValueError as error:
+        result[case['name']] = {'error': str(error)}
+with open(os.environ['SSC_TEST_OUT'], 'w') as stream:
+    json.dump(result, stream)
+'''
+
+
+@unittest.skipUnless(shutil.which('klayout'), 'KLayout is not installed')
+class InputErrorTests(unittest.TestCase):
+    """Fail closed (SPEC 0021, the antenna review's lessons): no verdict from input the port cannot read."""
+
+    @classmethod
+    def setUpClass(cls):
+        violating = [[32, 0, [0, 0, 2, 40]], [32, 0, [2.79, 0, 4.79, 40]]]  # 8.MET1.S1 at 0.79
+        cls.result = run_cases([
+            dict(name='plain', rules=['8.MET1.S1'], shapes=violating),
+            # the second wire on 32/1: the deck sees the violation, datatype 0 alone would not
+            dict(name='datatype-1', rules=['8.MET1.S1'], shapes=[violating[0], [32, 1, [2.79, 0, 4.79, 40]]]),
+            dict(name='label-on-datatype-1', rules=['8.MET1.S1'], shapes=violating+[[32, 1, 'text']]),
+            dict(name='no-deck-layer', rules=['8.MET1.S1'], shapes=[[235, 0, [0, 0, 10, 10]]]),
+        ], INPUT_BATCH)
+
+    def test_plain_case_is_judged(self):
+        self.assertGreater(self.result['plain']['8.MET1.S1'], 0)
+
+    def test_other_datatype_on_a_deck_layer_is_an_input_error(self):
+        self.assertIn('shapes on 32/1', self.result['datatype-1'].get('error', ''))
+
+    def test_text_label_on_another_datatype_is_not_geometry(self):
+        self.assertEqual(self.result['label-on-datatype-1'], self.result['plain'])
+
+    def test_no_shape_on_any_deck_layer_is_an_input_error(self):
+        self.assertIn('no polygon on any deck layer', self.result['no-deck-layer'].get('error', ''))
 
 
 if __name__ == '__main__':

@@ -9,6 +9,9 @@
 | 새 DRC 규칙 묶음을 KLayout으로 옮겼을 때 | 새 규칙의 fixture Calibre 판정. 대응하는 규칙을 `ported`에서 `verified`로 올린다 |
 | 도구 버전을 바꿨을 때(KLayout 0.30.x 등) | 모든 `verified` 규칙의 fixture 판정, 변형본 판정과 실제 칩 대조. 변형본 golden의 형상 해시는 KLayout 0.28.16으로 계산했으므로(`meta.klayout_version`) 버전이 바뀌어 해시가 달라지면 `check-mutations`가 실패한다 |
 | 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정 |
+| 제출 GDS가 바뀌었을 때 | 바뀐 제출 GDS의 키트 Calibre DRC·ANT·LVS 전체. 아래 "제출 조건" |
+
+**제출 조건.** 제출 GDS가 바뀌면, 상용 서버를 쓸 수 있는 동안 키트 Calibre DRC·ANT·LVS 전체를 다시 돌려 결과를 기준점으로 남긴다. ETRI 담당자는 칩 레이아웃을 개략적으로 확인하지만 제출 DB의 DRC를 재수행하지는 않는다(2026-11-28 운영기관 회신). 그래서 제출본 DRC는 전부 팀 책임이다. KLayout은 PR마다 verified 규칙만 판정하고, 아직 옮기지 않은 규칙이 남아 있는 동안 Calibre 전체 결과를 대신하지 못한다. 결과는 칩 결과 형식(5절, `golden/chip-<이름>-YYYYMMDD/`)으로 넣고, 같은 GDS의 KLayout 판정을 함께 적는다.
 
 생성기(`scripts/asic/drc_cases.py`)를 고쳐 `verified` 규칙의 fixture 정의가 바뀐 경우도 그 fixture의 golden이 사라지므로 기준점이 필요하다. 변형본 생성기(`scripts/asic/mutate.py`, `scripts/asic/mutate_v2.py`)를 고쳐 같은 seed에서 다른 형상이 나오는 경우도 같다.
 
@@ -86,19 +89,19 @@ python scripts/asic/reliability.py import-mutations --counts counts.csv --manife
 
 KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fixture golden과 같고, `group`(묶음)과 `deck`(DRC/ANT)이 더 있다. `reliability.py check`는 이 파일을 읽지 않고, `python scripts/asic/reliability.py check-pending`이 fixture 정의(`scripts/asic/drc_cases_pending.py`)와 1:1인지와, Calibre가 판정한 fixture에서 정의의 `fail`이 Calibre 판정과 같은지만 확인한다. fixture 정의는 생성한 파일을 그대로 옮겨 `case_sha256`이 Calibre가 읽은 GDS의 manifest 값과 같게 한다. 가설(`fail`)이 Calibre와 다르면 정의를 Calibre 판정으로 고치고, golden 항목에 Calibre가 읽은 정의의 해시를 `run_case_sha256`으로 남긴다. Calibre가 입력을 거부한 fixture는 정의를 고치지 않고 `refused`와 사유로 남긴다(사유가 붙은 제외, 첫 묶음의 0169·0170과 같음). `raises`는 우리 GDS 작성기나 KLayout이 오류를 내는 경우에만 쓴다.
 
-규칙을 KLayout으로 옮기면 그 fixture를 `scripts/asic/drc_cases.py`로 옮기고(같은 `case_sha256`), 규칙을 `drc_cases_pending.py`의 `MOVED_RULES`에 넣는다. golden 항목은 pending 파일을 고치지 않고 새 fixture golden 폴더로 그대로 복사한다(`meta.moved_from`·`moved_from_sha256`). `check-pending`은 pending golden에 남은 항목 중 다음을 모두 만족하는 것만 `moved`로 센다: 규칙이 `MOVED_RULES`에 있고, `drc-rules.json`에서 verified이며(그래서 `check`가 그 규칙의 fixture golden 항목을 모두 `drc_cases.py`와 대조하고 하나라도 사라지면 실패한다), pending 정의가 없고, fixture golden에 같은 해시·규칙·Calibre 판정이 있다. 하나라도 어긋나면 실패다. 첫 사례는 키트 ANT deck 12개 검사(102개, `golden/ant-fixtures-20261128/`, SPEC 0020)다.
+규칙을 KLayout으로 옮기면 그 fixture를 `scripts/asic/drc_cases.py`로 옮기고(같은 `case_sha256`), 규칙을 `drc_cases_pending.py`의 `MOVED_RULES`에 넣는다. golden 항목은 pending 파일을 고치지 않고 새 fixture golden 폴더로 그대로 복사한다(`meta.moved_from`·`moved_from_sha256`). `check-pending`은 pending golden에 남은 항목 중 다음을 모두 만족하는 것만 `moved`로 센다: 규칙이 `MOVED_RULES`에 있고, `drc-rules.json`에서 verified이며(그래서 `check`가 그 규칙의 fixture golden 항목을 모두 `drc_cases.py`와 대조하고 하나라도 사라지면 실패한다), pending 정의가 없고, fixture golden에 같은 해시·규칙·Calibre 판정이 있다. 하나라도 어긋나면 실패다. 첫 사례는 키트 ANT deck 12개 검사(102개, `golden/ant-fixtures-20261128/`, SPEC 0020), 두 번째는 DRC deck 금속·via·PAD 17개 규칙(228개, `golden/drc-fixtures-20261128c/`, SPEC 0021)이다. 옮긴 규칙은 변형본 golden 두 개(`check-mutations --kit`)에서도 Calibre와 같아야 verified로 올린다.
 
 ## 6. 첫 사례
 
 2026-11-28 실행이 첫 기준점이다. Calibre `v2023.4_17.10`, 키트 deck 무수정으로 다음을 받았다.
 
-- DRC fixture 427개(첫 묶음 기록): 425 일치, 2개 Calibre 거부(dbu). 지금 숫자는 아래 둘러싸기 묶음과 합친 451개 중 449개 일치, 2개 제외. 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
-- 둘러싸기 경계 fixture 24개(`0427`~`0450`): 24개 모두 정의의 기대값과 같음 → `golden/drc-fixtures-20261128b/`. 두 묶음을 합쳐 fixture 451개 중 449개 일치, 2개 제외
+- DRC fixture 427개(첫 묶음 기록): 425 일치, 2개 Calibre 거부(dbu). 아래 둘러싸기 묶음과 합치면 451개 중 449개 일치, 2개 제외(금속·via·PAD 묶음 228개를 더한 지금은 679개 중 677개 일치, 2개 제외). 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
+- 둘러싸기 경계 fixture 24개(`0427`~`0450`): 24개 모두 정의의 기대값과 같음 → `golden/drc-fixtures-20261128b/`. 두 묶음을 합쳐 fixture 451개 중 449개 일치, 2개 제외(2026-11-28 첫 기준점 기록)
 - 키트 셀 변형본 695개(1차, `mutate.py`): 81개 Calibre 거부(자기 교차) → `golden/drc-mutations-20261128/`
 - 키트 셀 604개 + 코어 창 196개 변형본 800개(2차, `mutate_v2.py`): Calibre 거부 0 → `golden/drc-mutations-20261128b/`
 - 오픈소스 흐름 코어·SOP28 칩의 DRC·ANT·LVS → `golden/chip-openflow-20261128/`
 - v2 칩의 DRC·ANT·LVS → `golden/chip-v2-20261128/`
-- 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`(ANT 102개는 KLayout 이식 뒤 `golden/ant-fixtures-20261128/`로 옮김), 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`
+- 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`(ANT 102개는 KLayout 이식 뒤 `golden/ant-fixtures-20261128/`로, 금속·via·PAD 17개 규칙의 228개는 `golden/drc-fixtures-20261128c/`로 옮김), 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`
 
 ## 7. 2026-11-28 실행에서 배운 절차
 

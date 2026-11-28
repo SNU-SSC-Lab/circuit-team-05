@@ -278,11 +278,12 @@ class SnapshotTests(unittest.TestCase):
     def test_working_tree_snapshot(self):
         head = baseline_guard.snapshot(ROOT, run_fixtures=True)
         verified = [r for r, s in head['rules'].items() if s == 'verified']
-        self.assertEqual(len(verified), 96+12)  # DRC deck rules + ANT deck RULECHECKs
-        self.assertEqual(len(head['fixtures']), 451+102)
+        self.assertEqual(len(verified), 113+12)  # DRC deck rules + ANT deck RULECHECKs
+        self.assertEqual(len(head['fixtures']), 451+102+228)
         self.assertEqual(set(head['fixture_rules'].values()), set(verified))
-        # the mutation golden has no fixtures; the pending golden (857) does. Its 102 ANT entries are the same
-        # case_sha256 as golden/ant-fixtures-20261128 (moved, not edited), so they count once.
+        # the mutation golden has no fixtures; the pending golden (857) does. Its 102 ANT entries and 228 batch-1
+        # entries are the same case_sha256 as golden/ant-fixtures-20261128 and golden/drc-fixtures-20261128c
+        # (moved, not edited), so they count once.
         self.assertEqual(len(head['golden_fixtures']), 451+857)
         self.assertIn('verification/reliability/golden/drc-fixtures-20261128b/golden.json', head['golden'])
         self.assertIn('verification/reliability/golden/drc-mutations-20261128/golden.json', head['golden'])
@@ -303,7 +304,7 @@ class SnapshotTests(unittest.TestCase):
     def test_snapshot_at_reads_git(self):
         at = baseline_guard.snapshot_at('HEAD', ROOT, run_fixtures=True)
         self.assertEqual(at['rules'], baseline_guard.snapshot(ROOT)['rules'])
-        self.assertEqual(len(at['fixtures']), 451+102)
+        self.assertEqual(len(at['fixtures']), 451+102+228)
         self.assertIsNone(baseline_guard.snapshot_at('HEAD', ROOT)['fixtures'])  # data only by default
         with self.assertRaises(ValueError):
             baseline_guard.snapshot_at('no-such-ref-0019', ROOT)

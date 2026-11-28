@@ -542,4 +542,229 @@ def cases():
         vias, xe, ye = via_array(L, x0, wg, 132)
         ant(vrule, 'no-diode-goes-to-%s' % fallback, mk(wg, vias, xe, ye), False,
              base + '132 vias without diode: %s_WITH_DIODE empty -> silent; %s fires.' % (nm, fallback))
+
+    # ---- Batch 1 of the unported DRC deck rules (SPEC 0021): metal spacing by width class, via
+    # enclosure by width class, via arrays, pad pitch. The 228 fixtures Calibre judged on 2026-11-28
+    # (golden/drc-fixtures-20261128c), moved from drc_cases_pending_c1b.py when drc_ports.py ported the
+    # rules. The code is that file's, with names changed for this file's rules (no leading `_`, no import:
+    # floor(s / sqrt 2 * 100) is int(s / 2 ** .5 * 100), the same float), so every case_sha256 is the one
+    # Calibre read. The rationale strings are the deck reading behind each `fail`; Calibre agreed with all.
+    PAD = 37
+
+    def c1b(rule, label, shapes, fail, rationale, hierarchy=False, uncertain=False):
+        emit(rule, label, shapes, fail, hierarchy)
+
+    def diag(s):
+        """Grid offsets d (dx=dy) just inside / outside Euclidean corner distance s."""
+        d_in = int(s / 2 ** .5 * 100) / 100
+        d_out = snap(d_in + .01)
+        assert d_in * 2 ** .5 < s <= d_out * 2 ** .5
+        return snap(d_in), d_out
+
+    def plate_tail(layer):
+        """20x20 plate (width >= 10) with a 2-wide, 20-long tail on its right side."""
+        return P(layer, [(0, 0), (20, 0), (20, 9), (40, 9), (40, 11), (20, 11), (20, 20), (0, 20)])
+
+    # metal spacing S1 (both narrow) and S2 (one or both wide)
+    metals = [('8.MET1', MET1, .8, 1.0, 'MET1'), ('10.MET2', MET2, 1.0, 1.2, 'MET2'),
+              ('12.MET3', MET3, 1.0, 1.2, 'MET3')]
+    n, length = 2.0, 40
+    for prefix, L, s1, s2, name in metals:
+        S1, S2 = prefix + '.S1', prefix + '.S2'
+        gm = snap((s1 + s2) / 2)
+        un = '%sUN10 = WITH WIDTH %s < 10' % (name, name)
+        up = '%sUP10 = WITH WIDTH %s >= 10' % (name, name)
+        r1 = 'deck: OneSpace_check %sUN10 %g -> EXT %sUN10 < %g ABUT < 90 SINGULAR REGION; %s. ' % (name, s1, name, s1, un)
+        r2 = 'deck: TwoSpace_check %sUP10 %s %g -> EXT %sUP10 %s < %g ABUT < 90 SINGULAR REGION; %s. ' % (name, name, s2, name, name, s2, up)
+
+        def pair(w1, w2, g):
+            return [R(L, 0, 0, w1, length), R(L, w1 + g, 0, w1 + g + w2, length)]
+
+        # ---- S1: both lines narrow
+        for label, g, fail, h in [('below', s1 - .01, True, False), ('boundary', s1, False, False),
+                                  ('above', s1 + .01, False, False), ('child-rotated', s1 - .01, True, True),
+                                  ('touch-merges', 0, False, False)]:
+            c1b(S1, label, pair(n, n, snap(g)), fail,
+                 r1 + 'two %g-wide x %g lines, gap %g vs %g.' % (n, length, snap(g), s1), h)
+        for w, fail in [(9.99, True), (10.0, False), (10.01, False)]:
+            c1b(S1, 'both-width-%.2f-gap-below' % w, pair(w, w, snap(s1 - .01)), fail,
+                 r1 + 'both lines %.2f wide at gap %g: %s. (S2 also fires for >=10.)'
+                 % (w, snap(s1 - .01), 'both UN10 -> error' if fail else 'both UP10 -> not in S1 layer'),
+                 uncertain=(w == 10.0))
+        c1b(S1, 'narrow-to-wide-gap-below', pair(20, n, snap(s1 - .01)), False,
+             r1 + '20-wide (UP10) next to 2-wide at gap %g: only one UN10 polygon -> no S1 pair (S2 fires).' % snap(s1 - .01))
+        for label, g, fail in [('notch-below', snap(s1 - .01), True), ('notch-boundary', s1, False)]:
+            pts = [(0, 0), (4 + g, 0), (4 + g, 20), (2 + g, 20), (2 + g, 2), (2, 2), (2, 20), (0, 20)]
+            c1b(S1, label, [P(L, pts)], fail,
+                 r1 + 'single narrow U polygon, notch %g: single-layer EXT measures notches.' % g)
+        d_in, d_out = diag(s1)
+        for label, d, fail in [('corner-diagonal-below', d_in, True), ('corner-diagonal-above', d_out, False)]:
+            c1b(S1, label, [R(L, 0, 0, n, length), R(L, n + d, length + d, 2 * n + d, 2 * length + d)], fail,
+                 r1 + 'corner-to-corner dx=dy=%g -> Euclidean %.4f vs %g.' % (d, d * 2 ** .5, s1))
+        c1b(S1, 'corner-touch-singular', [R(L, 0, 0, n, length), R(L, n, length, 2 * n, 2 * length)], True,
+             r1 + 'two narrow lines touching at one vertex: SINGULAR keyword.', uncertain=True)
+        c1b(S1, 'narrow-tail-of-wide-below', [plate_tail(L), R(L, 25, 11 + s1 - .01, 45, 13 + s1 - .01)], True,
+             r1 + 'T: 20x20 plate + 2-wide tail; 2-wide wire parallel to the tail at gap %g, 5 um from plate. '
+             'If WITH WIDTH keeps only the >=10 region, the tail is UN10 -> S1 error; '
+             'if it selects whole polygons, no S1 error (S2 would fire instead).' % snap(s1 - .01), uncertain=True)
+
+        # ---- S2: one or both lines wide
+        def wide_pair(g, w=20, w2=n):
+            return [R(L, 0, 0, w, length), R(L, w + g, 0, w + g + w2, length)]
+        for label, g, fail, h in [('below', s2 - .01, True, False), ('boundary', s2, False, False),
+                                  ('above', s2 + .01, False, False), ('child-rotated', s2 - .01, True, True)]:
+            c1b(S2, label, wide_pair(snap(g)), fail,
+                 r2 + '20-wide plate and 2-wide line, gap %g vs %g.' % (snap(g), s2), h)
+        c1b(S2, 'wide-to-wide-below', wide_pair(snap(s2 - .01), 20, 20), True,
+             r2 + 'two 20-wide plates, gap %g.' % snap(s2 - .01))
+        for w, fail in [(9.99, False), (10.0, True), (10.01, True)]:
+            c1b(S2, 'width-%.2f-gap-mid' % w, wide_pair(gm, w), fail,
+                 r2 + '%.2f-wide line + 2-wide line at gap %g (S1 %g passes): %s.'
+                 % (w, gm, s1, 'UP10 -> error' if fail else 'UN10 -> S2 not applicable'),
+                 uncertain=(w == 10.0))
+        c1b(S2, 'facing-short-side-gap-mid',
+             [R(L, 0, 0, 40, 10), R(L, 40 + gm, -15, 42 + gm, 25)], True,
+             r2 + '40x10 plate (width 10); line faces its 10-long end at gap %g.' % gm, uncertain=True)
+        c1b(S2, 'short-parallel-run-gap-mid',
+             [R(L, 0, 0, 20, 20), R(L, 20 + gm, 19, 22 + gm, 59)], True,
+             r2 + 'parallel run only 1 um at gap %g; deck has no run-length condition.' % gm)
+        d_in, d_out = diag(s2)
+        for label, d, fail in [('corner-diagonal-below', d_in, True), ('corner-diagonal-above', d_out, False)]:
+            c1b(S2, label, [R(L, 0, 0, 20, 20), R(L, 20 + d, 20 + d, 22 + d, 60 + d)], fail,
+                 r2 + 'plate corner to line corner dx=dy=%g -> Euclidean %.4f vs %g.' % (d, d * 2 ** .5, s2))
+        g = snap(s2 - .01)
+        pts = [(0, 0), (20 + g, 0), (20 + g, 40), (10 + g, 40), (10 + g, 10), (10, 10), (10, 40), (0, 40)]
+        c1b(S2, 'wide-notch-below', [P(L, pts)], True,
+             r2 + 'single U polygon, arms 10 wide, notch %g: two-layer EXT of a polygon against itself '
+             '(UP10 edge vs MET edge across the notch).' % g, uncertain=True)
+        c1b(S2, 'single-wide-plate', [R(L, 0, 0, 20, length)], False,
+             r2 + 'one plate alone: UP10 edges coincide with its own MET edges, nothing faces.')
+        c1b(S2, 'tee-alone', [plate_tail(L)], False,
+             r2 + 'T alone: checks no spurious result at the UP10/UN10 cut where the tail joins the plate.',
+             uncertain=True)
+        c1b(S2, 'narrow-tail-of-wide-gap-mid', [plate_tail(L), R(L, 25, 11 + gm, 45, 13 + gm)], False,
+             r2 + 'wire parallel to the 2-wide tail at gap %g, 5 um from the plate: region-based WITH WIDTH '
+             '-> tail is UN10 -> no S2 (S1 %g passes).' % (gm, s1), uncertain=True)
+
+    # via arrays (9.VIA1.S2, 11.VIA2.S2)
+    for rule, L, name in [('9.VIA1.S2', VIA1, 'VIA1'), ('11.VIA2.S2', VIA2, 'VIA2')]:
+        base = ('deck: ARRAY_%s = SIZE (SIZE %s BY 0.8) BY 2.4 UNDEROVER; ARRAY%s = %s AND ARRAY_%s; '
+                'EXT ARRAY%s < 0.8 ABUT < 90 SINGULAR REGION. Grown block span = 0.8N + s(N-1) + 1.6 '
+                'must exceed 4.8 in both directions to survive UNDEROVER. '
+                % (name, name, name[-1], name, name, name[-1]))
+
+        def array(nx, ny, s, x0=0, y0=0):
+            p = .8 + s
+            return [R(L, x0 + i * p, y0 + j * p, x0 + i * p + .8, y0 + j * p + .8)
+                    for i in range(nx) for j in range(ny)]
+
+        def span(N, s):
+            return .8 * N + s * (N - 1) + 1.6
+        for label, nx, ny, s, fail, h, unc in [
+                ('3x3-below', 3, 3, .79, True, False, False), ('3x3-boundary', 3, 3, .8, False, False, False),
+                ('3x3-above', 3, 3, .81, False, False, False), ('3x3-child-rotated', 3, 3, .79, True, True, False),
+                ('2x2-below', 2, 2, .79, False, False, False), ('3x2-below', 3, 2, .79, False, False, False),
+                ('1x5-below', 1, 5, .79, False, False, False), ('3x3-s0.41', 3, 3, .41, True, False, False),
+                ('3x3-s0.40-degenerate', 3, 3, .40, False, False, True), ('3x3-s0.39', 3, 3, .39, False, False, False),
+                ('4x4-s0.30', 4, 4, .30, True, False, False)]:
+            sx, sy = span(nx, s), span(ny, s)
+            kept = min(sx, sy) > 4.8 + 1e-9
+            verdict = ('kept, s < 0.8 -> error' if kept and s < .8 else 'kept, s >= 0.8 -> clean' if kept
+                       else 'not kept (span <= 4.8) -> no S2 result')
+            c1b(rule, label, array(nx, ny, s), fail,
+                 base + '%dx%d at s=%g: grown block %.2f x %.2f, %s. (%s.S1 fires for s<0.8 regardless.)'
+                 % (nx, ny, s, sx, sy, verdict, rule.split('.S2')[0]), h, uncertain=unc)
+            assert fail == (kept and s < .8), label
+        for label, g, fail, unc in [('outlier-0.79-from-3x3', .79, True, True), ('outlier-0.80-from-3x3', .8, False, False)]:
+            shapes = array(3, 3, .8) + [R(L, 4.0 + g, 1.6, 4.8 + g, 2.4)]
+            c1b(rule, label, shapes, fail,
+                 base + '3x3 at s=0.8 (array) + one extra via %g from it: the restored array region reaches 0.8 '
+                 'beyond the array vias, so ARRAY keeps a %s sliver of the extra via -> EXT %s.'
+                 % (g, '0.01-wide' if fail else 'no', 'error at %g' % g if fail else 'clean'), uncertain=unc)
+
+    # via enclosure by the width class of the metal
+    specs = [('9.VIA1.E1', VIA1, MET1, MET2, False), ('9.VIA1.E2', VIA1, MET1, MET2, True),
+             ('9.VIA1.E3', VIA1, MET2, MET1, False), ('9.VIA1.E4', VIA1, MET2, MET1, True),
+             ('11.VIA2.E1', VIA2, MET2, MET3, False), ('11.VIA2.E2', VIA2, MET2, MET3, True),
+             ('11.VIA2.E3', VIA2, MET3, MET2, False), ('11.VIA2.E4', VIA2, MET3, MET2, True)]
+    lname = {VIA1: 'VIA1', VIA2: 'VIA2', MET1: 'MET1', MET2: 'MET2', MET3: 'MET3'}
+    for rule, V, M, O, wide in specs:
+        mset = '%s%s10' % (lname[M], 'UP' if wide else 'UN')
+        base = ('deck: Enc_check %s %s 0.6 -> ENC %s %s < 0.6 ABUT < 90 SINGULAR OVERLAP REGION; %s = WITH WIDTH %s %s 10. '
+                'Other metal %s encloses the via by 1.0 (narrow) so its own E rule stays clean. '
+                % (lname[V], mset, lname[V], mset, mset, lname[M], '>=' if wide else '<', lname[O]))
+
+        def at(x, y, extra):
+            return [R(V, x, y, x + .8, y + .8), R(O, x - 1, y - 1, x + 1.8, y + 1.8)] + extra
+        for label, e, fail, h in [('below', .59, True, False), ('boundary', .6, False, False),
+                                  ('above', .61, False, False), ('child-rotated', .59, True, True)]:
+            if wide:
+                m = R(M, -e, -e, 20 - e, 20 - e)
+                txt = 'via at the corner of a 20x20 plate, enclosure %g on two sides.' % e
+            else:
+                m = R(M, -e, -e, .8 + e, .8 + e)
+                txt = 'metal = via grown by %g (%.2f wide, narrow).' % (e, .8 + 2 * e)
+            c1b(rule, label, at(0, 0, [m]), fail, base + txt, h)
+        for w in (9.99, 10.0, 10.01):
+            fail = (w >= 10) == wide
+            c1b(rule, 'width-%.2f-side-below' % w, at(0, 0, [R(M, -.59, -5, -.59 + w, 20)]), fail,
+                 base + '%.2f x 25 metal, via 0.59 from its left edge: metal is %s -> %s.'
+                 % (w, 'UP10' if w >= 10 else 'UN10', 'error' if fail else 'checked by the other E rule'),
+                 uncertain=(w == 10.0))
+        if wide:
+            c1b(rule, 'center-of-wide', at(0, 0, [R(M, -10, -10, 10.8, 10.8)]), False,
+                 base + 'via in the middle of a 20.8 plate.')
+            c1b(rule, 'partially-outside', at(0, 0, [R(M, -.6, -19.6, 19.4, .4)]), True,
+                 base + 'via crosses the plate top edge (0.4 inside): OVERLAP.')
+        else:
+            c1b(rule, 'line-end-below', at(0, 0, [R(M, -.6, -.59, 1.4, 20)]), True,
+                 base + '2-wide line, via 0.59 from the line end, 0.6 on the sides.')
+            c1b(rule, 'partially-outside', at(0, 0, [R(M, -.6, -.6, 1.4, .4)]), True,
+                 base + 'via crosses the metal top edge (0.4 inside): OVERLAP.')
+        # T-shape: 20x20 plate x[-20,0] + 2-wide tail x[0,20]; the WITH WIDTH cut is x=0, y in [-1,1].
+        tee = P(M, [(-20, -10), (0, -10), (0, -1), (20, -1), (20, 1), (0, 1), (0, 10), (-20, 10)])
+        tt = 'T: plate x[-20,0] y[-10,10] + tail x[0,20] y[-1,1]; region-based WITH WIDTH cuts at x=0. '
+        c1b(rule, 'straddles-wide-narrow-cut', at(-.4, -.4, [tee]), True,
+             base + tt + 'via centred on the cut: the %s edge at x=0 runs through the via (OVERLAP).' % mset,
+             uncertain=True)
+        if wide:
+            for label, x, fail in [('plate-0.59-from-cut', -1.39, True), ('plate-0.60-from-cut', -1.4, False)]:
+                c1b(rule, label, at(x, -.4, [tee]), fail,
+                     base + tt + 'via inside the plate, %g from the cut; real plate edges are >0.8 away (corner).'
+                     % snap(-x - .8), uncertain=True)
+        else:
+            for label, x, fail in [('tail-0.59-from-cut', .59, True), ('tail-0.60-from-cut', .6, False)]:
+                c1b(rule, label, at(x, -.4, [tee]), fail,
+                     base + tt + 'via inside the tail (0.6 to its sides), %g from the cut edge.' % x,
+                     uncertain=True)
+
+    # 13.PAD.P
+    rule = '13.PAD.P'
+    base = ('deck: PITCHPAD = SIZE PAD BY 19.99 OVERUNDER; A = PITCHPAD NOT PAD; PAD INTERACT A. '
+            'Two pads bridge when grown by 19.99 they overlap/abut (gap <= 39.98); this is a space test, '
+            'not a centre-pitch test (PDF: pitch >= 120 with 80x80 pads; Assura does not check it). ')
+
+    def pad(x, y, s=80):
+        return R(PAD, x, y, x + s, y + s)
+    for label, g, fail, h, unc in [('gap-50', 50, False, False, False), ('gap-40-pitch-120', 40, False, False, False),
+                                   ('gap-39.99-pitch-119.99', 39.99, False, False, True),
+                                   ('gap-39.98-grown-abut', 39.98, True, False, True),
+                                   ('gap-39.97', 39.97, True, False, False), ('gap-30', 30, True, False, False),
+                                   ('child-rotated-gap-39.97', 39.97, True, True, False)]:
+        c1b(rule, label, [pad(0, 0), pad(80 + g, 0)], fail,
+             base + 'two 80x80 pads, gap %g (pitch %g).' % (g, 80 + g), h, uncertain=unc)
+    c1b(rule, 'row-of-3-pitch-120', [pad(0, 0), pad(120, 0), pad(240, 0)], False, base + 'three pads at pitch 120.')
+    c1b(rule, 'diagonal-corner-10', [pad(0, 0), pad(90, 90)], False,
+         base + 'corner-to-corner offset 10/10: grown squares only overlap at a corner, UNDEROVER restores '
+         'two squares -> no bridge (13.PAD.S fires).', uncertain=True)
+    c1b(rule, 'partial-projection-gap-30', [pad(0, 0), pad(110, 70)], True,
+         base + 'gap 30 with 10 um projection overlap: bridge 30 x 10 survives.')
+    c1b(rule, 'single-pad-notch-30',
+         [P(PAD, [(0, 0), (190, 0), (190, 80), (110, 80), (110, 40), (80, 40), (80, 80), (0, 80)])], True,
+         base + 'one U-shaped PAD polygon with a 30-wide notch: OVERUNDER fills the notch -> PAD interacts.',
+         uncertain=True)
+    c1b(rule, 'pads-100-pitch-120-gap-20', [pad(0, 0, 100), pad(120, 0, 100)], True,
+         base + '100x100 pads at pitch 120 (gap 20): fails by space although pitch = 120.')
+    c1b(rule, 'pads-70-pitch-110-gap-40', [pad(0, 0, 70), pad(110, 0, 70)], False,
+         base + '70x70 pads at pitch 110 (gap 40): deck passes although pitch < 120 (13.PAD.A fires).')
     return result

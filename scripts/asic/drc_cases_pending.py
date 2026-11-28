@@ -21,7 +21,8 @@ goes into MOVED_RULES and is verified in drc-rules.json, and only then `check-pe
 golden's entries of that rule as moved (`reliability.check_pending`).
 
 Moved so far: the 12 ANT deck RULECHECKs (102 fixtures, drc_antenna.py; golden/ant-fixtures-20261128),
-including the two ANT_06 equality fixtures Calibre fired on (now `fail=True` in drc_cases.py). Their
+including the two ANT_06 equality fixtures Calibre fired on (now `fail=True` in drc_cases.py), and the 17
+DRC deck rules of batch 1 (228 C1b fixtures, drc_ports.py; golden/drc-fixtures-20261128c, SPEC 0021). Their
 definitions stay in drc_cases_pending_c1b.py only as the record of what Calibre ran (the file is the
 verbatim generator); records() leaves them out and nothing checks them there. drc_cases.py is the source.
 """
@@ -37,7 +38,11 @@ import drc_cases_pending_c1c
 # Rules ported to KLayout since the batch: their fixtures live in drc_cases.py now, so records() leaves
 # them out (the GDS names of the rest stay as Calibre ran them).
 MOVED_RULES = {'ANT_01', 'ANT_02_1', 'ANT_02_2', 'ANT_02_3', 'ANT_03_1', 'ANT_03_2', 'ANT_03_3', 'ANT_04',
-               'ANT_05_1', 'ANT_05_2', 'ANT_06_01', 'ANT_06_02'}
+               'ANT_05_1', 'ANT_05_2', 'ANT_06_01', 'ANT_06_02',
+               # DRC deck batch 1 (SPEC 0021): C1b metal/via/pad rules, golden/drc-fixtures-20261128c
+               '8.MET1.S1', '8.MET1.S2', '9.VIA1.S2', '9.VIA1.E1', '9.VIA1.E2', '9.VIA1.E3', '9.VIA1.E4',
+               '10.MET2.S1', '10.MET2.S2', '11.VIA2.S2', '11.VIA2.E1', '11.VIA2.E2', '11.VIA2.E3', '11.VIA2.E4',
+               '12.MET3.S1', '12.MET3.S2', '13.PAD.P'}
 
 # (group, GDS name Calibre ran) -> fields replaced by the Calibre verdict, and why. The ANT_06 equality
 # fixtures C1b 0315/0323 (fail=True, Calibre 124) moved with their rules to drc_cases.py.
