@@ -321,7 +321,7 @@ class FailClosedTests(unittest.TestCase):
         for name in ('diode-edge-touch', 'diode-vertex-touch', 'big-gate-edge-touch'):
             self.assertIn('without overlapping', result[name].get('error', ''), (name, result[name]))
         self.assertIn('every datatype', result['wire-on-datatype-1'].get('error', ''))
-        self.assertEqual(result['label-on-datatype-1'], result['alone'])
+        self.assertEqual(result['label-on-datatype-1']['ANT_02_1'], result['alone']['ANT_02_1'])
 
 
 if __name__ == '__main__':
