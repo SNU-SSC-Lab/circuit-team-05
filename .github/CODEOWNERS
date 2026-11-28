@@ -19,3 +19,9 @@ scripts/asic/flow.py @Dojaegyum
 scripts/run_asic.py @Dojaegyum
 scripts/asic/drc_audit.py @Dojaegyum
 scripts/asic/report.py @Dojaegyum
+# LVS judgement: what asic-lvs and the cell qualification treat as the same circuit.
+scripts/asic/lvs_reduce.py @Dojaegyum
+verification/asic/netgen_setup.tcl @Dojaegyum
+scripts/run_physical.py @Dojaegyum
+scripts/asic/extract.py @Dojaegyum
+scripts/asic/reference.py @Dojaegyum

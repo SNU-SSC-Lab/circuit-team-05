@@ -303,7 +303,7 @@ class UnverifiedListTests(unittest.TestCase):
         # lvs-vs-calibre left on 2026-11-28: core and SOP28 chip both have an open-source ↔ Calibre comparison;
         # the remaining gap (pad-internal devices on the open-source side) is gpio-internal-lvs.
         self.assertEqual([i['id'] for i in self.items], [
-            'drc-unported-rules', 'drc-global-flags', 'gpio-internal-lvs', 'std-cell-netgen-11',
+            'drc-unported-rules', 'drc-global-flags', 'gpio-internal-lvs',
             'synth-vs-genus', 'pnr-sta-vs-innovus-tempus', 'sdc-portability', 'pex', 'wire-rc-zero', 'pinmap-25'])
         for item in self.items:
             self.assertEqual(set(item), {'id', 'what', 'why', 'exit_evidence', 'allows_checks', 'docs'}, item['id'])
@@ -324,10 +324,8 @@ class UnverifiedListTests(unittest.TestCase):
 
     def test_new_items_state_the_2026_11_28_facts(self):
         items = {i['id']: i for i in self.items}
-        self.assertIn('AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2',
-                      items['std-cell-netgen-11']['what'])
-        self.assertIn('34/34 CORRECT', items['std-cell-netgen-11']['why'])
-        self.assertIn('(추정)', items['std-cell-netgen-11']['why'])
+        # std-cell-netgen-11 closed 2026-11-28: lvs_reduce.py + netgen_setup.tcl match all 34 kit cells.
+        self.assertNotIn('std-cell-netgen-11', items)
         self.assertIn('estimated.spef', items['wire-rc-zero']['what'])
         self.assertIn('delete_from_list', items['sdc-portability']['what'])
         self.assertIn('remove_from_collection', items['sdc-portability']['why'])
@@ -367,7 +365,7 @@ class TableTests(unittest.TestCase):
         verdicts = {key: row['verdict'] for key, row in rows.items()}
         self.assertEqual(verdicts, {
             'drc-fixtures': 'match', 'drc-mutations': 'match', 'drc-unported': 'no_evidence', 'drc-chip-v2': 'match',
-            'drc-chip-openflow': 'match', 'lvs-core': 'match', 'lvs-cells': 'mismatch', 'lvs-chip': 'match',
+            'drc-chip-openflow': 'match', 'lvs-core': 'match', 'lvs-cells': 'match', 'lvs-chip': 'match',
             'spice': 'match', 'synth': 'no_evidence', 'pnr-sta': 'match', 'pex': 'no_evidence',
             'antenna': 'match'})
         self.assertEqual(rows['lvs-core']['scope'], '오픈소스 흐름 코어 1건')
@@ -383,7 +381,9 @@ class TableTests(unittest.TestCase):
                                                              'golden/drc-mutations-20261128b/golden.json'])
         self.assertEqual(len({r['stage'] for r in self.table['rows']}), len(self.table['rows']))  # labels tell rows apart
         self.assertIn('제외', rows['drc-unported']['note'])
-        self.assertIn('std-cell-netgen-11', rows['lvs-cells']['unverified'])
+        self.assertEqual(rows['lvs-cells']['unverified'], [])
+        self.assertIn('34/34 일치', rows['lvs-cells']['note'])
+        self.assertIn('golden/lvs-20261128/README.md', rows['lvs-cells']['evidence'])
         self.assertIn('wire-rc-zero', rows['pex']['unverified'])
         self.assertIn('golden/ant-fixtures-20261128/golden.json', rows['antenna']['evidence'])
         self.assertEqual(rows['antenna']['unverified'], [])

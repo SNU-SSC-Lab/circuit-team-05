@@ -82,14 +82,14 @@
     {
       "id": "lvs-cells",
       "stage": "LVS 표준셀",
-      "open_source": "KLayout 0.28.16 추출 + Netgen 1.5.323",
+      "open_source": "KLayout 0.28.16 추출 + lvs_reduce.py + Netgen 1.5.323",
       "commercial": "Calibre LVS v2023.4_17.10, 키트 LVS deck 무수정",
-      "verdict": "mismatch",
+      "verdict": "match",
       "scope": "키트 표준셀 34종(키트 GDS ↔ 키트 CDL, 셀마다 따로)",
-      "note": "Calibre 34/34 CORRECT. 우리 Netgen은 23종 일치, 11종 확인 못 함(property 오류 6, 핀 맞춤 실패 4, 불일치 1). Calibre가 모두 CORRECT라서 불일치 원인은 우리 Netgen 설정 쪽",
-      "pr_check": "PR마다 확인하지 않음. 셀 검증 기록(verification/asic/cell-qualification.json)은 따로 갱신",
-      "evidence": ["golden/lvs-20261128/summary.json"],
-      "unverified": ["std-cell-netgen-11"],
+      "note": "Calibre 34/34 CORRECT, 우리 경로 34/34 일치(2026-11-28 재검사). 2026-11-24에 확인 못 한 11종은 우리 쪽이 키트 deck의 병렬 MOS 합치기(m=), 직렬 입력 순서 교환, split gate 합치기를 하지 않아서였다. 두 netlist에 같은 줄이기를 하고 W/L 허용오차를 deck과 같은 0으로 맞춤. 직렬 순서 교환은 Calibre로 확인한 모양(한 끝이 VDD/VSS, 게이트가 끝에 안 붙음)만. 일부러 틀린 키트 CDL 12개는 모두 불일치(tests/asic/test_lvs_reduce.py KitMutationTests, 키트 필요)",
+      "pr_check": "PR마다 확인하지 않음. 셀 검증 기록(verification/asic/cell-qualification.json)은 따로 갱신. 같은 줄이기와 설정을 쓰는 코어 LVS는 ASIC gate가 PR마다 확인",
+      "evidence": ["golden/lvs-20261128/README.md", "golden/lvs-20261128/summary.json"],
+      "unverified": [],
       "updated": "2026-11-28"
     },
     {
