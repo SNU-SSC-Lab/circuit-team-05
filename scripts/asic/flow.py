@@ -19,11 +19,13 @@ from .reference import convert
 from .lvs_reduce import reduce_netlist
 from .pinplan import make_plan, tcl as pin_tcl
 from .drc_antenna import report_problems as antenna_problems
+from .synth_equiv import check as synth_equiv
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 # asic-antenna / asic-chip-antenna: the kit ANT deck's 12 RULECHECKs (drc_antenna.py) on the core / chip GDS.
-CORE_CHECKS = {'asic-input', 'asic-synth', 'asic-pnr', 'asic-cts', 'asic-route',
+# asic-synth-equiv: this run's Yosys netlist against the RTL (synth_equiv.py; SPEC 0019 table row synth).
+CORE_CHECKS = {'asic-input', 'asic-synth', 'asic-synth-equiv', 'asic-pnr', 'asic-cts', 'asic-route',
                'asic-gds', 'asic-drc-subset', 'asic-antenna', 'asic-extract', 'asic-lvs', 'asic-gate',
                'asic-pex', 'asic-drc', 'asic-estimated-sta'}
 CHIP_CHECKS = {'asic-chip-gds', 'asic-chip-connectivity', 'asic-chip-antenna', 'asic-chip-lvs',
@@ -75,6 +77,25 @@ def estimated_sta(log):
             'slacks_ns': slacks, 'clock': 'propagated', 'corner': 'TT 5V 25C',
             'derates': 'none; typical trial only',
             'rc': 'uncalibrated global-route estimate; not qualified PEX'}
+
+
+def synth_equivalence(netlist, lib, out):
+    """asic-synth-equiv: this run's Yosys netlist against the RTL (scripts/asic/synth_equiv.py): ports and
+    clock structure, every register pair's next-state function (equiv_induct) and the start condition after
+    one reset cycle. The FSM recodings come from this run's synthesis log."""
+    start = time.perf_counter()
+    try:
+        r = synth_equiv(netlist, lib, out/'synth-equiv', synth_log=out/'synth/synth.log')
+    except Exception as error:  # a broken check must fail the gate, never pass it
+        return {'status': 'fail', 'detail': f'{type(error).__name__}: {error}'[:500],
+                'wall_seconds': round(time.perf_counter()-start, 3)}
+    equiv = r.get('equiv', {})
+    detail = (f"짝 {equiv.get('proven')}/{equiv.get('cells')} 증명, 포트 {r.get('ports', {}).get('status')}, "
+              f"클록 구조 {r.get('clocks', {}).get('status')}, 리셋 뒤 출발 조건 {r.get('base_case', {}).get('status')}")
+    if r['problems']:
+        detail += '; ' + '; '.join(r['problems'][:5])
+    return {'status': r['status'], 'detail': detail[:600], 'pairs': equiv.get('cells'), 'proven': equiv.get('proven'),
+            'summary': 'synth-equiv/summary.json', 'wall_seconds': round(time.perf_counter()-start, 3)}
 
 
 def tool_environment(executable):
@@ -174,6 +195,9 @@ def run_core(args):
         write()
         if checks['asic-synth']['status'] != 'pass':
             raise RuntimeError('mapped synthesis failed')
+        checks['asic-synth-equiv'] = synth_equivalence(netlist, lib, out)
+        write()
+        print('asic-synth-equiv', checks['asic-synth-equiv']['status'], flush=True)
         area = checks['asic-synth']['area_um2']
         width = math.ceil(math.sqrt(area/0.30)/3.2)*3.2
         height = math.ceil(math.sqrt(area/0.30)/36)*36
