@@ -35,11 +35,13 @@ flowchart TD
 | `asic-route` | 배선 도구 자체 DRC 보고서가 존재하며 0건 |
 | `asic-gds` | 원본 셀 GDS 병합·독립 재반입, 인스턴스 수·원본 master 도형 보존 |
 | `asic-drc-subset` | 별도 KLayout으로 금속·cut 폭/간격/둘러쌈·서로 다른 cut 층 겹침 확인. 전체 공정 DRC는 아님 |
+| `asic-antenna` | 키트 ANT deck 12개 검사(`scripts/asic/drc_antenna.py`)를 코어 GDS에 실행. 위반 넷 0개. Calibre fixture 102개와 판정 일치(SPEC 0020) |
 | `asic-extract` / `asic-lvs` | 실제 코어 GDS의 MOS·연결과 최종 netlist + 원본 CDL을 비교. 핀·W/L 오류를 무시하지 않음 |
 | `asic-gate` | 최종 netlist로 경계·오류·프로토콜·리셋·합법 가중치 전체 배열·무작위 회귀 |
 | `asic-estimated-sta` | 10MHz·TT·전파 클록의 setup/hold 탐색. RC는 보정 전 추정값 |
 | `asic-chip-gds` | 원본 pad opening 28개 위치·GPIO 도형 보존, 제안 핀맵으로 조립 |
 | `asic-chip-connectivity` | 183개 탐침점 및 모든 코어 금속 연결 성분 대조. 조립으로 생긴 단선·합선 검사 |
+| `asic-chip-antenna` | 같은 antenna 검사를 GPIO pad를 포함한 SOP28 칩 GDS에 실행 |
 
 `asic-pex`, `asic-drc`, `asic-chip-lvs`, `asic-chip-timing`, `asic-pinmap`은 현재 `unsupported`다. 이 항목이 남으면 전체 상태는 `incomplete`, 기본 명령의 종료 코드는 1이다. 실행 오류나 실제 위반은 `fail`, 앞 단계 때문에 못 돌린 검사는 `not_run`이다.
 

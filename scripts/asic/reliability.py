@@ -26,24 +26,31 @@ def rule_state(rule):
     return 'verified' if rule.get('golden_compared') else 'ported'
 
 
+def catalog_rules(catalog, antenna=True):
+    """Rules of drc-rules.json: the DRC deck's `rules` and, unless antenna=False, the ANT deck's
+    `antenna_rules`. Both follow the same states; only the mutation golden is DRC-deck-only."""
+    return catalog['rules'] + (catalog.get('antenna_rules', []) if antenna else [])
+
+
 def state_counts(catalog, ids=None):
     """How many catalog rules (only `ids` when given) are unported, ported and verified."""
-    states = [rule_state(rule) for rule in catalog['rules'] if ids is None or rule['id'] in ids]
+    states = [rule_state(rule) for rule in catalog_rules(catalog) if ids is None or rule['id'] in ids]
     return {state: states.count(state) for state in ('unported', 'ported', 'verified')}
 
 
 def rule_ids(catalog):
-    """Rule ids of drc-rules.json; a duplicated id makes the rule state ambiguous, so it is an error."""
-    ids = [rule['id'] for rule in catalog['rules']]
+    """Rule ids of drc-rules.json (both decks); a duplicated id makes the rule state ambiguous, so it is an error."""
+    ids = [rule['id'] for rule in catalog_rules(catalog)]
     duplicated = sorted({rule for rule in ids if ids.count(rule) > 1})
     if duplicated:
         raise ValueError('drc-rules.json lists a rule id more than once: '+', '.join(duplicated))
     return ids
 
 
-def verified_rules(catalog):
+def verified_rules(catalog, antenna=True):
+    """Verified rules; antenna=False leaves out the ANT deck (the mutation golden has DRC deck runs only)."""
     rule_ids(catalog)
-    return sorted(rule['id'] for rule in catalog['rules'] if rule_state(rule) == 'verified')
+    return sorted(rule['id'] for rule in catalog_rules(catalog, antenna) if rule_state(rule) == 'verified')
 
 
 def case_sha256(case):
@@ -194,20 +201,30 @@ def load_golden(directory):
     return {'sources': sources, 'fixtures': fixtures}
 
 
-def check_pending(golden_dir, records=None):
+def check_pending(golden_dir, records=None, moved_rules=None, rules_json=RULES_JSON):
     """Pending golden (meta.pending) against drc_cases_pending.records(): one entry per fixture, same hashes.
 
     Only the binding is checked: the rules have no KLayout port yet, so there is no verdict to compare.
     A corrected fixture's entry keeps the hash of the definition Calibre ran as run_case_sha256. An entry
-    Calibre refused is an exclusion with a reason: its intent (fail/raises) is not compared."""
+    Calibre refused is an exclusion with a reason: its intent (fail/raises) is not compared.
+    Golden files are never edited, so the pending golden keeps the entries of rules ported since. Such an
+    entry is `moved` only when all hold: its rule is in drc_cases_pending.MOVED_RULES, that rule is verified
+    in drc-rules.json (so `check` compares every fixture golden entry of it with drc_cases.py and fails on a
+    lost one), it has no pending definition, and a fixture golden holds the same case_sha256, rule and
+    Calibre verdict. Anything else without a definition is a problem."""
     if records is None:
         from drc_cases_pending import records as pending_records
         records = pending_records()
+    if moved_rules is None:
+        from drc_cases_pending import MOVED_RULES as moved_rules
+    verified = set(verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8'))))
     golden_dir = Path(golden_dir)
-    sources, entries, problems, excluded = [], {}, [], 0
+    sources, entries, problems, excluded, moved, ported = [], {}, [], 0, 0, {}
     for path in sorted(golden_dir.glob('**/golden.json')):
         doc = json.loads(path.read_text(encoding='utf-8'))
         if not doc.get('meta', {}).get('pending'):
+            for entry in doc.get('fixtures', []):
+                ported.setdefault(entry['case_sha256'], entry)
             continue
         sources.append(path.relative_to(golden_dir).as_posix())
         for entry in doc['fixtures']:
@@ -221,7 +238,16 @@ def check_pending(golden_dir, records=None):
     for key in sorted(set(wanted)-set(entries)):
         problems.append(f'{key[0]}/{key[1]}: fixture has no golden entry')
     for key in sorted(set(entries)-set(wanted)):
-        problems.append(f'{key[0]}/{key[1]}: golden entry has no fixture definition')
+        entry = entries[key]
+        there = ported.get(entry['case_sha256'])
+        if entry['rule'] in moved_rules and entry['rule'] in verified and there is not None \
+                and there['rule'] == entry['rule'] and there['calibre'] == entry['calibre']:
+            moved += 1
+        elif there is not None and (entry['rule'] not in moved_rules or entry['rule'] not in verified):
+            problems.append(f'{key[0]}/{key[1]}: copied to a fixture golden, but {entry["rule"]} is not a moved, '
+                            'verified rule, so no check would compare it')
+        else:
+            problems.append(f'{key[0]}/{key[1]}: golden entry has no fixture definition')
     for key in sorted(set(wanted) & set(entries)):
         record, entry, name = wanted[key], entries[key], f'{key[0]}/{key[1]}'
         case = record['case']
@@ -239,7 +265,7 @@ def check_pending(golden_dir, records=None):
             problems.append(f'{name}: Calibre {entry["calibre"]} but the definition says fail={case["fail"]}, '
                             f'raises={case["raises"]}')
     return {'status': 'fail' if problems else 'pass', 'fixtures': len(entries), 'definitions': len(wanted),
-            'excluded': excluded, 'sources': sources, 'problems': problems}
+            'excluded': excluded, 'moved': moved, 'sources': sources, 'problems': problems}
 
 
 def summary_markdown(result):
@@ -639,7 +665,8 @@ def check_mutations(golden_path, out, kit=None, gds_dir=None, rules_json=RULES_J
     geometry = _mutation_geometry(gds_dir, out/'geometry.json', klayout)
     targets = mutation_targets(golden, geometry, unavailable)
     klayout_rules = _run_drc(gds_dir, targets, out/'klayout', jobs or os.cpu_count() or 1, klayout)
-    verified = verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8')))
+    # The mutation golden is from DRC deck runs only, so ANT deck rules are not compared here.
+    verified = verified_rules(json.loads(Path(rules_json).read_text(encoding='utf-8')), antenna=False)
     result = compare_mutations(golden, geometry, klayout_rules, verified, unavailable)
     return _write_mutation_result(out, golden, result, started, version)
 
@@ -790,7 +817,7 @@ def main(argv=None):
             sys.stdout.reconfigure(errors='replace')
         print(f'pending golden {", ".join(result["sources"]) or "(none)"}: {result["fixtures"]} entries, '
               f'{result["definitions"]} fixture definitions, {result["excluded"]} excluded (Calibre refused), '
-              f'{result["status"]}')
+              f'{result["moved"]} moved (rule ported; compared by check), {result["status"]}')
         for problem in result['problems']:
             print('- '+problem)
         return 0 if result['status'] == 'pass' else 1

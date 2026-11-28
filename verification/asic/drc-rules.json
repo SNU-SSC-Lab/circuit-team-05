@@ -6,6 +6,10 @@
       "path": "Calibre/DRC/NSPL_0p5um_Analog_CMOS_2P3M_5V_V1.1_DRC.cal",
       "sha256": "6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f"
     },
+    "calibre_ant": {
+      "path": "Calibre/ANT/NSPL_0p5um_Analog_CMOS_2P3M_5V_V1.1_ANT.cal",
+      "sha256": "80dc257e6778121ab9a61a444d0e82c79999dc785d8e6aa5a6a2a5318c7b94b5"
+    },
     "assura": {
       "path": "Assura/DRC/NSPL_0p5um_Analog_CMOS_2P3M_5V_V1.1_DRC.rul",
       "sha256": "09ce215f4034ad9aa9709157fe3d61a2ba508b0407a89da6cfc7faa6f6581109"
@@ -2738,6 +2742,128 @@
       "golden_compared": false,
       "legacy_coverage": "미실행",
       "fixture_definitions": 0
+    }
+  ],
+  "antenna_rules": [
+    {
+      "source_line": 73,
+      "body_sha256": "3e066b4dc9a086d67541fd65c380e1a74b9750dbaa5bf3bc11eb1706a56e1791",
+      "description": "Max. drawn ratio of field poly perimeter area to the active poly gate area connected directly to it 200:1",
+      "id": "ANT_01",
+      "implementation": "antenna_port",
+      "remaining": "fixture 10개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 76번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 10
+    },
+    {
+      "source_line": 88,
+      "body_sha256": "905e45c5c747248499cf63760791bb1c15a2f2dafcac46f0e8e63adbce167c5f",
+      "description": "When the protection diode is not used, the maximum ratio of single-layer metal (for metal1 to metal6) perimeter area to the active poly gate area 400:1",
+      "id": "ANT_02_1",
+      "implementation": "antenna_port",
+      "remaining": "fixture 16개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 91번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 16
+    },
+    {
+      "source_line": 104,
+      "body_sha256": "8de39503c078b0de0deac882874b59d24de16428d5813fd302a4950b14744cdd",
+      "description": "When the protection diode is not used, the maximum ratio of single-layer metal (for metal1 to metal6) perimeter area to the active poly gate area 400:1",
+      "id": "ANT_02_2",
+      "implementation": "antenna_port",
+      "remaining": "fixture 9개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 107번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 9
+    },
+    {
+      "source_line": 121,
+      "body_sha256": "07ca378655be61f55c11442b695d62a5448ac4aea4483f837eea53d888a67110",
+      "description": "When the protection diode is not used, the maximum ratio of single-layer metal (for metal1 to metal6) perimeter area to the active poly gate area 400:1",
+      "id": "ANT_02_3",
+      "implementation": "antenna_port",
+      "remaining": "fixture 8개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 124번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 8
+    },
+    {
+      "source_line": 136,
+      "body_sha256": "8aded8815f722453cffaf0abf48066d5fd2bc0dade3210e4b3c72994fe0b9cb1",
+      "description": "When a protection diode with area larger then 0.202um2 is used, the maximum ratio of (for metal1 to metal6) single-layer metal perimeter area to the active poly gate can be calculated by the following equation Ratio = diode area * 400+2200 for M1,2,3,4 and 5 single layer Ratio = diode area * 8000 + 30000 for M6 single layer",
+      "id": "ANT_03_1",
+      "implementation": "antenna_port",
+      "remaining": "fixture 7개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 141번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 7
+    },
+    {
+      "source_line": 154,
+      "body_sha256": "f04b3aaa4dfc39abeb5539932c5d3b55102d5344af84d5588a00b1e7d593ef3f",
+      "description": "When a protection diode with area larger then 0.202um2 is used, the maximum ratio of (for metal1 to metal6) single-layer metal perimeter area to the active poly gate can be calculated by the following equation Ratio = diode area * 400+2200 for M1,2,3,4 and 5 single layer Ratio = diode area * 8000 + 30000 for M6 single layer",
+      "id": "ANT_03_2",
+      "implementation": "antenna_port",
+      "remaining": "fixture 5개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 159번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 5
+    },
+    {
+      "source_line": 174,
+      "body_sha256": "4b7f8c098f18c9fff90c0c76314d567ba3935cd5fceff6c04464988a31ad276a",
+      "description": "When a protection diode with area larger then 0.202um2 is used, the maximum ratio of (for metal1 to metal6) single-layer metal perimeter area to the active poly gate can be calculated by the following equation Ratio = diode area * 400+2200 for M1,2,3,4 and 5 single layer Ratio = diode area * 8000 + 30000 for M6 single layer",
+      "id": "ANT_03_3",
+      "implementation": "antenna_port",
+      "remaining": "fixture 6개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 179번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 6
+    },
+    {
+      "source_line": 187,
+      "body_sha256": "c5777adb9426df925b69bdf95e6227031bb3efe65f48887cb0a8085d6b456fb5",
+      "description": "Max. drawn ratio of contact ratio to the active poly gate area connected directly to it",
+      "id": "ANT_04",
+      "implementation": "antenna_port",
+      "remaining": "fixture 7개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 190번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 7
+    },
+    {
+      "source_line": 203,
+      "body_sha256": "5e8aab14bf056837bc6afbdd580ff8739dc579da8c6f7cf8e0d2c30f5ee6e6f1",
+      "description": "When the protection diode is not used, the maximum drawn ratio of via area to the active poly gate area connected directly to it",
+      "id": "ANT_05_1",
+      "implementation": "antenna_port",
+      "remaining": "fixture 9개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 206번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 9
+    },
+    {
+      "source_line": 220,
+      "body_sha256": "defbf94d82bc43126bba66204012491762bceb95e2c1e3a12cc43e759079084a",
+      "description": "When the protection diode is not used, the maximum drawn ratio of via area to the active poly gate area connected directly to it",
+      "id": "ANT_05_2",
+      "implementation": "antenna_port",
+      "remaining": "fixture 9개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 223번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 9
+    },
+    {
+      "source_line": 236,
+      "body_sha256": "9be19a9e90843922180d422db4dcf39b7e1cf5fd41756d704ed7b58d40982a21",
+      "description": "When a protection diode with area larger then 0.202um2 is used, the maximum drawn ratio of Via area to the active poly gate area can be calculated by the following equation Ratio = diode area * 83.33 + 75 for single layer The definition of poly,metal1 ~ metal6 antenna ratio for each layer is Ratio = 2 [(l+W1) * t] / W2 * L l : floating metal length connected to gate W1  : floating metal width connected to gate t      : metal thickness W2  : connected transistor channel width L       : connected transistor channel length",
+      "id": "ANT_06_01",
+      "implementation": "antenna_port",
+      "remaining": "fixture 8개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 247번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 8
+    },
+    {
+      "source_line": 261,
+      "body_sha256": "0fe7f4d1893fe9b00be44058d5d5515f07821dd168304caa4080d052dab43e9d",
+      "description": "When a protection diode with area larger then 0.202um2 is used, the maximum drawn ratio of Via area to the active poly gate area can be calculated by the following equation Ratio = diode area * 83.33 + 75 for single layer The definition of poly,metal1 ~ metal6 antenna ratio for each layer is Ratio = 2 [(l+W1) * t] / W2 * L l : floating metal length connected to gate W1  : floating metal width connected to gate t      : metal thickness W2  : connected transistor channel width L       : connected transistor channel length",
+      "id": "ANT_06_02",
+      "implementation": "antenna_port",
+      "remaining": "fixture 8개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 272번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요",
+      "golden_compared": true,
+      "fixture_definitions": 8
     }
   ],
   "disabled_rules": {

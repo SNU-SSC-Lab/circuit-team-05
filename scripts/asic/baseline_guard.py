@@ -21,7 +21,7 @@ Fixture checks that need `drc_cases.py` evaluated (a verified rule losing or cha
 a fixture added without golden, only refused fixtures left) run in `reliability.py check` inside the
 unprivileged `pull_request` job `reliability-table`. That job runs PR code by design: drc_fixture_test.py
 imports `drc_cases.py`, check-pending imports `drc_cases_pending*.py`, and the DRC harness itself
-(drc_fixture_test.py, drc_geometry.py, drc_ports.py, drc.py) comes from the PR. Accepted residual risk: a
+(drc_fixture_test.py, drc_geometry.py, drc_antenna.py, drc_ports.py, drc.py) comes from the PR. Accepted residual risk: a
 PR that edits that harness can fake its own results there; CODEOWNERS asks 도재겸 to review those files.
 As defence in depth the guard scans the fixture sources as data (`ast.parse(bytes)` only, never compile
 or exec; see `source_problems`) and reports a new or changed source that does more than define fixtures,
@@ -323,7 +323,8 @@ def _build(read, baseline_paths, run_fixtures=False, entries=None):
     text = read(RULES)
     if text is not None:
         ids = []
-        for rule in json.loads(text)['rules']:
+        catalog = json.loads(text)
+        for rule in catalog['rules']+catalog.get('antenna_rules', []):  # DRC deck and ANT deck checks
             ids.append(rule['id'])
             result['rules'][rule['id']] = reliability.rule_state(rule)
         result['duplicate_rules'] = sorted({rule for rule in ids if ids.count(rule) > 1})
@@ -504,6 +505,10 @@ def violations(base, head):
             found.append(f'규칙 `{_c(rule)}`의 상태가 {_c(before)}에서 {_c(after)}(으)로 내려갔습니다.')
         elif introduced and after == 'verified' and before != 'verified':
             found.append(f'규칙 `{_c(rule)}`이(가) {_c(before)}에서 verified로 올라갔습니다(golden_compared). '
+                         'Calibre golden과 맞춰 본 근거를 도재겸이 확인해야 합니다.')
+    for rule, after in sorted(head['rules'].items()):
+        if introduced and rule not in base['rules'] and after == 'verified':
+            found.append(f'새 규칙 `{_c(rule)}`이(가) 처음부터 verified로 들어왔습니다(golden_compared). '
                          'Calibre golden과 맞춰 본 근거를 도재겸이 확인해야 합니다.')
     count = sum(state == 'verified' for state in base['rules'].values())
     if count and not any(state == 'verified' for state in head['rules'].values()):

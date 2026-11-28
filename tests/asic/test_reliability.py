@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -40,7 +41,8 @@ class CaseHashTests(unittest.TestCase):
 
     def test_every_fixture_case_hashes(self):
         hashes = [reliability.case_sha256(c) for c in cases()]
-        self.assertEqual(len(hashes), 451)  # 427 in golden/drc-fixtures-20261128 + 24 in golden/drc-fixtures-20261128b
+        # 427 in golden/drc-fixtures-20261128 + 24 in golden/drc-fixtures-20261128b + 102 ANT in golden/ant-fixtures-20261128
+        self.assertEqual(len(hashes), 553)
 
 
 def golden(*fixtures):
@@ -272,14 +274,26 @@ class RuleStateTests(unittest.TestCase):
         self.assertEqual(reliability.state_counts(catalog), {'unported': 1, 'ported': 1, 'verified': 1})
         self.assertEqual(reliability.state_counts(catalog, {'B', 'C'}), {'unported': 0, 'ported': 1, 'verified': 1})
         real = json.loads(RULES_JSON.read_text(encoding='utf-8'))
-        self.assertEqual(reliability.state_counts(real), {'unported': 113, 'ported': 0, 'verified': 96})
+        # DRC deck 96 + 113 and ANT deck 12 (antenna_rules, all verified)
+        self.assertEqual(reliability.state_counts(real), {'unported': 113, 'ported': 0, 'verified': 108})
 
     def test_catalog_has_96_verified_and_113_unported(self):
         from drc_ports import PORTS
         catalog = json.loads(RULES_JSON.read_text(encoding='utf-8'))
         states = [reliability.rule_state(r) for r in catalog['rules']]
         self.assertEqual((states.count('verified'), states.count('ported'), states.count('unported')), (96, 0, 113))
-        self.assertEqual(set(reliability.verified_rules(catalog)), set(PORTS))
+        from drc_antenna import RULES as ANTENNA
+        self.assertEqual({r['id'] for r in catalog['antenna_rules'] if reliability.rule_state(r) == 'verified'},
+                         set(ANTENNA))
+        self.assertEqual(set(reliability.verified_rules(catalog)), set(PORTS) | set(ANTENNA))
+        # check-mutations: the mutation golden has DRC deck runs only
+        self.assertEqual(set(reliability.verified_rules(catalog, antenna=False)), set(PORTS))
+
+    def test_duplicate_id_across_decks_fails(self):
+        catalog = {'rules': [{'id': 'A', 'implementation': 'geometry_port', 'golden_compared': True}],
+                   'antenna_rules': [{'id': 'A', 'implementation': 'antenna_port', 'golden_compared': True}]}
+        with self.assertRaises(ValueError):
+            reliability.verified_rules(catalog)
 
 
 class UnverifiedListTests(unittest.TestCase):
@@ -291,7 +305,7 @@ class UnverifiedListTests(unittest.TestCase):
         # the remaining gap (pad-internal devices on the open-source side) is gpio-internal-lvs.
         # synth-vs-genus left on 2026-11-28: RTL ↔ Genus and RTL ↔ Yosys formally proven (golden/synth-20261128).
         self.assertEqual([i['id'] for i in self.items], [
-            'drc-unported-rules', 'drc-global-flags', 'antenna', 'gpio-internal-lvs',
+            'drc-unported-rules', 'drc-global-flags', 'gpio-internal-lvs',
             'pnr-sta-vs-innovus-tempus', 'sdc-portability', 'pex', 'wire-rc-zero', 'pinmap-25'])
         for item in self.items:
             self.assertEqual(set(item), {'id', 'what', 'why', 'exit_evidence', 'allows_checks', 'docs'}, item['id'])
@@ -326,7 +340,7 @@ class UnverifiedListTests(unittest.TestCase):
         self.assertEqual(chip['allows_checks'], ['asic-chip-timing'])
         self.assertNotIn('synth-vs-genus', items)
         self.assertIn('drc-unported-20261128', items['drc-unported-rules']['why'])
-        self.assertIn('drc-unported-20261128', items['antenna']['why'])
+        self.assertNotIn('antenna', items)  # closed 2026-11-28: KLayout antenna checks match Calibre
 
 
 class TableTests(unittest.TestCase):
@@ -363,7 +377,7 @@ class TableTests(unittest.TestCase):
             'drc-fixtures': 'match', 'drc-mutations': 'match', 'drc-unported': 'no_evidence', 'drc-chip-v2': 'match',
             'drc-chip-openflow': 'match', 'lvs-core': 'match', 'lvs-cells': 'match', 'lvs-chip': 'match',
             'spice': 'match', 'synth': 'match', 'pnr-sta': 'match', 'pex': 'no_evidence',
-            'antenna': 'no_evidence'})
+            'antenna': 'match'})
         self.assertEqual(rows['lvs-core']['scope'], '오픈소스 흐름 코어 1건')
         self.assertIn('오픈소스 쪽 패드 내부 소자 LVS는 아직 없음', rows['lvs-chip']['scope'])
         self.assertIn('gpio-internal-lvs', rows['lvs-chip']['unverified'])
@@ -381,7 +395,9 @@ class TableTests(unittest.TestCase):
         self.assertIn('34/34 일치', rows['lvs-cells']['note'])
         self.assertIn('golden/lvs-20261128/README.md', rows['lvs-cells']['evidence'])
         self.assertIn('wire-rc-zero', rows['pex']['unverified'])
-        self.assertIn('golden/drc-unported-20261128/golden.json', rows['antenna']['evidence'])
+        self.assertIn('golden/ant-fixtures-20261128/golden.json', rows['antenna']['evidence'])
+        self.assertEqual(rows['antenna']['unverified'], [])
+        self.assertIn('102', rows['antenna']['scope'])
         self.assertIn('golden/drc-unported-20261128/golden.json', rows['drc-unported']['evidence'])
         self.assertIn('golden/pex-reference-20261128/README.md', rows['pex']['evidence'])
         self.assertIn('golden/spice-20261128/summary.json', rows['spice']['evidence'])
@@ -662,7 +678,7 @@ class EdgeGoldenFileTests(unittest.TestCase):
 
     def test_all_fixture_golden_covers_every_case(self):
         loaded = reliability.load_golden(RELIABILITY/'golden')
-        self.assertEqual(len(loaded['fixtures']), 451)
+        self.assertEqual(len(loaded['fixtures']), 553)
         self.assertEqual({f['case_sha256'] for f in loaded['fixtures']}, {reliability.case_sha256(c) for c in cases()})
 
     def test_readme_without_server_details(self):
@@ -710,9 +726,9 @@ ANT_RULES = {'ANT_01', 'ANT_02_1', 'ANT_02_2', 'ANT_02_3', 'ANT_03_1', 'ANT_03_2
              'ANT_05_1', 'ANT_05_2', 'ANT_06_01', 'ANT_06_02'}
 # Calibre-refused 0225/0226 are not corrected: `raises` means our writer/KLayout raises (like 0169/0170).
 REFUSED = {('C1a', '0225-NONSIMPLE-bow-tie.gds'), ('C1a', '0226-NONSIMPLE-orthogonal-self-crossing.gds')}
-CORRECTED = {('C1a', '0227-NONSIMPLE-self-touching-vertex.gds'): {'fail': False},
-             ('C1b', '0315-ANT_06_01-boundary.gds'): {'fail': True},
-             ('C1b', '0323-ANT_06_02-boundary.gds'): {'fail': True}}
+CORRECTED = {('C1a', '0227-NONSIMPLE-self-touching-vertex.gds'): {'fail': False}}
+# Corrected ANT fixtures moved to drc_cases.py with their rules (golden/ant-fixtures-20261128).
+MOVED_CORRECTED = {'0315-ANT_06_01-boundary.gds', '0323-ANT_06_02-boundary.gds'}
 
 
 class PendingCaseTests(unittest.TestCase):
@@ -724,11 +740,12 @@ class PendingCaseTests(unittest.TestCase):
         cls.records = drc_cases_pending.records()
         cls.module = drc_cases_pending
 
-    def test_three_groups_857_fixtures(self):
-        self.assertEqual(collections.Counter(r['group'] for r in self.records), {'C1a': 229, 'C1b': 330, 'C1c': 298})
+    def test_three_groups_755_pending_fixtures(self):
+        # 857 ran in Calibre; the 102 ANT fixtures moved to drc_cases.py when drc_antenna.py ported the deck.
+        self.assertEqual(collections.Counter(r['group'] for r in self.records), {'C1a': 229, 'C1b': 228, 'C1c': 298})
         self.assertEqual([r['case'] for r in self.records], self.module.cases())
-        self.assertEqual(len({reliability.case_sha256(r['case']) for r in self.records}), 857)
-        self.assertEqual(collections.Counter(r['deck'] for r in self.records), {'DRC': 755, 'ANT': 102})
+        self.assertEqual(len({reliability.case_sha256(r['case']) for r in self.records}), 755)
+        self.assertEqual(collections.Counter(r['deck'] for r in self.records), {'DRC': 755})
         for record in self.records:
             self.assertEqual(set(record['case']), {'rule', 'label', 'shapes', 'fail', 'hierarchy', 'dbu', 'raises'})
             group_index = record['index']
@@ -740,7 +757,8 @@ class PendingCaseTests(unittest.TestCase):
         unported = {rule for rule, state in states.items() if state == 'unported'}
         drc = {r['case']['rule'] for r in self.records if r['deck'] == 'DRC'}
         self.assertEqual(drc, unported | {'ACUTE', 'NONSIMPLE'})
-        self.assertEqual({r['case']['rule'] for r in self.records if r['deck'] == 'ANT'}, ANT_RULES)
+        self.assertEqual(self.module.MOVED_RULES, ANT_RULES)
+        self.assertFalse({r['case']['rule'] for r in self.records} & ANT_RULES)
         self.assertFalse({r['case']['rule'] for r in self.records} & {r for r, s in states.items() if s != 'unported'})
 
     def test_pending_cases_stay_out_of_the_ported_selftest(self):
@@ -764,6 +782,16 @@ class PendingCaseTests(unittest.TestCase):
                 self.assertEqual(record['run_case_sha256'], reliability.case_sha256(record['case']))
             self.assertFalse(record['case']['raises'], record['gds'])  # no pending fixture expects a writer error
 
+    def test_moved_ant_corrections_keep_the_definition_calibre_ran(self):
+        moved = json.loads((RELIABILITY/'golden'/'ant-fixtures-20261128'/'golden.json').read_text(encoding='utf-8'))
+        by_hash = {reliability.case_sha256(c): c for c in cases()}
+        corrected = [e for e in moved['fixtures'] if 'run_case_sha256' in e]
+        self.assertEqual({e['gds'] for e in corrected}, MOVED_CORRECTED)
+        for entry in corrected:
+            case = by_hash[entry['case_sha256']]
+            self.assertTrue(case['fail'])
+            self.assertEqual(entry['run_case_sha256'], reliability.case_sha256(dict(case, fail=False)))
+
     def test_calibre_refused_fixtures_keep_their_run_definition(self):
         by = {(r['group'], r['gds']): r for r in self.records}
         for key in REFUSED:
@@ -785,6 +813,7 @@ class PendingGoldenTests(unittest.TestCase):
         self.assertEqual(result['problems'], [])
         self.assertEqual(result['status'], 'pass')
         self.assertEqual(result['fixtures'], 857)
+        self.assertEqual((result['definitions'], result['moved'], result['excluded']), (755, 102, 2))
         self.assertEqual(result['sources'], ['drc-unported-20261128/golden.json'])
 
     def test_golden_counts_and_meta(self):
@@ -813,8 +842,10 @@ class PendingGoldenTests(unittest.TestCase):
     def test_every_calibre_verdict_equals_the_intent(self):
         import drc_cases_pending
         cases_by = {(r['group'], r['gds']): r['case'] for r in drc_cases_pending.records()}
+        ported = {reliability.case_sha256(c): c for c in cases()}
         for entry in self.golden['fixtures']:
-            case = cases_by[(entry['group'], entry['gds'])]
+            # moved entries: the definition is in drc_cases.py now, under the same hash
+            case = cases_by.get((entry['group'], entry['gds'])) or ported[entry['case_sha256']]
             self.assertFalse(case['raises'], entry['gds'])
             if entry['calibre'] == 'refused':
                 self.assertIn((entry['group'], entry['gds']), REFUSED)  # excluded with a reason, no intent checked
@@ -825,12 +856,13 @@ class PendingGoldenTests(unittest.TestCase):
 
     def test_fixture_check_ignores_pending_golden(self):
         loaded = reliability.load_golden(RELIABILITY/'golden')
-        self.assertEqual(len(loaded['fixtures']), 451)
+        self.assertEqual(len(loaded['fixtures']), 553)
+        self.assertIn('ant-fixtures-20261128/golden.json', [s['path'] for s in loaded['sources']])
         self.assertNotIn('drc-unported-20261128/golden.json', [s['path'] for s in loaded['sources']])
 
     def test_check_pending_reports_drift(self):
         import drc_cases_pending
-        good = [f for f in self.golden['fixtures']]
+        good = [f for f in self.golden['fixtures'] if f['rule'] not in drc_cases_pending.MOVED_RULES]
         broken = {
             'missing': good[1:],
             'extra': good+[dict(good[0], gds='9999-extra.gds', case_sha256='0'*64)],
@@ -866,6 +898,50 @@ class PendingGoldenTests(unittest.TestCase):
             entries[3]['calibre'] = 'clean'
             (Path(tmp)/'p'/'golden.json').write_text(json.dumps(pending_doc(entries)), encoding='utf-8')
             self.assertEqual(reliability.check_pending(Path(tmp), records)['status'], 'fail')
+
+    def test_moved_entry_needs_the_same_verdict_in_a_fixture_golden(self):
+        def record(gds):
+            case = {'rule': 'R', 'label': gds, 'shapes': [], 'fail': True, 'hierarchy': False, 'dbu': .001, 'raises': False}
+            return {'group': 'G', 'gds': gds, 'deck': 'DRC', 'case': case, 'run_case_sha256': reliability.case_sha256(case)}
+        kept, gone = record('a.gds'), record('b.gds')
+        entries = [{'group': 'G', 'gds': r['gds'], 'rule': 'R', 'deck': 'DRC', 'case_sha256': r['run_case_sha256'],
+                    'calibre': 'fired', 'refused_reason': None} for r in (kept, gone)]
+        verified = {'rules': [{'id': 'R', 'implementation': 'geometry_port', 'golden_compared': True}]}
+        unported = {'rules': [{'id': 'R', 'implementation': 'unported', 'golden_compared': False}]}
+        for there, moved_rules, rules, status, moved in [
+                (None, {'R'}, verified, 'fail', 0), ('fired', {'R'}, verified, 'pass', 1),
+                ('clean', {'R'}, verified, 'fail', 0),
+                # review 2026-11-28: an unported rule's entry copied into a new folder, definition dropped
+                ('fired', set(), unported, 'fail', 0), ('fired', {'R'}, unported, 'fail', 0),
+                ('fired', set(), verified, 'fail', 0)]:
+            with self.subTest(there=there, moved_rules=moved_rules, rules=rules['rules'][0]['implementation']), \
+                    tempfile.TemporaryDirectory() as tmp:
+                (Path(tmp)/'p').mkdir()
+                (Path(tmp)/'p'/'golden.json').write_text(json.dumps(pending_doc(entries)), encoding='utf-8')
+                (Path(tmp)/'rules.json').write_text(json.dumps(rules), encoding='utf-8')
+                if there:
+                    (Path(tmp)/'f').mkdir()
+                    (Path(tmp)/'f'/'golden.json').write_text(json.dumps(dict(meta=META, **golden(
+                        ('b.gds', 'R', gone['run_case_sha256'], there)))), encoding='utf-8')
+                result = reliability.check_pending(Path(tmp), [kept], moved_rules, Path(tmp)/'rules.json')
+                self.assertEqual((result['status'], result['moved']), (status, moved), result['problems'])
+
+    def test_unported_entry_copied_out_of_the_real_pending_golden_fails(self):
+        # review 2026-11-28 counterexample on the real files: copy a pending entry of an unported rule into
+        # a new non-pending golden and drop its definition.
+        import drc_cases_pending
+        records = drc_cases_pending.records()
+        victim = next(r for r in records if r['case']['rule'] == '1.NWL.S.1')
+        entry = next(e for e in self.golden['fixtures'] if (e['group'], e['gds']) == (victim['group'], victim['gds']))
+        with tempfile.TemporaryDirectory() as tmp:
+            shutil.copytree(RELIABILITY/'golden', Path(tmp)/'golden')
+            (Path(tmp)/'golden'/'x').mkdir()
+            (Path(tmp)/'golden'/'x'/'golden.json').write_text(json.dumps({'meta': META, 'fixtures': [entry]}),
+                                                               encoding='utf-8')
+            result = reliability.check_pending(Path(tmp)/'golden', [r for r in records if r is not victim])
+        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['moved'], 102)
+        self.assertTrue(any('1.NWL.S.1' in p for p in result['problems']), result['problems'])
 
     def test_check_pending_without_pending_golden_fails(self):
         with tempfile.TemporaryDirectory() as tmp:

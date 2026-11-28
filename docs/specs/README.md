@@ -26,4 +26,6 @@
 
 - [0019 머지 게이트와 신뢰성 대응표](0019-merge-gate.md): main ruleset·필수 체크, Calibre 대응표·미검증 목록·기준점 절차, MyChip integration 폐지. 구현(GitHub 실행 기록 있음, main ruleset 전)
 
+- [0020 키트 ANT deck antenna 검사 이식](0020-antenna-check.md): 12개 검사를 KLayout으로 옮겨 Calibre fixture 102개와 일치, 흐름 필수 검사 `asic-antenna`·`asic-chip-antenna`
+
 index.json은 검사 대상 파일과 확인한 규약의 버전을 기록한다. SHA256은 파일 내용으로 계산한 식별값이다. 사람이 읽는 설명은 각 SPEC의 RFC 확인 항목에 둔다.

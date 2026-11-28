@@ -160,14 +160,14 @@
     {
       "id": "antenna",
       "stage": "antenna",
-      "open_source": "(미구현)",
-      "commercial": "Calibre ANT, 키트 ANT deck 무수정",
-      "verdict": "no_evidence",
-      "scope": "키트 ANT deck 12개 검사, fixture 102개 + 칩 3건",
-      "note": "Calibre ANT fixture golden 확보(102개, ANT_06 등호 경계 2개는 Calibre가 위반으로 판정해 정의를 고침). Calibre ANT 0건: 오픈소스 흐름 코어·SOP28 칩, v2 칩. KLayout antenna 검사가 없어 대조 불가",
-      "pr_check": "미검증 목록",
-      "evidence": ["golden/drc-unported-20261128/golden.json", "golden/chip-openflow-20261128/summary.json", "golden/chip-v2-20261128/summary.json"],
-      "unverified": ["antenna"],
+      "open_source": "KLayout 0.28.16 antenna 검사 12개(scripts/asic/drc_antenna.py, deck 식을 넷마다 그대로 계산)",
+      "commercial": "Calibre v2023.4_17.10, 키트 ANT deck 무수정(sha256 80dc257e…94b5)",
+      "verdict": "match",
+      "scope": "키트 ANT deck 12개 검사, fixture 102개 + 칩 3건(오픈소스 흐름 코어·SOP28 칩, v2 칩)",
+      "note": "fixture 102개 모두 대상 검사 발동 여부 일치(Calibre 위반 45·위반 없음 57, 제외 0). ANT_06 등호 경계 2개(Calibre 위반)도 deck 식을 같은 순서의 배정밀도로 계산해 일치. 칩: 코어 v_ternary8_top·SOP28 ternary8_sop28·v2 칩(seal ring 없는 판·있는 판) 모두 KLayout 0 ↔ Calibre ANT 0(같은 GDS sha256)",
+      "pr_check": "reliability-table이 PR마다 ANT fixture 102개를 KLayout으로 다시 판정해 golden과 비교(reliability.py check). asic-gate가 흐름의 코어·칩 GDS에서 antenna 0건을 확인(asic-antenna·asic-chip-antenna, 미확인 허용 없음)",
+      "evidence": ["golden/ant-fixtures-20261128/golden.json", "golden/ant-fixtures-20261128/README.md", "golden/chip-openflow-20261128/summary.json", "golden/chip-v2-20261128/summary.json"],
+      "unverified": [],
       "updated": "2026-11-28"
     }
   ]
