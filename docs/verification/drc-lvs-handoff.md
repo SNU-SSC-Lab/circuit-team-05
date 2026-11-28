@@ -87,7 +87,7 @@ python -m json.tool "$TEAM05_OUT/drc-expanded/result.json"
 
 ## 6. Netgen 비교만 따로 다시 실행
 
-4절이 끝난 뒤 같은 입력을 새 폴더에 복사해 비교 단계를 재현할 수 있다. 기준 회로의 include 파일도 함께 복사한다.
+4절이 끝난 뒤 같은 입력을 새 폴더에 복사해 비교 단계를 재현할 수 있다. 기준 회로의 include 파일도 함께 복사한다. 자동 실행처럼 Netgen 전에 두 netlist를 `lvs_reduce.py`로 줄인다(키트 deck의 병렬 MOS 합치기·직렬 입력 순서·split gate와 같은 의미).
 
 ```bash
 export TEAM05_LVS_RECHECK="$TEAM05_OUT/lvs-recheck-01"
@@ -95,9 +95,11 @@ mkdir "$TEAM05_LVS_RECHECK"
 cp "$TEAM05_OUT/lvs/"{layout.spice,schematic.spice,cells.spice,run.tcl} "$TEAM05_LVS_RECHECK/"
 (
   cd "$TEAM05_LVS_RECHECK"
+  python "$TEAM05_REPO/scripts/asic/lvs_reduce.py" layout.spice layout.reduced.spice
+  python "$TEAM05_REPO/scripts/asic/lvs_reduce.py" schematic.spice schematic.reduced.spice
   export SSC_TOP=v_ternary8_top
-  export SSC_EXTRACTED="$TEAM05_LVS_RECHECK/layout.spice"
-  export SSC_SCHEMATIC="$TEAM05_LVS_RECHECK/schematic.spice"
+  export SSC_EXTRACTED="$TEAM05_LVS_RECHECK/layout.reduced.spice"
+  export SSC_SCHEMATIC="$TEAM05_LVS_RECHECK/schematic.reduced.spice"
   export SSC_SETUP="$TEAM05_REPO/verification/asic/netgen_setup.tcl"
   netgen-lvs -batch source run.tcl
 )
@@ -165,7 +167,7 @@ python scripts/run_physical.py report --result "$HOME/ssc-team05-runs/magic-prac
 | Magic 설정을 현재 키트에 적용 | INVX1에 공개 `.10`/`.30` 기술파일을 적용했을 때 DRC 오류 타일 49/55개와 핀 추출 문제가 발생 | 실제 코어 경로는 KLayout 추출 + Netgen으로 구성. Magic의 현재 NSPL 호환·PEX 정확도는 계속 미확인 |
 | 셀 핀 접근·배선 | 38개 셀 LEF의 VIA1 장애물 도형이 원본 GDS의 CONT 도형과 일치 | 해시·도형 일치를 확인한 작업용 LEF에서 층 표기를 수정. 원본 도형을 삭제하지 않음 |
 | 클록 핀 부근 short | 내부 MET2 전원선이 CLK 핀의 접근점을 막음 | 전원 링을 코어 밖으로 옮기고 MET1 전원선을 연결 |
-| 첫 코어 LVS 불일치 | 개별 셀 검사에서 핀 대응·소자 속성 차이가 발생. 34종 중 현재 추출·비교 경로에서 23종 일치, 11종 미확인 | 새 ASIC 흐름에서만 미확인 11종을 제외. 셀 자체 불량으로 단정하거나 핀·W/L 검사를 끄지 않음. 이후 코어 LVS 통과 |
+| 첫 코어 LVS 불일치 | 개별 셀 검사에서 핀 대응·소자 속성 차이가 발생. 34종 중 2026-11-24 추출·비교 경로에서 23종 일치, 11종 미확인. 2026-11-28 원인 확인: 병렬 MOS `m=`, 직렬 입력 순서, split gate를 키트 deck처럼 줄이지 않음 | 새 ASIC 흐름에서만 11종을 제외. 셀 자체 불량으로 단정하거나 핀·W/L 검사를 끄지 않음. 이후 코어 LVS 통과. 11-28 `lvs_reduce.py`로 34종 모두 일치, 합성 제외 목록은 아직 그대로 |
 | 배선 도구 DRC 0인데 독립 검사 실패 | KLayout이 새 배선의 VIA1/CONT 간격·겹침 마커 262개를 검출 | 공정의 cut 층 간격·적층 금지 조건을 작업용 기술 LEF에 추가. 재배선 후 해당 검사 오류 0건 |
 
 이 과정 때문에 **배선 도구 DRC 0건**, **코어 LVS 일치**, **전체 공정 DRC/LVS 통과**를 따로 기록한다. Netgen의 종료 코드 0도 회로 일치를 뜻하지 않아 6절처럼 완료 표시·로그·JSON을 함께 판정한다.

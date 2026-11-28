@@ -35,14 +35,6 @@
       "docs": ["docs/specs/0017-rtl-to-gds.md", "docs/specs/0019-merge-gate.md", "verification/reliability/golden/lvs-20261128/README.md"]
     },
     {
-      "id": "std-cell-netgen-11",
-      "what": "우리 KLayout 추출 + Netgen 경로가 표준셀 34종 중 11종(AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2)을 일치로 확인하지 못함",
-      "why": "2026-11-28 Calibre LVS는 키트 표준셀 34/34 CORRECT(golden/lvs-20261128)라 셀 자체는 맞다. 그래서 문제는 우리 쪽 대조 설정에 있다. 원인은 property 오류 6종은 병렬 MOS(m=)를 합치지 않아서, 최상위 핀 맞춤 실패 4종은 직렬 트랜지스터 입력 순서를 바꿔 맞추지 않아서로 보인다(추정). TBUFX2(불일치)의 원인은 아직 모른다. Calibre CORRECT는 셀이 맞다는 근거일 뿐 이 원인의 근거는 아니다.",
-      "exit_evidence": "Netgen 설정(verification/asic/netgen_setup.tcl 등)을 고쳐 34종 모두 일치하고, 그 판정이 Calibre 34/34 CORRECT와 같다는 기록",
-      "allows_checks": [],
-      "docs": ["verification/reliability/golden/lvs-20261128/README.md", "verification/asic/cell-qualification.json"]
-    },
-    {
       "id": "synth-vs-genus",
       "what": "합성 결과 대응: Yosys netlist와 Genus netlist",
       "why": "Genus 325셀 결과는 있지만 같은 RTL의 두 netlist를 같은 시험이나 형식 동치로 대조하지 않았다.",

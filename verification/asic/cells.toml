@@ -1,16 +1,18 @@
-# Original GDS vs independent CDL qualification, 2026-11-24.
+# Original GDS vs independent CDL qualification, 2026-11-24: these 11 did not match.
+# 2026-11-28: all 34 cells match after scripts/asic/lvs_reduce.py (cell-qualification.json).
+# The list stays until re-admitting the cells is decided; it changes the flow output.
 # These restrictions apply to the new ASIC build, not historical PDK checks.
 dont_use = ["AND2X2", "AOI21X1", "BUFX4", "INVX2", "INVX4", "INVX8", "NOR2X1", "OAI21X1", "OAI22X1", "OR2X2", "TBUFX2"]
 
 [reason]
-AOI21X1 = "Standalone LVS: A/B pin correspondence differs"
-OAI21X1 = "Standalone LVS: A/B pin correspondence differs"
-NOR2X1 = "Standalone LVS: A/B pin correspondence differs"
-INVX8 = "Standalone LVS: transistor property mismatch"
-AND2X2 = "Not qualified by current original-GDS/CDL comparison"
-BUFX4 = "Not qualified by current original-GDS/CDL comparison"
-INVX2 = "Not qualified by current original-GDS/CDL comparison"
-INVX4 = "Not qualified by current original-GDS/CDL comparison"
-OAI22X1 = "Not qualified by current original-GDS/CDL comparison"
-OR2X2 = "Not qualified by current original-GDS/CDL comparison"
-TBUFX2 = "Not qualified by current original-GDS/CDL comparison"
+AOI21X1 = "2026-11-24 standalone LVS: series input order differs (matches since 2026-11-28)"
+OAI21X1 = "2026-11-24 standalone LVS: series input order differs (matches since 2026-11-28)"
+NOR2X1 = "2026-11-24 standalone LVS: series input order differs (matches since 2026-11-28)"
+OAI22X1 = "2026-11-24 standalone LVS: series input order differs (matches since 2026-11-28)"
+INVX8 = "2026-11-24 standalone LVS: m= not folded into W (matches since 2026-11-28)"
+AND2X2 = "2026-11-24 standalone LVS: m= not folded into W (matches since 2026-11-28)"
+BUFX4 = "2026-11-24 standalone LVS: m= not folded into W (matches since 2026-11-28)"
+INVX2 = "2026-11-24 standalone LVS: m= not folded into W (matches since 2026-11-28)"
+INVX4 = "2026-11-24 standalone LVS: m= not folded into W (matches since 2026-11-28)"
+OR2X2 = "2026-11-24 standalone LVS: m= not folded into W (matches since 2026-11-28)"
+TBUFX2 = "2026-11-24 standalone LVS: split series stack not merged (matches since 2026-11-28)"

@@ -16,6 +16,7 @@ import pdk
 import run_physical
 from .nspl import prepare, sha
 from .reference import convert
+from .lvs_reduce import reduce_netlist
 from .pinplan import make_plan, tcl as pin_tcl
 
 HERE = Path(__file__).resolve().parent
@@ -246,12 +247,18 @@ set_load 0.5 [all_outputs]
         (lvs/'schematic.spice').write_text(convert(json.loads((lvs/'mapped.json').read_text()), cdl.read_text(), top))
         shutil.copyfile(cdl, lvs/'cells.spice')
         (lvs/'run.tcl').write_text(run_physical.NETGEN_SCRIPT)
-        env.update(SSC_EXTRACTED=str(lvs/'layout.spice'), SSC_SCHEMATIC=str(lvs/'schematic.spice'),
+        # Same kit-deck reductions on both sides before Netgen (lvs_reduce.py); raw netlists stay.
+        reduce_netlist(lvs/'layout.spice', lvs/'layout.reduced.spice')
+        reduce_netlist(lvs/'schematic.spice', lvs/'schematic.reduced.spice')
+        env.update(SSC_EXTRACTED=str(lvs/'layout.reduced.spice'), SSC_SCHEMATIC=str(lvs/'schematic.reduced.spice'),
                    SSC_SETUP=str(ROOT/'verification/asic/netgen_setup.tcl'))
         command('asic-netgen', [run_physical.executable('netgen'), '-batch', 'source', lvs/'run.tcl'], lvs, env)
         report = (lvs/'lvs.log').read_text()
         cells = json.loads((lvs/'lvs.json').read_text())
-        match = (lvs/'netgen-complete.txt').is_file() and run_physical.lvs_verdict(report, cells, top)
+        # Netgen prints and skips a failing setup command ("Error ... (ignoring)"); treat it as a failure.
+        console = (out/'asic-netgen.log').read_text(errors='replace')
+        match = ((lvs/'netgen-complete.txt').is_file() and run_physical.lvs_verdict(report, cells, top)
+                 and not re.search(r'^Error\b|SSC_NETGEN_ERROR', console, re.M))
         checks['asic-lvs'] = {'status': 'pass' if match else 'fail', 'report': 'lvs/lvs.log'}
         checks['asic-lvs']['devices'] = json.loads((lvs/'layout.json').read_text())['devices']
         write()
