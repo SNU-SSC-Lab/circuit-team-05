@@ -8,7 +8,7 @@
 | --- | --- |
 | 새 DRC 규칙 묶음을 KLayout으로 옮겼을 때 | 새 규칙의 fixture Calibre 판정. 대응하는 규칙을 `ported`에서 `verified`로 올린다 |
 | 도구 버전을 바꿨을 때(KLayout 0.30.x 등) | 모든 `verified` 규칙의 fixture 판정, 변형본 판정과 실제 칩 대조. 변형본 golden의 형상 해시는 KLayout 0.28.16으로 계산했으므로(`meta.klayout_version`) 버전이 바뀌어 해시가 달라지면 `check-mutations`가 실패한다 |
-| 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정 |
+| 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정. RTL이 `golden/synth-*`의 RTL과 다르면 같은 RTL의 Genus netlist와 합성 대조 |
 
 생성기(`scripts/asic/drc_cases.py`)를 고쳐 `verified` 규칙의 fixture 정의가 바뀐 경우도 그 fixture의 golden이 사라지므로 기준점이 필요하다. 변형본 생성기(`scripts/asic/mutate.py`, `scripts/asic/mutate_v2.py`)를 고쳐 같은 seed에서 다른 형상이 나오는 경우도 같다.
 
@@ -86,6 +86,19 @@ python scripts/asic/reliability.py import-mutations --counts counts.csv --manife
 
 KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fixture golden과 같고, `group`(묶음)과 `deck`(DRC/ANT)이 더 있다. `reliability.py check`는 이 파일을 읽지 않고, `python scripts/asic/reliability.py check-pending`이 fixture 정의(`scripts/asic/drc_cases_pending.py`)와 1:1인지와, Calibre가 판정한 fixture에서 정의의 `fail`이 Calibre 판정과 같은지만 확인한다. fixture 정의는 생성한 파일을 그대로 옮겨 `case_sha256`이 Calibre가 읽은 GDS의 manifest 값과 같게 한다. 가설(`fail`)이 Calibre와 다르면 정의를 Calibre 판정으로 고치고, golden 항목에 Calibre가 읽은 정의의 해시를 `run_case_sha256`으로 남긴다. Calibre가 입력을 거부한 fixture는 정의를 고치지 않고 `refused`와 사유로 남긴다(사유가 붙은 제외, 첫 묶음의 0169·0170과 같음). `raises`는 우리 GDS 작성기나 KLayout이 오류를 내는 경우에만 쓴다.
 
+### 합성 대조 (`golden/synth-YYYYMMDD/summary.json`)
+
+같은 RTL로 Genus netlist를 받고(서버), 로컬에서 Genus netlist와 흐름의 Yosys netlist를 각각 RTL과 형식 증명한다. Genus netlist는 저장소에 넣지 않고 sha256만 적는다.
+
+```
+python scripts/asic/synth_equiv.py --netlist <Genus netlist> --liberty <키트 tt Liberty> --out <새 폴더> --cell-models <키트 Verilog 셀 모델>
+python scripts/asic/synth_equiv.py --netlist <결과>/synth/netlist.v --liberty <키트 tt Liberty> --out <새 폴더> --synth-log <결과>/synth/synth.log --cell-models <키트 Verilog 셀 모델>
+```
+
+- 두 실행 모두 `summary.json`의 `status`가 `pass`여야 한다(모든 짝 증명, 출력 포트 누락 없음, 셀 모델 다름 없음).
+- Yosys가 FSM을 다시 부호화하면 합성 로그(`synth.log`)의 `FSM_RECODE` 표가 필요하다. 없으면 상태 레지스터를 짝짓지 못해 실패한다.
+- 같은 팀 시험을 두 netlist에 돌린 결과(시험, 증명 아님)와 일부러 고친 netlist가 실패하는 확인을 함께 적는다. 예시는 `golden/synth-20261128/`이다.
+
 ## 6. 첫 사례
 
 2026-11-28 실행이 첫 기준점이다. Calibre `v2023.4_17.10`, 키트 deck 무수정으로 다음을 받았다.
@@ -96,7 +109,7 @@ KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fi
 - 키트 셀 604개 + 코어 창 196개 변형본 800개(2차, `mutate_v2.py`): Calibre 거부 0 → `golden/drc-mutations-20261128b/`
 - 오픈소스 흐름 코어·SOP28 칩의 DRC·ANT·LVS → `golden/chip-openflow-20261128/`
 - v2 칩의 DRC·ANT·LVS → `golden/chip-v2-20261128/`
-- 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`, 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`
+- 2차(같은 날): 아직 KLayout에 없는 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 → `golden/drc-unported-20261128/`, 코어·SOP28 칩·표준셀 34종·GPIO 9종 LVS → `golden/lvs-20261128/`, OpenSTA ↔ Tempus 타이밍 → `golden/sta-20261128/`, ngspice ↔ Spectre → `golden/spice-20261128/`, Calibre xRC 기준 자료(파일은 저장소 밖) → `golden/pex-reference-20261128/`, 같은 RTL의 Genus·Yosys netlist ↔ RTL 형식 증명(Genus netlist는 저장소 밖) → `golden/synth-20261128/`
 
 ## 7. 2026-11-28 실행에서 배운 절차
 

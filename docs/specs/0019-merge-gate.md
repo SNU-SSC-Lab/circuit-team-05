@@ -135,6 +135,7 @@ verification/reliability/
     chip-v2-20261128/        v2 칩 GDS 해시, Calibre DRC/ANT/LVS 요약, Genus/Innovus/Tempus 요약
     lvs-20261128/            코어·SOP28 칩·표준셀 34종·GPIO 9종 Calibre LVS
     sta-20261128/            같은 입력의 OpenSTA ↔ Tempus slack 비교
+    synth-20261128/          같은 RTL의 Genus·Yosys netlist ↔ RTL 형식 증명과 같은 시험(Genus netlist는 저장소 밖, 해시만)
     spice-20261128/          ngspice ↔ Spectre 비교
     pex-reference-20261128/  Calibre xRC 기준 자료의 해시(파일은 저장소 밖)
 ```
@@ -152,8 +153,8 @@ verification/reliability/
 | `lvs-cells` | LVS 표준셀 | 일치 | Calibre 34/34 CORRECT ↔ 우리 경로(KLayout 추출 + `lvs_reduce.py` + Netgen) 34/34 일치(2026-11-28 재검사, `cell-qualification.json`) | 셀 대조는 PR마다 하지 않음. 같은 줄이기·설정을 쓰는 코어 LVS는 `asic-gate` |
 | `lvs-chip` | LVS 칩·pad | 일치 | 같은 GDS에서 Calibre 칩 LVS CORRECT ↔ 오픈소스 연결 검사 단선·합선 0 + 코어 Netgen 일치. 오픈소스 쪽 패드 내부 LVS는 없음 | 연결 검사·코어 LVS는 `asic-gate`. `asic-chip-lvs`는 미검증 허용 |
 | `spice` | SPICE 시뮬레이션 | 일치 | ngspice ↔ Spectre 최대 상대오차 과도 1.5%, DC 3.67%, 측정값 0.62%, GPIO 과도 0.92% | 없음(기준점에서만) |
-| `synth` | 합성 | 근거 없음 | Genus 325셀 결과 있음, 동치 미확인 | 미검증 `synth-vs-genus` |
-| `pnr-sta` | P&R·STA | 일치(STA 계산만) | 같은 입력에서 OpenSTA ↔ Tempus 끝점 72개 slack 차 setup 최대 0.253 ns, hold 최대 0.353 ns. 흐름의 `estimated.spef`는 RC 0 | 없음. 흐름 STA는 배선 RC 0(`wire-rc-zero`), `asic-chip-timing`은 미검증 허용 |
+| `synth` | 합성 | 일치(기준점 1건) | 같은 RTL(`ac5d641`)의 Genus netlist ↔ RTL 109/109, Yosys netlist ↔ RTL 72/72 짝 형식 증명. 같은 팀 시험 42,907작업도 셋 다 통과 | 없음. Genus netlist는 저장소 밖, 기준점에서만(`drc-chip-v2`와 같음) |
+| `pnr-sta` | P&R·STA | 일치(STA 계산만) | 같은 입력에서 OpenSTA ↔ Tempus 끝점 72개 slack 차 setup 최대 0.253 ns, hold 최대 0.353 ns. 흐름의 `estimated.spef`는 RC 0. Innovus 배치와는 비교하지 않는다(아래 3절) | 없음. 흐름 STA는 배선 RC 0(`wire-rc-zero`), `asic-chip-timing`은 미검증 허용 |
 | `pex` | PEX | 근거 없음 | Calibre xRC 기준 자료 확보, OpenRCX 보정·대조 전 | 미검증 `pex`, `wire-rc-zero` |
 | `antenna` | antenna | 근거 없음 | Calibre ANT fixture golden 102개, 칩 3건 0. KLayout antenna 검사 없음 | 미검증 `antenna` |
 
@@ -170,7 +171,7 @@ DRC 규칙 판정 칸의 기준은 Calibre `v2023.4_17.10`, 키트 DRC deck sha2
 
 ### 3. 미검증 목록과 DRC 규칙 상태
 
-- 현재 항목(10개, `unverified.json`): `drc-unported-rules`, `drc-global-flags`, `antenna`, `gpio-internal-lvs`(ETRI 검증 셀로 처리, 근거 QnA #1125·#952), `synth-vs-genus`, `pnr-sta-vs-innovus-tempus`, `sdc-portability`, `pex`, `wire-rc-zero`, `pinmap-25`. 처음 계획한 "오픈소스 LVS↔Calibre LVS 대조"는 같은 GDS의 코어·칩 Calibre LVS 결과로 빠졌고, 패드 내부는 `gpio-internal-lvs`에 남았다. `std-cell-netgen-11`(우리 Netgen 경로가 표준셀 11종을 확인 못 함)은 2026-11-28 원인을 찾아 고친 뒤 34/34 일치로 빠졌다(`golden/lvs-20261128/README.md`).
+- 현재 항목(9개, `unverified.json`): `drc-unported-rules`, `drc-global-flags`, `antenna`, `gpio-internal-lvs`(ETRI 검증 셀로 처리, 근거 QnA #1125·#952), `pnr-sta-vs-innovus-tempus`, `sdc-portability`, `pex`, `wire-rc-zero`, `pinmap-25`. `synth-vs-genus`는 2026-11-28 같은 RTL의 Genus·Yosys netlist를 RTL과 형식 증명해 빠졌다(`golden/synth-20261128/`). `sdc-portability`는 흐름 SDC를 표준 문법으로 바꾼 뒤 "Tempus가 새 파일을 읽은 기록"만 남았다. `pnr-sta-vs-innovus-tempus`는 같은 날 도재겸 승인으로 "GPIO·패키지 지연을 넣은 칩 단위 타이밍"으로 줄였다. OpenROAD와 Innovus는 원래 다른 배치를 만들므로 두 배치를 맞추는 것은 판정의 신뢰성 근거가 아니고, 우리 배치는 이미 상용 도구(Calibre DRC·LVS, Tempus STA 대조)로 검사했기 때문이다. 처음 계획한 "오픈소스 LVS↔Calibre LVS 대조"는 같은 GDS의 코어·칩 Calibre LVS 결과로 빠졌고, 패드 내부는 `gpio-internal-lvs`에 남았다. `std-cell-netgen-11`(우리 Netgen 경로가 표준셀 11종을 확인 못 함)은 2026-11-28 원인을 찾아 고친 뒤 34/34 일치로 빠졌다(`golden/lvs-20261128/README.md`).
 - 각 항목은 id, 내용, 이유, 빠지려면 필요한 근거, `allows_checks`(이 항목 때문에 `unsupported`로 남아도 되는 흐름 검사), 관련 문서를 가진다. `asic-gate`는 모든 항목의 `allows_checks`를 합친 집합만 허용한다. 모르는 검사 이름이 있으면 `--gate`가 시작하지 않는다.
 - **DRC는 규칙 단위 상태로 관리한다.** `unported`(미구현) → `ported`(KLayout 구현, 자체 시험 통과, Calibre 근거 없음) → `verified`(그 규칙의 모든 fixture가 해시가 맞는 Calibre golden과 판정 일치). 현재 96개는 `verified`, 113개는 `unported`. 상태는 `verification/asic/drc-rules.json`의 구현 여부와 `golden_compared`로 정한다. 새 규칙을 옮기는 PR이 Calibre 재실행 없이 머지될 수 있어야 하고(기준점은 묶음 단위), 동시에 이미 검증된 규칙이 조용히 근거를 잃는 것은 막아야 하기 때문이다. (구현자 판단)
 
@@ -276,7 +277,9 @@ flowchart TD
 | `scripts/asic/drc_geometry.py`, `scripts/asic/drc_cases.py` | 둘러싸기 규칙에 deck의 `ENC … OVERLAP` 의미(일부만 겹친 도형도 위반) 추가, 일부 겹침·겹침 없음·안쪽 섬·바깥 근접 fixture 추가 |
 | `scripts/asic/drc_cases_pending.py` | 미구현 규칙 fixture 정의(pending golden과 1:1) |
 | `scripts/asic/baseline_guard.py` | 기준 커밋과 PR head의 규칙 상태·미검증 목록·golden·검사 코드를 파일 내용으로만 비교해 우회가 필요한 변경을 실패시킴. PR 코드는 실행하지 않음(`--run-fixtures`는 로컬 전용) |
-| `scripts/asic/flow.py`, `scripts/run_asic.py` | `--gate`가 `unverified.json`의 `allows_checks`로 판정. `--experimental`은 고정 목록 `UNQUALIFIED_DEFAULT`로 유지. `asic-estimated-sta` 판정 함수 분리 |
+| `scripts/asic/flow.py`, `scripts/run_asic.py` | `--gate`가 `unverified.json`의 `allows_checks`로 판정. `--experimental`은 고정 목록 `UNQUALIFIED_DEFAULT`로 유지. `asic-estimated-sta` 판정 함수 분리. `constraints.sdc` 2행은 입력 포트를 `get_ports`로 나열(2026-11-28) |
+| `scripts/pdk.py` | `input_ports`·`sdc_data_inputs`: netlist의 입력 포트에서 SDC 2행을 만든다(흐름과 MyChip PDK 검사의 OpenSTA가 같이 씀) |
+| `scripts/asic/synth_equiv.py` | 기준점 도구: gate netlist ↔ RTL 형식 증명(Yosys `equiv_*`), 키트 Verilog 셀 모델 ↔ Liberty 대조. PR마다 돌지 않는다 |
 | `verification/reliability/**` | 대응표·미검증 목록·golden·기준점 절차 |
 | `verification/asic/drc-rules.json` | 구현 96개 규칙의 golden 대조 여부(`golden_compared`)와 남은 일(`remaining`) |
 | `.github/workflows/asic.yml` | 워크플로 `ASIC gate`, job `asic-gate`(경로 필터, OpenROAD 실행 라이브러리 apt 설치와 `ldd` 확인)와 `reliability-table` |
@@ -387,6 +390,36 @@ ruleset 설정 JSON은 저장소에 커밋하지 않고 적용 후 내용을 이
 | #13 | `docs/ci.md` 한 줄 | 필수 체크 8개 모두 생성·통과. `asic-gate` 12초, 요약 "물리 흐름 대상 변경 없음". 머지 상태 `CLEAN`(ruleset 적용 뒤) |
 | #14 | `golden.json` fixture `0001-OFFGRID_CHIPBOUNDARY-positive-half-grid`의 `calibre` `fired`→`clean` | `baseline-guard` 실패("기준 파일 … 수정되었습니다", "우회 머지가 필요합니다"), `baseline-change` 라벨. `reliability-table` 실패(불일치 1, 변형본 대조 포함 9분 23초). `asic-gate`도 실패(단위 시험 `test_import_real_batch`가 golden의 fired 수 253을 고정). 머지 상태 `BLOCKED` |
 | #15 | `src/adder12.v` 맨 위 주석 한 줄 | `asic-gate`가 물리 흐름 전체 실행 후 통과(전체 3분 30초, 빌드·게이트 판정 1분 53초). 나머지 체크 모두 통과. 머지 상태 `CLEAN` |
+
+### 2026-11-28 합성 대조·SDC 문법·칩 타이밍 범위
+
+미검증 항목 세 개를 다뤘다. 대응표·미검증 목록·golden을 바꾸므로 기준점 PR이다(`baseline-guard` 우회 대상).
+
+**`synth-vs-genus` 닫음.** 같은 RTL(`ac5d641`)로 Genus `23.14-s090_1`이 만든 netlist(325셀)와 흐름의 Yosys netlist(452셀)를 각각 RTL과 형식 증명했다(`scripts/asic/synth_equiv.py`, Yosys `equiv_make`·`equiv_simple`·`equiv_induct`, 셀은 키트 Liberty function). RTL ↔ Genus 109/109, RTL ↔ Yosys 72/72 짝이 증명됐다. 일부러 한 셀을 바꾼 netlist 4개와 틀린 FSM 부호표 1개는 모두 실패했다. 형식 증명과 따로, 같은 팀 시험(integration·regression, 42,907작업)을 RTL과 두 netlist에 돌려 모두 통과했다. Genus netlist는 저장소에 넣지 않고 sha256만 `golden/synth-20261128/`에 둔다. CI는 이 대조를 다시 하지 않는다. 대응표 `synth` 행은 기준점 1건으로 적었다.
+
+**`sdc-portability` 줄임.** 흐름 `constraints.sdc` 2행과 MyChip PDK 검사의 OpenSTA 스크립트 2행을 표준 SDC로 바꿨다. 입력 포트는 Yosys로 netlist에서 읽는다.
+
+```diff
+-set data_in [delete_from_list [all_inputs] [get_ports CLK]]
++set data_in [get_ports {IN[0] IN[1] IN[2] IN[3] IN_VALID RST_N}]
+```
+
+OpenSTA 3.1.0에서 바꾸기 전후가 같다(로컬 WSL, 같은 `final.v`·Liberty).
+
+| 조건 | 바꾸기 전 setup / hold (ns) | 바꾼 뒤 setup / hold (ns) | 끝점 72개 slack | `write_sdc` 데이터 포트 6개 |
+| --- | --- | --- | --- | --- |
+| SPEF 없음 | 49.1454 / 1.6356 | 49.1454 / 1.6356 | 같음 | 같음 |
+| Calibre typical | 48.3162 / 1.6104 | 48.3162 / 1.6104 | 같음 | 같음 |
+| Calibre bestRC | 48.4225 / 1.6158 | 48.4225 / 1.6158 | 같음 | 같음 |
+| Calibre worstRC | 48.1502 / 1.6042 | 48.1502 / 1.6042 | 같음 | 같음 |
+| `run_asic --gate` `asic-estimated-sta` | 49.145 / 1.636 | 49.145 / 1.636 | - | - |
+| MyChip PDK `timing`(Yosys netlist) | 40.277 / 1.411 | 40.277 / 1.411 | - | - |
+
+`write_sdc`의 유일한 차이는 `final.v`의 `inout VDD`·`VSS`다. 옛 2행의 `all_inputs`는 이 두 전원 핀에도 입력 지연을 걸었다(타이밍 경로 없음). 흐름 안에서는 OpenROAD가 전원 핀 없는 `input.v`로 SDC를 읽으므로 같은 6개다. 흐름 결과 `final.v`(`1ffd0df6…`)와 SOP28 칩 GDS(`967bcad6…`)도 바꾸기 전과 같다. Tempus가 새 파일을 읽은 기록은 없어서 항목은 남긴다. 2026-11-28 Tempus 결과는 2행을 `remove_from_collection`으로 바꾼 사본의 것이라, 같은 6개 포트에 50 ns가 걸렸다는 근거는 되지만 새 문법(중괄호 안의 버스 비트 이름)을 Tempus가 같은 포트로 읽는다는 근거는 아니다. 다음 서버 묶음에서 확인한다.
+
+**`pnr-sta-vs-innovus-tempus` 범위 조정(2026-11-28 도재겸 승인).** 내용을 "GPIO·패키지 지연을 넣은 칩 단위 타이밍"으로 줄였다. 두 P&R 도구는 같은 입력에서도 원래 다른 배치를 만들기 때문에, OpenROAD 배치를 Innovus 배치와 맞추는 것은 판정 도구의 신뢰성 근거가 아니다. 우리 배치는 이미 상용 도구로 검사했다(Calibre DRC·LVS, Tempus STA 대조). `allows_checks`(`asic-chip-timing`)는 그대로다.
+
+로컬 확인(WSL, 새 clone): `tests/asic`, `run_asic.py --target chip --gate`(종료 0), `reliability.py check`, `tests/policy`, `check-docs`, `check-pr`. 결과 수치는 PR 본문에 적는다.
 
 ## RFC 확인
 

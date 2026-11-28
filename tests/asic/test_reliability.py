@@ -1,6 +1,7 @@
 """Golden results are keyed by the fixture definition, not by GDS bytes."""
 import collections
 import contextlib
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -288,9 +289,10 @@ class UnverifiedListTests(unittest.TestCase):
     def test_initial_items(self):
         # lvs-vs-calibre left on 2026-11-28: core and SOP28 chip both have an open-source ↔ Calibre comparison;
         # the remaining gap (pad-internal devices on the open-source side) is gpio-internal-lvs.
+        # synth-vs-genus left on 2026-11-28: RTL ↔ Genus and RTL ↔ Yosys formally proven (golden/synth-20261128).
         self.assertEqual([i['id'] for i in self.items], [
             'drc-unported-rules', 'drc-global-flags', 'antenna', 'gpio-internal-lvs',
-            'synth-vs-genus', 'pnr-sta-vs-innovus-tempus', 'sdc-portability', 'pex', 'wire-rc-zero', 'pinmap-25'])
+            'pnr-sta-vs-innovus-tempus', 'sdc-portability', 'pex', 'wire-rc-zero', 'pinmap-25'])
         for item in self.items:
             self.assertEqual(set(item), {'id', 'what', 'why', 'exit_evidence', 'allows_checks', 'docs'}, item['id'])
             for key in ('what', 'why', 'exit_evidence'):
@@ -313,8 +315,16 @@ class UnverifiedListTests(unittest.TestCase):
         # std-cell-netgen-11 closed 2026-11-28: lvs_reduce.py + netgen_setup.tcl match all 34 kit cells.
         self.assertNotIn('std-cell-netgen-11', items)
         self.assertIn('estimated.spef', items['wire-rc-zero']['what'])
-        self.assertIn('delete_from_list', items['sdc-portability']['what'])
+        # sdc-portability narrowed 2026-11-28: the flow SDC now lists the inputs; only a Tempus read is missing.
+        self.assertIn('Tempus', items['sdc-portability']['what'])
+        self.assertIn('get_ports {IN[0] IN[1] IN[2] IN[3] IN_VALID RST_N}', items['sdc-portability']['why'])
         self.assertIn('remove_from_collection', items['sdc-portability']['why'])
+        # pnr-sta-vs-innovus-tempus narrowed 2026-11-28 (approved): chip timing only, no Innovus placement match.
+        chip = items['pnr-sta-vs-innovus-tempus']
+        self.assertEqual(chip['what'], 'GPIO·패키지 지연을 넣은 칩 단위 타이밍')
+        self.assertNotIn('Innovus P&R', chip['exit_evidence'])
+        self.assertEqual(chip['allows_checks'], ['asic-chip-timing'])
+        self.assertNotIn('synth-vs-genus', items)
         self.assertIn('drc-unported-20261128', items['drc-unported-rules']['why'])
         self.assertIn('drc-unported-20261128', items['antenna']['why'])
 
@@ -352,7 +362,7 @@ class TableTests(unittest.TestCase):
         self.assertEqual(verdicts, {
             'drc-fixtures': 'match', 'drc-mutations': 'match', 'drc-unported': 'no_evidence', 'drc-chip-v2': 'match',
             'drc-chip-openflow': 'match', 'lvs-core': 'match', 'lvs-cells': 'match', 'lvs-chip': 'match',
-            'spice': 'match', 'synth': 'no_evidence', 'pnr-sta': 'match', 'pex': 'no_evidence',
+            'spice': 'match', 'synth': 'match', 'pnr-sta': 'match', 'pex': 'no_evidence',
             'antenna': 'no_evidence'})
         self.assertEqual(rows['lvs-core']['scope'], '오픈소스 흐름 코어 1건')
         self.assertIn('오픈소스 쪽 패드 내부 소자 LVS는 아직 없음', rows['lvs-chip']['scope'])
@@ -376,6 +386,9 @@ class TableTests(unittest.TestCase):
         self.assertIn('golden/pex-reference-20261128/README.md', rows['pex']['evidence'])
         self.assertIn('golden/spice-20261128/summary.json', rows['spice']['evidence'])
         self.assertIn('golden/sta-20261128/summary.json', rows['pnr-sta']['evidence'])
+        self.assertEqual(rows['synth']['evidence'], ['golden/synth-20261128/summary.json'])
+        self.assertTrue(rows['synth']['scope'].startswith('기준점 1건'))
+        self.assertIn('기준점에서만', rows['synth']['pr_check'])
         for key in ('lvs-cells', 'lvs-chip'):
             self.assertIn('golden/lvs-20261128/summary.json', rows[key]['evidence'])
 
@@ -927,6 +940,26 @@ class EvidenceSummaryTests(unittest.TestCase):
         self.assertIn('delete_from_list', summary['sdc']['tempus_copy_diff'])
         self.assertTrue(summary['open_flow']['estimated_spef_rc_zero'])
         self.assertIn('remove_from_collection', readme)
+
+    def test_synth_summary(self):
+        summary, readme = self.load('synth-20261128')
+        genus, yosys = summary['netlists']['genus'], summary['netlists']['yosys']
+        self.assertEqual(genus['sha256'], '6fef0f3e70eb4c857500e3d697cd0017ab54d4dc8481fc014e9997bc3600ed24')
+        self.assertEqual((genus['tool'], genus['cells'], genus['flops']), ('Genus(TM) Synthesis Solution 23.14-s090_1', 325, 64))
+        self.assertEqual(sum(genus['by_type'].values()), 325)
+        self.assertEqual((yosys['cells'], yosys['flops']), (452, 66))
+        self.assertEqual(sum(yosys['by_type'].values()), 452)
+        formal = summary['formal']
+        for key, pairs in (('rtl_vs_genus', 109), ('rtl_vs_yosys', 72)):
+            self.assertEqual((formal[key]['status'], formal[key]['pairs'], formal[key]['proven']), ('pass', pairs, pairs))
+            self.assertEqual(formal[key]['outputs_left_out'], [])
+        self.assertTrue(all(v.startswith('fail') for k, v in formal['negative_controls'].items() if k != 'note'))
+        self.assertEqual(formal['kit_verilog_vs_liberty']['different'], [])
+        self.assertEqual({r['jobs'] for r in summary['simulation']['results'].values()}, {42907})
+        self.assertEqual(summary['meta']['rtl_sha256'], {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                                                         for p in sorted((ROOT/'src').glob('*.v'))})
+        self.assertIn('6fef0f3e70eb4c857500e3d697cd0017ab54d4dc8481fc014e9997bc3600ed24', readme)
+        self.assertFalse(list((RELIABILITY/'golden'/'synth-20261128').glob('*.v')))
 
     def test_spice_summary(self):
         summary, readme = self.load('spice-20261128')

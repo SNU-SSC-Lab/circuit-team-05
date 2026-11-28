@@ -1,0 +1,91 @@
+{
+ "meta": {
+  "run_date": "2026-11-28",
+  "design": "v_ternary8_top",
+  "rtl_commit": "ac5d641",
+  "rtl_note": "src/ 10개 파일. ac5d641 이후 main(e6acdd6)까지 src/ 변경 없음",
+  "rtl_sha256": {
+   "accumulator_reg.v": "ba4bb0d4b6f031efe7dd2017819afae6b6d6cf0d4ab62b6fbaf92e8c684fc8b2",
+   "adder12.v": "df4b616ae8da009332f8c25d11e26487b2407f8646eba712041c9170b8bb6947",
+   "dot8_controller.v": "63f6dd3393230cc0d60a98900d1dcc9079268c874fc2d5189bf0c52f61ca3e00",
+   "illegal_flag_reg.v": "c6b541f2b1c3ecaa43eedfbcab1cfd2601357bf9c31998f995d426f7f4771221",
+   "nibble_rx.v": "f0f5735127d0c30db7a179b2a04891019b84c8ac002466f1cc06e4ab11cf373d",
+   "result_tx.v": "12fceb3b8315fbeb11a7be0b9b73f6791d105542f085b370b09ece7701483c9b",
+   "ternary_decoder.v": "08c79f8015b43c9e3fd25153dd7783b41c44327d591b2aade38da6658a5548ce",
+   "ternary_term.v": "e8e7c95372fc593a415ddf1368a57fa6497b9a321d8d20eebddb904be8e69fcd",
+   "v_ternary8_top.v": "9927c354e41a803c2255956e4f68561f81192dc375119d1604ed366215b7fbaf",
+   "weight_shift_reg.v": "356d79d3e1292126266fcea06a11843849a2a6bae28522ac2d2090d032336d1e"
+  },
+  "liberty_sha256": "0c84f0d970d374ba5c9c4cf7aec22fec96e306f8be373bda9ef20ce2bb48de51",
+  "kit_verilog_models_sha256": "846c7085348384851c9f787caf17635e6e3633ddb8014ce0b71dbf8fbb05f0b5",
+  "checkpoint_only": "Genus netlist는 저장소에 넣지 않는다(v2 칩 GDS와 같은 원칙). CI는 이 대조를 다시 하지 않는다"
+ },
+ "netlists": {
+  "genus": {
+   "tool": "Genus(TM) Synthesis Solution 23.14-s090_1",
+   "file": "v_ternary8_top.syn.v (저장소 밖)",
+   "sha256": "6fef0f3e70eb4c857500e3d697cd0017ab54d4dc8481fc014e9997bc3600ed24",
+   "cells": 325,
+   "flops": 64,
+   "area_um2": 196992.0,
+   "by_type": {"AND2X1": 10, "AOI21X1": 4, "AOI22X1": 29, "DFFPOSX1": 64, "FAX1": 9, "HAX1": 2, "INVX1": 65, "MUX2X1": 25,
+               "NAND2X1": 35, "NAND3X1": 4, "NOR2X1": 28, "NOR3X1": 1, "OAI21X1": 37, "OAI22X1": 6, "OR2X1": 2,
+               "XNOR2X1": 1, "XOR2X1": 3},
+   "source": "셀 수·면적·종류별 수는 Genus report_gates 그대로",
+   "settings": "read_hdl -language v2001, syn_generic/syn_map/syn_opt effort medium, ungroup -all -flatten, dont_use LATCHX1 TBUFX1 TBUFX2, 키트 tt Liberty 무수정"
+  },
+  "yosys": {
+   "tool": "오픈소스 흐름 asic-synth (scripts/pdk.py synthesize, main e6acdd6), Yosys 0.68+40",
+   "file": "synth/netlist.v",
+   "sha256": "29e667e21a1b3527ba4745f2685a1e6fae065fdd4db8b01b786605bc787b0490",
+   "cells": 452,
+   "flops": 66,
+   "area_um2": 247564.8,
+   "by_type": {"AND2X1": 54, "AOI22X1": 13, "DFFPOSX1": 66, "INVX1": 66, "MUX2X1": 30, "NAND2X1": 92, "NAND3X1": 43,
+               "NOR3X1": 16, "OR2X1": 42, "XNOR2X1": 24, "XOR2X1": 6},
+   "fsm_recode": ["u_controller.state: 00 -> ---1, 10 -> --1-, 01 -> -1--, 11 -> 1--- (one-hot, 2비트 → 4비트)"],
+   "pnr_final_v_sha256": "1ffd0df62cfd19918932dd9c11f1b55ed84f7b30b68f171b9550b87e0cad3d35"
+  }
+ },
+ "formal": {
+  "kind": "형식 증명",
+  "tool": "Yosys 0.68+40, scripts/asic/synth_equiv.py",
+  "method": "RTL(gold, flatten)과 netlist(gate, 셀은 키트 Liberty function)를 equiv_make로 같은 이름의 신호끼리 짝짓고 equiv_simple -seq 5, equiv_induct -seq 5로 모든 짝을 증명(equiv_status -assert). 레지스터 대응: Genus는 flop 인스턴스 이름(<path>_reg[<i>])으로 별칭 wire를 붙이고, Yosys는 flop 출력이 RTL 이름을 그대로 가짐. Yosys의 FSM 재부호화는 합성 로그의 FSM_RECODE 표를 equiv_make -encfile로 줌",
+  "assumption": "짝지은 레지스터가 같은 값에서 시작한다. 모든 레지스터에 동기 리셋이 있어 리셋 한 주기 뒤에 성립한다",
+  "rtl_vs_genus": {"status": "pass", "pairs": 109, "proven": 109, "register_aliases": 64, "outputs_left_out": [],
+                   "gold_bits_without_gate_signal": ["u_tx.result_shift[13]", "u_tx.result_shift[14]", "u_tx.result_shift[15]"],
+                   "note": "result_shift[15:13]은 RTL에서 항상 0(RESULT_DATA[15:13] = 3'b000)이라 Genus가 지웠다. 증명은 이 세 비트 없이 성립했다. weights[15:1]은 Genus가 이름만 남기고 연결하지 않은 wire라 짝에서 빠지고, 같은 레지스터는 u_weights.WEIGHTS 이름으로 짝지어졌다"},
+  "rtl_vs_yosys": {"status": "pass", "pairs": 72, "proven": 72, "register_aliases": 0, "outputs_left_out": [],
+                   "gold_bits_without_gate_signal": ["u_tx.result_shift[13]", "u_tx.result_shift[14]", "u_tx.result_shift[15]"],
+                   "note": "FSM 부호표 없이 돌리면 70짝 중 14짝만 증명되어 실패한다(상태 레지스터를 짝지을 수 없음)"},
+  "negative_controls": {
+   "note": "검사가 틀린 netlist를 놓치지 않는지 확인. 모두 실패해야 정상이고 모두 실패했다",
+   "genus_first_NAND2X1_to_AND2X1": "fail (0/109)",
+   "genus_first_OAI21X1_to_AOI21X1": "fail (106/109)",
+   "yosys_first_XOR2X1_to_XNOR2X1": "fail (44/72)",
+   "yosys_first_NAND2X1_to_OR2X1": "fail (45/72)",
+   "yosys_fsm_codes_10_and_01_swapped": "fail (15/72)"
+  },
+  "kit_verilog_vs_liberty": {
+   "note": "두 netlist가 쓰는 조합 셀 16종의 키트 Verilog 모델 = Liberty function(형식 증명). DFFPOSX1은 키트 Verilog 모델이 하강 에지에 D를 받고 상승 에지에 내보내는 2-에지 모델이라 대조하지 않고 Liberty ff(상승 에지)를 썼다",
+   "equivalent": ["AND2X1", "AOI21X1", "AOI22X1", "FAX1", "HAX1", "INVX1", "MUX2X1", "NAND2X1", "NAND3X1", "NOR2X1", "NOR3X1",
+                  "OAI21X1", "OAI22X1", "OR2X1", "XNOR2X1", "XOR2X1"],
+   "different": [],
+   "not_compared": ["DFFPOSX1"]
+  }
+ },
+ "simulation": {
+  "kind": "시험(형식 증명 아님)",
+  "tests": "scripts/run_rtl.py integration·regression 그룹(tests/rtl/test_top.py 6개 시험, seed 20261112), 셀은 Liberty function 모델(pdk.gate_model), Icarus",
+  "results": {
+   "rtl": {"status": "pass", "jobs": 42907},
+   "genus": {"status": "pass", "jobs": 42907},
+   "yosys": {"status": "pass", "jobs": 42907}
+  }
+ },
+ "pdk_sta": {
+  "kind": "기록만(판정 아님)",
+  "note": "MyChip PDK 검사의 OpenSTA(scripts/pdk.py timing, 100 ns, ×1.5/×0.7)를 Genus netlist에 돌린 값. SDC 2행 변경 전후 같음",
+  "genus": {"setup_ns": 41.153, "hold_ns": 1.365}
+ }
+}
