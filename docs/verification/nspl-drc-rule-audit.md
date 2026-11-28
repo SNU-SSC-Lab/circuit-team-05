@@ -17,7 +17,7 @@
 
 원본 위치·SHA-256은 목록 JSON의 `sources`에 있다. Calibre 원본은 `6c012073...19c4f0f`, Assura 원본은 `09ce215f...581109`다. 검사는 전체 해시를 비교하며 위 줄임 표기를 입력으로 사용하지 않는다. 원본 PDK는 수정하거나 Git에 복사하지 않는다.
 
-숫자 규칙 외에 OFFGRID 42개와 SKEW도 209개에 포함된다. 전역 `FLAG NONSIMPLE/OFFGRID/ACUTE/SKEW`는 별도 미이식 항목이다. Calibre의 별도 ANT deck 전체를 이식한 작업도 아니다.
+숫자 규칙 외에 OFFGRID 42개와 SKEW도 209개에 포함된다. 전역 `FLAG NONSIMPLE/OFFGRID/ACUTE/SKEW`는 별도 미이식 항목이다. Calibre의 별도 ANT deck 전체를 이식한 작업도 아니다. (2026-11-28 갱신: 별도 ANT deck의 12개 검사는 SPEC 0020에서 `scripts/asic/drc_antenna.py`로 옮겼다. fixture 102개의 판정이 Calibre와 같다. 대조표 끝의 "키트 ANT deck" 절에 검사별 줄 번호가 있다.)
 
 ## 실제로 늘린 검사와 시험
 
@@ -41,7 +41,7 @@
 | --- | --- | --- |
 | `OFFGRID_FVTN` | Calibre 본문은 FVTP, Assura는 FVTN/FVTP 각각 검사 | Calibre 본문 그대로 구현하고 차이를 명시. FVTN까지 검사했다고 주장하지 않음 |
 | `13.PAD.A` | Calibre 본문은 최소 폭 80µm, min/max 주석과 차이. Assura에는 별도의 사각 치수 식 | 최소 폭으로 시험. 80µm 초과를 임의로 금지하지 않고 적용 기준 질문 |
-| 금속 antenna | Calibre DRC의 3개 metal ANT는 비활성, Assura에는 실행 식이 있음. 별도 Calibre ANT deck도 있음 | 어떤 검사 묶음을 제출에 적용할지 담당자 확인. 임의로 삭제·통합하지 않음 |
+| 금속 antenna | Calibre DRC의 3개 metal ANT는 비활성, Assura에는 실행 식이 있음. 별도 Calibre ANT deck도 있음 | 어떤 검사 묶음을 제출에 적용할지 담당자 확인. 임의로 삭제·통합하지 않음. 별도 ANT deck은 그대로 옮겨 흐름에서 실행(SPEC 0020). DRC deck의 `3.PL1.ANT`는 미구현 |
 | 공개 변환본의 `NMOS`·`POLY1_ON_ACT` | 원본의 INTERACT 선택과 변환본의 AND 교집합은 다른 도형을 만들 수 있음 | 옮긴 식은 원본의 전체 polygon 선택을 유지하고 좁은 tail 반례로 시험 |
 | Assura/변환본 ID 차이 | `7.CONT.E.1`·`7.SONT.S8`·`5.PSD.*` 등 다른 이름이 있음 | 같은 문자열이 없는 것을 곧바로 검사 누락으로 결론 내리지 않음 |
 

@@ -216,6 +216,25 @@
 | 23.NPW.S | 1594 | 미실행 | 미구현 | True | False | BJT·diode 유도 도형과 고정 치수·edge 연산 이식 필요 |
 | 23.NPW.E | 1600 | 미실행 | 미구현 | True | False | BJT·diode 유도 도형과 고정 치수·edge 연산 이식 필요 |
 
+## 키트 ANT deck
+
+`Calibre/ANT/NSPL_0p5um_Analog_CMOS_2P3M_5V_V1.1_ANT.cal` RULECHECK 12개. KLayout 구현은 `scripts/asic/drc_antenna.py`(deck 문장 그대로 넷마다 비율 계산).
+
+| 원본 검사 | 줄 | 구현 | 설명 |
+| --- | --- | --- | --- |
+| ANT_01 | 73 | antenna 검사·Calibre 일치(verified) | fixture 10개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 76번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_02_1 | 88 | antenna 검사·Calibre 일치(verified) | fixture 16개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 91번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_02_2 | 104 | antenna 검사·Calibre 일치(verified) | fixture 9개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 107번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_02_3 | 121 | antenna 검사·Calibre 일치(verified) | fixture 8개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 124번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_03_1 | 136 | antenna 검사·Calibre 일치(verified) | fixture 7개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 141번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_03_2 | 154 | antenna 검사·Calibre 일치(verified) | fixture 5개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 159번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_03_3 | 174 | antenna 검사·Calibre 일치(verified) | fixture 6개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 179번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_04 | 187 | antenna 검사·Calibre 일치(verified) | fixture 7개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 190번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_05_1 | 203 | antenna 검사·Calibre 일치(verified) | fixture 9개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 206번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_05_2 | 220 | antenna 검사·Calibre 일치(verified) | fixture 9개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 223번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_06_01 | 236 | antenna 검사·Calibre 일치(verified) | fixture 8개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 247번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+| ANT_06_02 | 261 | antenna 검사·Calibre 일치(verified) | fixture 8개 판정이 Calibre golden과 일치(verified, golden/ant-fixtures-20261128). 식은 deck 272번째 줄. fixture를 바꾸거나 더하면 기준점에서 Calibre 재실행 필요 |
+
 원본 비활성: 3.PL1.bad2, 8.MET1.ANT, 9.VIA1.bad2, 10.MET2.ANT, 11.VIA2.bad2, 12.MET3.ANT, 19.IO.F
 
 Assura에서만 같은 이름이 잡힌 항목: 10.MET2.ANT, 12.MET3.ANT, 14.PL2PR.bad1.1, 16.PNP.bad1, 17.NPN.bad1, 2.ACT.bad, 5.PSD.E, 5.PSD.O, 5.PSD.S1, 5.PSD.W, 5.PSD.bad1, 7.CONT.E.1, 7.CONT.E.2, 7.CONT.E.3, 7.CONT.E.4, 7.SONT.S8, 8.MET.bad1, 8.MET1.ANT, OFFGRID_FVTP, OFFGRID_MET1TXT, OFFGRID_MET2TXT, OFFGRID_MET3TXT, OFFGRID_NODRC, OFFGRID_PADTXT, OFFGRID_PHRI, OFFGRID_POLY1TXT
@@ -224,4 +243,4 @@ Assura에서만 같은 이름이 잡힌 항목: 10.MET2.ANT, 12.MET3.ANT, 14.PL2
 
 아직 옮기지 않은 전역 입력 플래그: FLAG NONSIMPLE YES, FLAG OFFGRID YES (global input flag), FLAG ACUTE YES, FLAG SKEW YES
 
-동일 ID는 이름 대조이며 같은 식·조건의 증거가 아니다. 변환본에서 ID를 나누거나 바꾼 경우도 있다. Calibre 결과와의 대조는 verification/reliability/(신뢰성 대응표)에 있다: verified 규칙은 fixture와 실제 형상 변형본에서 KLayout 판정이 Calibre golden과 같다. Assura 결과와의 대조는 하지 않았다. verified도 공정 전체 DRC 통과나 제출 승인이 아니다.
+동일 ID는 이름 대조이며 같은 식·조건의 증거가 아니다. 변환본에서 ID를 나누거나 바꾼 경우도 있다. Calibre 결과와의 대조는 verification/reliability/(신뢰성 대응표)에 있다: verified DRC 규칙은 fixture와 실제 형상 변형본에서, verified ANT 검사는 fixture에서 KLayout 판정이 Calibre golden과 같다. Assura 결과와의 대조는 하지 않았다. verified도 공정 전체 DRC 통과나 제출 승인이 아니다.

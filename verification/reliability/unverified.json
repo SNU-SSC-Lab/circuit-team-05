@@ -19,14 +19,6 @@
       "docs": ["docs/verification/nspl-drc-rule-audit.md", "verification/asic/drc-rules.json", "verification/reliability/golden/drc-unported-20261128/README.md"]
     },
     {
-      "id": "antenna",
-      "what": "antenna 검사(키트 별도 Calibre ANT deck, 12개 RULECHECK)",
-      "why": "KLayout antenna 검사를 구현하지 않았다. 2026-11-28 키트 ANT deck 12개 검사 모두의 fixture 102개와 Calibre 판정을 받았다(golden/drc-unported-20261128; ANT_06 등호 경계 2개는 Calibre가 위반으로 판정). Calibre ANT는 오픈소스 흐름 코어·SOP28 칩과 v2 칩에서 모두 0건이지만, 오픈소스 쪽 판정이 없어 대조할 수 없다.",
-      "exit_evidence": "KLayout antenna 검사 구현과, golden/drc-unported-20261128의 ANT fixture 102개에서 Calibre ANT 판정과의 일치",
-      "allows_checks": ["asic-drc"],
-      "docs": ["docs/specs/0019-merge-gate.md", "verification/reliability/golden/chip-openflow-20261128/README.md", "verification/reliability/golden/drc-unported-20261128/README.md"]
-    },
-    {
       "id": "gpio-internal-lvs",
       "what": "GPIO·ESD pad 셀 내부의 트랜지스터·저항·ESD 소자 LVS",
       "why": "오픈소스 흐름은 pad 내부 소자를 추출·대조하지 않고 연결성 검사만 한다. ETRI 검증 셀로 처리한다는 근거는 QnA #1125·#952. 상용 쪽은 확인됐다: 키트 GPIO 9종의 Virtuoso auCdl 원회로 CDL ↔ 키트 GDS Calibre LVS 9/9 CORRECT(header에 VIRTUAL CONNECT NAME \"VDD\" \"VSS\" 한 줄, deck 무수정), 오픈소스 흐름 SOP28 칩 Calibre LVS CORRECT(패드 내부 포함, golden/lvs-20261128). 오픈소스 쪽 패드 내부 소자 LVS는 아직 없다.",

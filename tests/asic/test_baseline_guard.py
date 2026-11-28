@@ -96,6 +96,24 @@ class RuleStateTests(unittest.TestCase):
         self.assertIn('verified', found[0])
 
 
+    def test_new_rule_entering_as_verified_needs_bypass(self):  # e.g. ANT deck RULECHECKs added verified
+        base = backed()
+        head = backed(rules={'B': 'verified', 'N': 'verified'})
+        found = baseline_guard.violations(base, head)  # also: N has no golden fixture (evidence check)
+        self.assertTrue(found and all('`N`' in v for v in found), found)
+        self.assertTrue(any('처음부터 verified' in v for v in found), found)
+        self.assertEqual(baseline_guard.violations(base, backed(rules={'B': 'verified', 'N': 'ported'})), [])
+
+    def test_antenna_rules_are_read_from_the_catalog(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'verification'/'asic'/'drc-rules.json'
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps({'rules': [{'id': 'B', 'implementation': 'geometry_port', 'golden_compared': True}],
+                                        'antenna_rules': [{'id': 'ANT_X', 'implementation': 'antenna_port',
+                                                           'golden_compared': True}]}), encoding='utf-8')
+            self.assertEqual(baseline_guard.snapshot(tmp)['rules'], {'B': 'verified', 'ANT_X': 'verified'})
+
+
 class FixtureTests(unittest.TestCase):
     def test_backed_snapshot_is_clean(self):
         self.assertEqual(baseline_guard.violations(backed(), backed()), [])
@@ -260,10 +278,11 @@ class SnapshotTests(unittest.TestCase):
     def test_working_tree_snapshot(self):
         head = baseline_guard.snapshot(ROOT, run_fixtures=True)
         verified = [r for r, s in head['rules'].items() if s == 'verified']
-        self.assertEqual(len(verified), 96)
-        self.assertEqual(len(head['fixtures']), 451)
+        self.assertEqual(len(verified), 96+12)  # DRC deck rules + ANT deck RULECHECKs
+        self.assertEqual(len(head['fixtures']), 451+102)
         self.assertEqual(set(head['fixture_rules'].values()), set(verified))
-        # the mutation golden has no fixtures; the pending golden (unported rules, 857) does
+        # the mutation golden has no fixtures; the pending golden (857) does. Its 102 ANT entries are the same
+        # case_sha256 as golden/ant-fixtures-20261128 (moved, not edited), so they count once.
         self.assertEqual(len(head['golden_fixtures']), 451+857)
         self.assertIn('verification/reliability/golden/drc-fixtures-20261128b/golden.json', head['golden'])
         self.assertIn('verification/reliability/golden/drc-mutations-20261128/golden.json', head['golden'])
@@ -284,7 +303,7 @@ class SnapshotTests(unittest.TestCase):
     def test_snapshot_at_reads_git(self):
         at = baseline_guard.snapshot_at('HEAD', ROOT, run_fixtures=True)
         self.assertEqual(at['rules'], baseline_guard.snapshot(ROOT)['rules'])
-        self.assertEqual(len(at['fixtures']), 451)
+        self.assertEqual(len(at['fixtures']), 451+102)
         self.assertIsNone(baseline_guard.snapshot_at('HEAD', ROOT)['fixtures'])  # data only by default
         with self.assertRaises(ValueError):
             baseline_guard.snapshot_at('no-such-ref-0019', ROOT)
