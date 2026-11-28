@@ -137,7 +137,7 @@ class FixtureDataTests(unittest.TestCase):
                                                  allowed=allowed), 1)
 
 
-# Runs inside KLayout: SSC_TEST_CASES = [{name, rules, cells: {cell: shapes}, instances: [[parent, child, rot,
+# Runs inside KLayout: the JSON file SSC_TEST_CASES = [{name, rules, cells: {cell: shapes}, instances: [[parent, child, rot,
 # mirror, x, y]]}], shapes as in drc_cases.py ([layer, box] or [layer, points]); the top cell is 'top'.
 BATCH = '''
 import json, os, sys
@@ -145,7 +145,7 @@ sys.path.insert(0, os.environ['SSC_TEST_ASIC'])
 import pya
 from drc_antenna import check
 result = {}
-for case in json.loads(os.environ['SSC_TEST_CASES']):
+for case in json.load(open(os.environ['SSC_TEST_CASES'])):
     layout = pya.Layout()
     layout.dbu = .001
     cells = {'top': layout.create_cell('top')}
@@ -169,10 +169,11 @@ with open(os.environ['SSC_TEST_OUT'], 'w') as stream:
 
 def run_cases(batch_cases):
     with tempfile.TemporaryDirectory() as tmp:
-        script, out = Path(tmp)/'batch.py', Path(tmp)/'out.json'
+        script, out, given = Path(tmp)/'batch.py', Path(tmp)/'out.json', Path(tmp)/'cases.json'
         script.write_text(BATCH, encoding='utf-8')
+        given.write_text(json.dumps(batch_cases), encoding='utf-8')  # 102 fixtures are too long for the environment
         env = dict(os.environ, QT_QPA_PLATFORM='offscreen', PYTHONDONTWRITEBYTECODE='1', SSC_TEST_ASIC=str(ASIC),
-                   SSC_TEST_CASES=json.dumps(batch_cases), SSC_TEST_OUT=str(out))
+                   SSC_TEST_CASES=str(given), SSC_TEST_OUT=str(out))
         done = subprocess.run(['klayout', '-b', '-r', str(script)], env=env, capture_output=True, text=True,
                               timeout=300)
         if done.returncode or not out.is_file():
