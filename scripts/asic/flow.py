@@ -186,8 +186,10 @@ def run_core(args):
             plan = make_plan(ROOT/'verification/asic/pinmap.toml', width+32, height+72)
             (out/'chip-plan.json').write_text(json.dumps(plan, indent=2)+'\n')
             (road/'io.tcl').write_text(pin_tcl(plan))
+        # Line 2 names the data inputs: standard SDC that OpenSTA and Tempus read alike (SPEC 0019).
+        data_in = pdk.sdc_data_inputs(pdk.input_ports(netlist, top, lib, out/'synth'))
         (road/'constraints.sdc').write_text('''create_clock -name CLK -period 100 [get_ports CLK]
-set data_in [delete_from_list [all_inputs] [get_ports CLK]]
+'''+data_in+'''
 set_input_delay 50 -clock CLK $data_in
 set_output_delay 20 -clock CLK [all_outputs]
 set_driving_cell -lib_cell BUFX2 -pin Y $data_in
