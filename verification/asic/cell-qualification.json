@@ -1,25 +1,46 @@
 {
-  "date": "2026-11-24",
-  "scope": "current KLayout extraction + Netgen comparison; not a manufacturing verdict",
+  "date": "2026-11-28",
+  "scope": "current KLayout extraction + lvs_reduce.py + Netgen comparison; not a manufacturing verdict",
   "tools": {
     "klayout": "0.28.16",
     "netgen": "1.5.323"
   },
+  "comparison": "both netlists reduced by scripts/asic/lvs_reduce.py (kit Calibre LVS deck: LVS REDUCE PARALLEL MOS YES, LVS RECOGNIZE GATES ALL, LVS REDUCE SPLIT GATES YES), then Netgen with verification/asic/netgen_setup.tcl (W/L tolerance 0 as TRACE PROPERTY ... 0)",
   "source_gds_sha256": "e42dc1fb4c9a31aaa669e8e4c3b93a4b0d6eea40a463f5eaef5dbd17b432618e",
   "source_cdl_sha256": "281efca41e93e7f88cf59e18e64159f9772111cfee1f86647cbd6ac3703e9f11",
   "extractor_sha256": "33947c62439496a6218354b7aab6bd8b706fea9068b6c621951be5454c123867",
+  "reducer_sha256": "5d0af0c6fb19f040d34912e6382df52ca460a0c5bb97edf673199ee3d43b4720",
+  "netgen_setup_sha256": "6c8aea98eda22de7d7b9806bdc8fa6cd11ce66ba8057d70730c4e40c222d5fa6",
+  "matched": "34/34",
+  "previous": {
+    "date": "2026-11-24",
+    "matched": "23/34",
+    "unconfirmed": [
+      "AND2X2",
+      "AOI21X1",
+      "BUFX4",
+      "INVX2",
+      "INVX4",
+      "INVX8",
+      "NOR2X1",
+      "OAI21X1",
+      "OAI22X1",
+      "OR2X2",
+      "TBUFX2"
+    ]
+  },
   "cells": {
     "AND2X1": {
       "pass": true,
       "final": "Circuits match uniquely.\n."
     },
     "AND2X2": {
-      "pass": false,
-      "final": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n AND2X2"
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "AOI21X1": {
-      "pass": false,
-      "final": "Top level cell failed pin matching."
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "AOI22X1": {
       "pass": true,
@@ -30,8 +51,8 @@
       "final": "Circuits match uniquely.\n."
     },
     "BUFX4": {
-      "pass": false,
-      "final": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n BUFX4"
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "CLKBUFX1": {
       "pass": true,
@@ -70,16 +91,16 @@
       "final": "Circuits match uniquely.\n."
     },
     "INVX2": {
-      "pass": false,
-      "final": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n INVX2"
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "INVX4": {
-      "pass": false,
-      "final": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n INVX4"
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "INVX8": {
-      "pass": false,
-      "final": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n INVX8"
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "LATCHX1": {
       "pass": true,
@@ -98,36 +119,36 @@
       "final": "Circuits match uniquely.\n."
     },
     "NOR2X1": {
-      "pass": false,
-      "final": "Top level cell failed pin matching."
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "NOR3X1": {
       "pass": true,
       "final": "Circuits match uniquely.\n."
     },
     "OAI21X1": {
-      "pass": false,
-      "final": "Top level cell failed pin matching."
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "OAI22X1": {
-      "pass": false,
-      "final": "Top level cell failed pin matching."
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "OR2X1": {
       "pass": true,
       "final": "Circuits match uniquely.\n."
     },
     "OR2X2": {
-      "pass": false,
-      "final": "Circuits match uniquely.\nProperty errors were found.\n\nThe following cells had property errors:\n OR2X2"
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "TBUFX1": {
       "pass": true,
       "final": "Circuits match uniquely.\n."
     },
     "TBUFX2": {
-      "pass": false,
-      "final": "Netlists do not match.\nPort matching may fail to disambiguate symmetries."
+      "pass": true,
+      "final": "Circuits match uniquely.\n."
     },
     "TIEHIX1": {
       "pass": true,
