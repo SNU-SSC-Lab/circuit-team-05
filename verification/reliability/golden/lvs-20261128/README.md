@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | 코어(1차 C3) | 오픈소스 흐름 코어 `v_ternary8_top`, source = 흐름의 `schematic.spice` + `cells.spice` | CORRECT. ports 15/15, nets 2096/2096, MN 1895/1895, MP 1895/1895 | 같은 GDS·같은 source로 KLayout 추출 + Netgen 일치 |
 | 칩(2차 C7) | 오픈소스 흐름 SOP28 칩 `ternary8_sop28`(28 pad, 검토 전 제안 핀맵) | CORRECT, header 추가 줄 없음. ports 15/15, nets 2129/2129, MN 2745/1963, MP 2195/1934, R 7/7. 합친 뒤 nets 869/869, MN 21/21, MP 13/13, R 7/7. 경고는 `Unbalanced smashed mosfets were matched.` 하나 | 같은 GDS에서 KLayout 연결 검사(`asic-chip-connectivity`, 탐침 183개) 단선·합선 0, 코어 Netgen LVS 일치. 패드 내부 소자 LVS 없음 |
-| 표준셀(2차 C6) | 키트 표준셀 34종, 키트 GDS ↔ 키트 CDL | 34/34 CORRECT | KLayout 0.28.16 + Netgen 1.5.323(2026-11-24, `verification/asic/cell-qualification.json`): 23종 일치, 11종 확인 못 함 |
+| 표준셀(2차 C6) | 키트 표준셀 34종, 키트 GDS ↔ 키트 CDL | 34/34 CORRECT | KLayout 0.28.16 + `scripts/asic/lvs_reduce.py` + Netgen 1.5.323: 2026-11-28 재검사 34/34 일치(`verification/asic/cell-qualification.json`). 2026-11-24에는 23종 일치, 11종 확인 못 함(`summary.json`의 `open_source`는 이 11-24 기록) |
 | GPIO(1차 K1 + C4c) | 키트 GPIO 패드 9종, 키트 GDS ↔ Virtuoso auCdl 원회로 CDL | 9/9 CORRECT(PVDD만 `Unbalanced smashed mosfets were matched.`) | 없음 |
 
 ### 칩 source netlist
@@ -37,21 +37,21 @@ VIRTUAL CONNECT NAME "VDD" "VSS"
 
 source CDL은 Virtuoso IC6.1.8 `auCdl`로 키트 OA 라이브러리 `ETRI_NSPL_GPIO_250610`에서 내보낸 것을 고치지 않고 썼다. 소자 이름 대응(`nmos4`·`pmos4`·`$[p2res]`·`ndiode`·`pdiode`)도 따로 필요 없었다.
 
-### 표준셀 11종을 오픈소스 쪽이 확인 못 한 이유
+### 표준셀 11종을 오픈소스 쪽이 처음 확인 못 한 이유와 고친 방법
 
-`AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2`. Calibre는 34종 모두 CORRECT라서 셀이 틀린 것이 아니라 우리 Netgen 대조 설정의 한계다. 아래 원인은 netlist를 비교해 본 추정이다. Calibre CORRECT는 셀이 맞다는 근거이지 이 원인의 근거는 아니다.
+`AND2X2 AOI21X1 BUFX4 INVX2 INVX4 INVX8 NOR2X1 OAI21X1 OAI22X1 OR2X2 TBUFX2`. Calibre는 34종 모두 CORRECT였다. 2026-11-28에 두 쪽 netlist와 Netgen 로그를 비교해 원인을 확인했다. 셀이 아니라 우리 대조 방법의 문제였다.
 
-- property 오류 6종(AND2X2, BUFX4, INVX2, INVX4, INVX8, OR2X2): CDL은 `m=2`처럼 쓰고 layout은 finger가 따로 있다. Calibre는 병렬 MOS를 합쳐서(`LVS REDUCE PARALLEL MOS YES`) 맞춘다. 우리 Netgen이 이것을 합치지 않아서로 보인다(추정).
-- 최상위 핀 맞춤 실패 4종(AOI21X1, NOR2X1, OAI21X1, OAI22X1): 직렬 트랜지스터 입력 순서가 CDL과 layout에서 다르다. Calibre는 게이트 입력을 바꿔 맞춘다(`LVS RECOGNIZE GATES ALL`). 우리 Netgen이 순서를 바꿔 맞추지 않아서로 보인다(추정).
-- 불일치 1종(TBUFX2): 3상태 출력단. Calibre는 CORRECT. 원인은 아직 모른다.
+- property 오류 6종(AND2X2, BUFX4, INVX2, INVX4, INVX8, OR2X2): CDL은 `W=3u m=2`처럼 쓰고, KLayout 추출은 finger를 이미 합쳐 `W=6u` 한 개로 쓴다. Netgen `property default`는 W를 같은 값끼리만 합치는 기준(critical)으로 두어 `m`을 W에 곱하지 않는다(1.5.323 `netcmp.c`). 그래서 W 6u↔3u, M 1↔2로 속성이 달랐다(INVX2 로그). deck은 `LVS REDUCE PARALLEL MOS YES`로 합친다.
+- 최상위 핀 맞춤 실패 4종(AOI21X1, NOR2X1, OAI21X1, OAI22X1): 직렬 2개의 순서가 반대다. 예: NOR2X1 layout `VDD-B-x-A-Y`, CDL `VDD-A-x-B-Y`. Netgen은 이름을 무시하면 같은 회로라서 A↔B를 바꿔 맞춘 뒤 핀 이름이 다르다고 실패했다. Calibre 보고서는 이 직렬을 `_smn2v`·`_sup2v`처럼 입력 순서가 없는 묶음으로 바꾼다(`LVS RECOGNIZE GATES ALL`). 같은 묶음이 DFF·LATCH·MUX·TBUF에도 있다.
+- 불일치 1종(TBUFX2): CDL은 출력 직렬을 `Y-[EN m=2]-net43-[A m=2]-VSS`처럼 중간점 하나로 쓰고, layout은 중간점이 따로인 직렬 두 줄이다. 그래프가 달라 Netgen은 소자 수 10↔6으로 불일치였다. deck은 `LVS REDUCE SPLIT GATES YES`와 위 직렬 묶음으로 둘을 같게 본다.
 
-미검증 목록 `std-cell-netgen-11`에 남긴다.
+고친 방법: `scripts/asic/lvs_reduce.py`가 두 netlist에 같은 줄이기(병렬 합치기, 직렬 순서 없애기, 같은 직렬 두 줄 합치기)를 하고, `verification/asic/netgen_setup.tcl`이 W/L 허용오차를 deck의 `TRACE PROPERTY ... 0`과 같은 0으로 둔다(Netgen 기본은 1%). W/L 비교·핀·소자는 그대로 비교한다. 같은 키트 셀에서 W·m·L·게이트 연결을 일부러 틀리게 고친 CDL 12개는 모두 불일치였고(W 0.44% 차이 포함), 고치지 않은 셀은 모두 일치였다. 같은 줄이기와 설정은 흐름의 코어 LVS(`asic-lvs`)에도 쓰인다.
 
 ## 이 결과로 말할 수 있는 것과 없는 것
 
 - 오픈소스 흐름 코어와 SOP28 칩 GDS는 상용 Calibre LVS 기준으로 맞다(1건씩, 검토 전 제안 핀맵).
 - 같은 칩에서 오픈소스 쪽 판정(연결 검사 + 코어 LVS)과 Calibre 칩 LVS는 같은 결론이다. 다만 오픈소스 쪽 패드 내부 소자 LVS는 아직 없다. 패드 내부는 Calibre(C4c 9/9, C7 칩)만 확인했다. 미검증 목록 `gpio-internal-lvs`에 남긴다.
-- 우리 Netgen 경로는 표준셀 11종을 아직 확인하지 못한다.
+- 우리 경로(KLayout 추출 + `lvs_reduce.py` + Netgen)는 키트 표준셀 34종 모두 일치로 확인하며, Calibre 34/34 CORRECT와 같은 판정이다(2026-11-28). 흐름 합성에서 이 11종을 빼 둔 목록(`verification/asic/cells.toml`)은 아직 그대로다.
 
 ## 입력 해시
 

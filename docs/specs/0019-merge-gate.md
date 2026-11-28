@@ -149,7 +149,7 @@ verification/reliability/
 | `drc-chip-v2` | DRC 실제 칩 (v2, 상용 흐름) | 일치 | seal ring 없음 0 ↔ 0, 있음 0 ↔ 1(`1.PWL.bad1`, KLayout 미구현) | 없음. v2 GDS는 저장소 밖(11-27 결정), 기준점에서만 |
 | `drc-chip-openflow` | DRC 실제 칩 (오픈소스 흐름) | 일치 | 코어·SOP28 칩 KLayout 0 ↔ Calibre 0 | `asic-gate`가 PR마다 새 GDS의 구현 규칙 DRC 0건 확인. Calibre 대조는 기준점에서만 |
 | `lvs-core` | LVS 코어 | 일치 | 같은 GDS에서 Netgen 일치, Calibre CORRECT | `asic-gate`가 PR마다 오픈소스 LVS |
-| `lvs-cells` | LVS 표준셀 | 불일치 | Calibre 34/34 CORRECT, 우리 Netgen 23종 일치·11종 확인 못 함(원인은 우리 설정 쪽) | 없음(미검증 `std-cell-netgen-11`) |
+| `lvs-cells` | LVS 표준셀 | 일치 | Calibre 34/34 CORRECT ↔ 우리 경로(KLayout 추출 + `lvs_reduce.py` + Netgen) 34/34 일치(2026-11-28 재검사, `cell-qualification.json`) | 셀 대조는 PR마다 하지 않음. 같은 줄이기·설정을 쓰는 코어 LVS는 `asic-gate` |
 | `lvs-chip` | LVS 칩·pad | 일치 | 같은 GDS에서 Calibre 칩 LVS CORRECT ↔ 오픈소스 연결 검사 단선·합선 0 + 코어 Netgen 일치. 오픈소스 쪽 패드 내부 LVS는 없음 | 연결 검사·코어 LVS는 `asic-gate`. `asic-chip-lvs`는 미검증 허용 |
 | `spice` | SPICE 시뮬레이션 | 일치 | ngspice ↔ Spectre 최대 상대오차 과도 1.5%, DC 3.67%, 측정값 0.62%, GPIO 과도 0.92% | 없음(기준점에서만) |
 | `synth` | 합성 | 근거 없음 | Genus 325셀 결과 있음, 동치 미확인 | 미검증 `synth-vs-genus` |
@@ -170,7 +170,7 @@ DRC 규칙 판정 칸의 기준은 Calibre `v2023.4_17.10`, 키트 DRC deck sha2
 
 ### 3. 미검증 목록과 DRC 규칙 상태
 
-- 현재 항목(11개, `unverified.json`): `drc-unported-rules`, `drc-global-flags`, `antenna`, `gpio-internal-lvs`(ETRI 검증 셀로 처리, 근거 QnA #1125·#952), `std-cell-netgen-11`, `synth-vs-genus`, `pnr-sta-vs-innovus-tempus`, `sdc-portability`, `pex`, `wire-rc-zero`, `pinmap-25`. 처음 계획한 "오픈소스 LVS↔Calibre LVS 대조"는 같은 GDS의 코어·칩 Calibre LVS 결과로 빠졌고, 패드 내부는 `gpio-internal-lvs`에 남았다.
+- 현재 항목(10개, `unverified.json`): `drc-unported-rules`, `drc-global-flags`, `antenna`, `gpio-internal-lvs`(ETRI 검증 셀로 처리, 근거 QnA #1125·#952), `synth-vs-genus`, `pnr-sta-vs-innovus-tempus`, `sdc-portability`, `pex`, `wire-rc-zero`, `pinmap-25`. 처음 계획한 "오픈소스 LVS↔Calibre LVS 대조"는 같은 GDS의 코어·칩 Calibre LVS 결과로 빠졌고, 패드 내부는 `gpio-internal-lvs`에 남았다. `std-cell-netgen-11`(우리 Netgen 경로가 표준셀 11종을 확인 못 함)은 2026-11-28 원인을 찾아 고친 뒤 34/34 일치로 빠졌다(`golden/lvs-20261128/README.md`).
 - 각 항목은 id, 내용, 이유, 빠지려면 필요한 근거, `allows_checks`(이 항목 때문에 `unsupported`로 남아도 되는 흐름 검사), 관련 문서를 가진다. `asic-gate`는 모든 항목의 `allows_checks`를 합친 집합만 허용한다. 모르는 검사 이름이 있으면 `--gate`가 시작하지 않는다.
 - **DRC는 규칙 단위 상태로 관리한다.** `unported`(미구현) → `ported`(KLayout 구현, 자체 시험 통과, Calibre 근거 없음) → `verified`(그 규칙의 모든 fixture가 해시가 맞는 Calibre golden과 판정 일치). 현재 96개는 `verified`, 113개는 `unported`. 상태는 `verification/asic/drc-rules.json`의 구현 여부와 `golden_compared`로 정한다. 새 규칙을 옮기는 PR이 Calibre 재실행 없이 머지될 수 있어야 하고(기준점은 묶음 단위), 동시에 이미 검증된 규칙이 조용히 근거를 잃는 것은 막아야 하기 때문이다. (구현자 판단)
 

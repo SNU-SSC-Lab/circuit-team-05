@@ -9,7 +9,9 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from run_physical import lvs_verdict, executable
+from lvs_reduce import reduce_netlist
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -42,11 +44,14 @@ def main():
         subprocess.run(['klayout', '-b', '-r', str(HERE/'extract.py')], env=env,
                        stdout=log, stderr=subprocess.STDOUT, timeout=180, check=True)
     shutil.copyfile(args.cdl, out/'reference.spice')
+    # Both sides get the same kit-deck reductions before Netgen (lvs_reduce.py).
+    reduce_netlist(out/'reference.spice', out/'reference.reduced.spice')
     results = {}
     for cell in cells:
+        reduce_netlist(out/(cell+'.spice'), out/(cell+'.reduced.spice'))
         script = out/(cell+'.tcl')
-        script.write_text('lvs [list {'+str(out/(cell+'.spice'))+'} '+cell+'] '
-                          '[list {'+str(out/'reference.spice')+'} '+cell+'] '
+        script.write_text('lvs [list {'+str(out/(cell+'.reduced.spice'))+'} '+cell+'] '
+                          '[list {'+str(out/'reference.reduced.spice')+'} '+cell+'] '
                           '{'+str(ROOT/'verification/asic/netgen_setup.tcl')+'} '+cell+'.lvs.log -json\n')
         with (out/(cell+'.netgen.log')).open('w') as log:
             subprocess.run([executable('netgen'), '-batch', 'source', str(script)], cwd=out,

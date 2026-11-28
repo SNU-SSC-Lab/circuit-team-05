@@ -84,6 +84,8 @@
 
 추가로 물리 전용 filler를 제외한 34종 전체를 같은 추출기·Netgen으로 검사했다. 23종은 일치했고 11종은 이 경로에서 미확인 상태다. AND2X2·AOI21X1·BUFX4·INVX2·INVX4·INVX8·NOR2X1·OAI21X1·OAI22X1·OR2X2·TBUFX2를 새 ASIC 경로에서 제외한다. 이는 공개 셀 자체가 불량이라는 판정이 아니며, 현재 추출·비교 경로의 호환 범위를 제한한 것이다. 셀별 보고서와 도구·원본 해시를 근거로 유지한다. Netgen 종료 코드 0과 LVS 일치는 구분해 저장한다.
 
+2026-11-28에 11종의 원인을 확인하고 고쳤다. 키트 Calibre LVS deck은 비교 전에 병렬 MOS를 합치고(`LVS REDUCE PARALLEL MOS YES`, `m=` 포함), 직렬 MOS의 입력 순서를 보지 않고(`LVS RECOGNIZE GATES ALL`, 보고서의 `_smn2v`·`_sup2v`), 같은 직렬 두 줄을 합친다(`LVS REDUCE SPLIT GATES YES`). Netgen 기본 설정은 `m`을 W에 접지 않고, 직렬 순서 교환과 split gate 합치기는 하지 않는다. 그래서 property 오류 6종은 CDL `W=3u m=2` ↔ 추출 `W=6u`, 핀 맞춤 실패 4종은 직렬 2개의 순서 반대, TBUFX2는 중간점 하나인 `m=2` 직렬 ↔ 중간점이 따로인 직렬 두 줄 때문이었다. `scripts/asic/lvs_reduce.py`가 Netgen 전에 두 netlist에 같은 줄이기를 한다. 직렬은 두 끝 사이의 연결 소자 하나와, 원래 트랜지스터마다 게이트 net·W·L을 가진 입력 소자로 바꿔 순서만 없앤다. 중간 net이 다른 곳(포트·게이트·bulk·다른 소자)에 닿으면 직렬로 보지 않는다. `verification/asic/netgen_setup.tcl`은 W/L 허용오차를 deck의 `TRACE PROPERTY ... W W 0`·`L L 0`과 같은 0으로 둔다. 결과는 34/34 일치이고, W·m·L·게이트 연결을 일부러 틀린 키트 CDL 12개는 모두 불일치였다. 코어 LVS(`asic-lvs`)도 같은 줄이기와 설정으로 비교한다. 합성 제외 목록(`verification/asic/cells.toml`)은 흐름 결과를 바꾸므로 따로 정한다.
+
 Ubuntu 24.04의 Yosys 0.33은 ABC `-dont_use` 옵션이 없다. 같은 제외 목록을 적용하기 위해 ABC에만 전달할 작업용 Liberty에서 해당 셀 블록을 제거한다. 지정 셀을 정확히 찾지 못하면 실패한다. 원본 Liberty와 STA·기능 모델은 유지하고, 합성 결과에 제외 셀이 남아 있으면 실패한다. OpenROAD에도 같은 제외 목록을 설정한다.
 
 새 코어의 전체 LVS와 42,907작업 기능 회귀는 통과했다. 그러나 별도 KLayout 배선 규칙 검사에서 VIA1/CONT 간격·겹침 262개 마커를 확인했다. 원본 셀 38종의 VIA1 도형은 모두 0개이므로 새 배선에서 생긴 것이다. 공정 deck `9.VIA1.S`·`11.VIA2.S`의 서로 다른 cut 층 간격 0.6 µm·적층 금지를 파생 기술 LEF에 추가하고, 최종 GDS로 다시 검사한다. 배선 도구 자체 DRC 0건과 공정 규칙 검사는 별도 결과로 유지한다.
@@ -206,7 +208,7 @@ YAML은 GitHub의 실행 순서를, TOML은 회로·공정 입력을, Tcl은 EDA
 | `asic-route` | 미배선·단선·합선 없음, 도구 내부 규칙 검사 | 최종 DB·DEF·netlist |
 | `asic-gds` | 실제 셀·pad GDS 병합, top·핀·단위·레이어·전원, 별도 재반입 | 최종 GDS·전체/확대 그림 |
 | `asic-drc` | 검토한 NSPL 규칙 위반 없음, 미지원 규칙 명시 | 규칙 지원표·오류 좌표 |
-| `asic-lvs` | 독립 기준 회로와 소자·연결·핀·W/L 일치, 임의 black box 없음 | 추출 SPICE·기준 CDL·비교 보고서 |
+| `asic-lvs` | 독립 기준 회로와 소자·연결·핀·W/L 일치, 임의 black box 없음. 두 쪽에 키트 deck과 같은 줄이기(`lvs_reduce.py`) 후 W/L 허용오차 0으로 비교 | 추출 SPICE·기준 CDL·줄인 두 netlist·비교 보고서 |
 | `asic-pex` | 검증된 NSPL 배선 RC 규칙, net·단위·corner·적용 범위 일치 | SPEF·추출 보고서 |
 | `asic-sta` | 배선 후 setup·hold WNS ≥ 0·TNS = 0, 미제약 경로와 SPEF 적용 누락 확인 | 최악 경로·제약·annotation 보고서 |
 | `asic-gate` | 최종 netlist로 기존 오류·리셋·경계·연속 작업 회귀 | 회귀 결과·실패 파형 |
