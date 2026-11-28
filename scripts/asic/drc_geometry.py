@@ -26,10 +26,23 @@ def check(layout, top, selected=None):
         # sizing that needs a threshold between two grid steps, so at least two dbu per grid step.
         raise ValueError('GDS dbu cannot represent the WITH WIDTH threshold: dbu must be at most half the 0.01 um grid')
     scale = lambda x: round(x/layout.dbu)
+    # The deck's `LAYER MET1i 32` reads every datatype of layer 32; this port reads datatype 0 only. A
+    # polygon under the top on another datatype of a deck layer number would be skipped without a word,
+    # so it is an input error (as in drc_antenna.py, SPEC 0020). Text labels are not geometry: a Region
+    # of texts counts 0 polygons.
+    for index in layout.layer_indexes():
+        info = layout.get_info(index)
+        if info.layer in LAYERS.values() and info.datatype != 0 and pya.Region(top.begin_shapes_rec(index)).count():
+            raise ValueError(f'shapes on {info.layer}/{info.datatype}: the deck reads every datatype of layer '
+                             f'{info.layer}, this check reads datatype 0 only')
     raw = {}
     for name, number in LAYERS.items():
         index = layout.find_layer(number, 0)
         raw[name] = pya.Region() if index is None else pya.Region(top.begin_shapes_rec(index)).merged()
+    if not any(value.count() for value in raw.values()):
+        # Nothing on any deck layer (wrong layer numbers, or only marker/text layers): zero markers would
+        # not mean a clean layout, so there is no verdict.
+        raise ValueError('no polygon on any deck layer number (datatype 0): nothing to check')
     reg = {name: (value-raw['NODRC'] if name in MASKED else value) for name, value in raw.items()}
     bulk = pya.Region(top.bbox()).sized(scale(.01))
     psub = bulk-(reg['NWELL'] | reg['HNWELL'] | reg['DNWELL'])-(raw['PWELL'] | reg['HPWELL'] | reg['DPWELL'])-reg['DWELL']

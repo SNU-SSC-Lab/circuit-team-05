@@ -172,5 +172,61 @@ class WidthClassTests(unittest.TestCase):
                 self.assertIn('WITH WIDTH threshold', self.result['0.01/'+width].get('error', ''))
 
 
+# Runs inside KLayout: shapes are [layer, datatype, box] or [layer, datatype, 'text']; records errors or
+# the ValueError text.
+INPUT_BATCH = '''
+import json, os, sys
+sys.path.insert(0, os.environ['SSC_TEST_ASIC'])
+import pya
+from drc_geometry import check
+result = {}
+for case in json.loads(os.environ['SSC_TEST_CASES']):
+    layout = pya.Layout()
+    layout.dbu = .001
+    top = layout.create_cell('t')
+    for layer, datatype, shape in case['shapes']:
+        shapes = top.shapes(layout.layer(layer, datatype))
+        if shape == 'text':
+            shapes.insert(pya.DText('VDD', pya.DTrans(1, 1)))
+        else:
+            shapes.insert(pya.DBox(*shape))
+    try:
+        rules = check(layout, top, case['rules'])['rules']
+        result[case['name']] = {rule: rules[rule]['errors'] for rule in case['rules']}
+    except ValueError as error:
+        result[case['name']] = {'error': str(error)}
+with open(os.environ['SSC_TEST_OUT'], 'w') as stream:
+    json.dump(result, stream)
+'''
+
+
+@unittest.skipUnless(shutil.which('klayout'), 'KLayout is not installed')
+class InputErrorTests(unittest.TestCase):
+    """Fail closed (SPEC 0021, the antenna review's lessons): no verdict from input the port cannot read."""
+
+    @classmethod
+    def setUpClass(cls):
+        violating = [[32, 0, [0, 0, 2, 40]], [32, 0, [2.79, 0, 4.79, 40]]]  # 8.MET1.S1 at 0.79
+        cls.result = run_cases([
+            dict(name='plain', rules=['8.MET1.S1'], shapes=violating),
+            # the second wire on 32/1: the deck sees the violation, datatype 0 alone would not
+            dict(name='datatype-1', rules=['8.MET1.S1'], shapes=[violating[0], [32, 1, [2.79, 0, 4.79, 40]]]),
+            dict(name='label-on-datatype-1', rules=['8.MET1.S1'], shapes=violating+[[32, 1, 'text']]),
+            dict(name='no-deck-layer', rules=['8.MET1.S1'], shapes=[[235, 0, [0, 0, 10, 10]]]),
+        ], INPUT_BATCH)
+
+    def test_plain_case_is_judged(self):
+        self.assertGreater(self.result['plain']['8.MET1.S1'], 0)
+
+    def test_other_datatype_on_a_deck_layer_is_an_input_error(self):
+        self.assertIn('shapes on 32/1', self.result['datatype-1'].get('error', ''))
+
+    def test_text_label_on_another_datatype_is_not_geometry(self):
+        self.assertEqual(self.result['label-on-datatype-1'], self.result['plain'])
+
+    def test_no_shape_on_any_deck_layer_is_an_input_error(self):
+        self.assertIn('no polygon on any deck layer', self.result['no-deck-layer'].get('error', ''))
+
+
 if __name__ == '__main__':
     unittest.main()

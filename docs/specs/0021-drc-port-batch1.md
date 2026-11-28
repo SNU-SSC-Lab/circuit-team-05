@@ -45,7 +45,9 @@ ETRI는 MyChip 제출 GDS의 DRC를 다시 돌리지 않는다(2026-11-28 운영
 ### 판정할 수 없는 입력은 실패 (fail closed)
 
 - `drc_geometry.check`는 0.01 µm grid 한 칸이 2 dbu보다 작으면(dbu > 0.005 µm) `ValueError`를 낸다. 정수 dbu 크기 조절로는 10.00과 9.99를 가를 수 없기 때문이다. 이 오류는 모든 규칙의 판정을 막는다(`drc_audit.py`는 실패로 끝난다). 0.001 µm(흐름·키트)와 0.0005 µm는 그대로다.
-- 맞닿기만 한 연결·datatype 0이 아닌 도형은 이 묶음과 관계없다. 이 묶음의 규칙은 넷 연결을 쓰지 않고, 층 읽기는 기존 확장 검사와 같다(datatype 0).
+- **datatype 0이 아닌 도형.** deck의 `LAYER MET1i 32`는 모든 datatype을 읽는다. 확장 검사는 datatype 0만 읽으므로, top 아래 deck 층 번호의 다른 datatype에 다각형이 있으면 `ValueError`다(antenna와 같은 처리, SPEC 0020 리뷰). 텍스트 라벨은 도형이 아니므로 세지 않는다. 확장 검사 전체(기존 verified 96개 포함)에 걸린다. 키트 GPIO·PAD GDS, 변형본 두 묶음 1,495개, 칩 GDS 4개에는 해당 도형이 없어 기존 판정은 바뀌지 않는다(2026-11-28 확인).
+- **빈 입력.** deck 층 번호(datatype 0)에 다각형이 하나도 없으면(층 번호가 틀린 GDS, 표시층만 있는 GDS) `ValueError`다. 0건을 깨끗한 배치로 읽지 않는다.
+- 맞닿기만 한 연결은 이 묶음과 관계없다. 이 묶음의 규칙은 넷 연결을 쓰지 않는다.
 
 ### 기존 방식을 그대로 따름 (SPEC 0020)
 
@@ -106,12 +108,12 @@ flowchart TD
 
 | 파일 | 내용 |
 | --- | --- |
-| `scripts/asic/drc_geometry.py` | WITH WIDTH·via 배열·PAD 채움 유도층, kind `separation_unshielded`·`interacting`, dbu 거부 |
+| `scripts/asic/drc_geometry.py` | WITH WIDTH·via 배열·PAD 채움 유도층, kind `separation_unshielded`·`interacting`, dbu·datatype·빈 입력 거부 |
 | `scripts/asic/drc_ports.py` | 17개 규칙 |
 | `scripts/asic/drc_cases.py`, `drc_cases_pending.py` | fixture 228개 이동, `MOVED_RULES` |
 | `verification/asic/drc-rules.json` | 17개 규칙 상태 |
 | `verification/reliability/**` | `golden/drc-fixtures-20261128c/`, 대응표 DRC 행, 미검증 `drc-unported-rules`, CHECKPOINT 제출 조건 |
-| `tests/asic/**` | 수 갱신, 새 golden 시험, dbu 거부 시험 |
+| `tests/asic/**` | 수 갱신, 새 golden 시험, 입력 오류 시험(dbu·datatype·텍스트·빈 입력) |
 
 ### 합격 조건과 검증
 
