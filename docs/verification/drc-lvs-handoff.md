@@ -6,7 +6,7 @@
 
 | 구분 | 확인한 범위 | 남은 일 |
 | --- | --- | --- |
-| DRC | 원본 활성 209개 대조, 구현한 기하 검사 96개에서 코어·패드 포함 GDS 오류 0건. 도형 시험 451개 통과, 96개 규칙의 판정이 Calibre golden과 일치(2026-11-28, `verification/reliability/`). 키트 ANT deck 12개 검사도 옮겨 fixture 102개가 Calibre와 일치, 코어·칩 0건(SPEC 0020) | 113개 규칙·전역 입력 플래그 이식 |
+| DRC | 원본 활성 209개 대조, 구현한 기하 검사 113개에서 코어·패드 포함 GDS 오류 0건. DRC 도형 시험 679개 통과, 113개 규칙의 판정이 Calibre golden과 일치(2026-11-28, `verification/reliability/`, 금속·via·PAD 17개는 SPEC 0021). 키트 ANT deck 12개 검사도 옮겨 fixture 102개가 Calibre와 일치, 코어·칩 0건(SPEC 0020) | 96개 규칙·전역 입력 플래그 이식 |
 | LVS | 내적 코어의 실제 GDS 추출 회로와 독립 기준 CDL 일치 | GPIO·ESD를 포함한 전체 칩 LVS |
 | 기능 | 최종 netlist의 6개 시험·42,907작업 회귀 통과 | 실제 제작 칩·보드 시험 |
 | RC·PEX | 추정 배선 RC와 탐색용 SPEF 생성 | 공정에 맞춘 RC 모델·정밀 추출·정확도 대조 |
@@ -178,7 +178,7 @@ python scripts/run_physical.py report --result "$HOME/ssc-team05-runs/magic-prac
 
 ### 전체 DRC
 
-공개 키트에 Calibre·Assura 규칙 원본이 있다. 원본이 없어서 멈춘 작업이 아니다. 활성 209개 중 96개를 옮겼고, 나머지 113개와 전역 입력 플래그·별도 antenna deck 전체는 아직 지원하지 않는다. well의 전위·연결 조건, 넓은 금속의 조건부 간격, tap·guard ring·ESD 등은 단순 폭/간격 수치만 복사해서 구현할 수 없다.
+공개 키트에 Calibre·Assura 규칙 원본이 있다. 원본이 없어서 멈춘 작업이 아니다. 활성 209개 중 113개를 옮겼고(넓은 금속의 조건부 간격·via 둘러싸기는 SPEC 0021), 나머지 96개와 전역 입력 플래그는 아직 지원하지 않는다. 별도 antenna deck은 SPEC 0020에서 옮겼다. well의 전위·연결 조건, tap·guard ring·ESD 등은 단순 폭/간격 수치만 복사해서 구현할 수 없다.
 
 다음 실험은 [대조표](nspl-drc-rule-matrix.md)에서 미구현 규칙 하나를 골라 원본 식의 정상·위반·경계 예제를 만들고, KLayout 결과를 원본 도구 결과와 비교하는 것이다. 옮긴 96개 규칙은 2026-11-28 Calibre golden과 판정이 같다(fixture 451개 중 449개 일치·2개 제외, 실제 형상 변형본 1차 609개·2차 798개에서 불일치 0, `verification/reliability/table.md`). 113개 미구현 규칙의 fixture Calibre 판정도 받아 두었다(`verification/reliability/golden/drc-unported-20261128/`). Assura와의 대조는 하지 않았다. `96/209`를 공정 검증률로 해석하지 않는다.
 

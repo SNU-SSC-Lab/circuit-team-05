@@ -128,9 +128,10 @@ verification/reliability/
   golden/
     drc-fixtures-20261128/   fixture 427개의 Calibre 판정(대상 규칙 발동·위반 수·대상 밖 발동 규칙), fixture 정의 해시, deck 해시, 도구 버전
     drc-fixtures-20261128b/  둘러싸기 규칙 fixture 24개(0427~0450, 일부 겹침·겹침 없음·안쪽 섬·바깥 근접)의 Calibre 판정
+    drc-fixtures-20261128c/  금속·via·PAD 17개 규칙 fixture 228개(0553~0780)의 Calibre 판정(pending golden에서 항목 그대로 옮김, SPEC 0021)
     drc-mutations-20261128/  키트 셀 변형본 695개의 형상 해시와 Calibre 발동 규칙(81개는 Calibre 입력 거부)
     drc-mutations-20261128b/ 2차 변형본 800개(키트 셀 604 + 코어 창 196, 모두 Calibre 검사)
-    drc-unported-20261128/   pending golden: 미구현 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 Calibre 판정(ANT 102개는 옮겨짐, 파일은 그대로)
+    drc-unported-20261128/   pending golden: 미구현 113개 규칙·전역 플래그·ANT deck 12개 검사의 fixture 857개 Calibre 판정(ANT 102개·금속·via·PAD 228개는 옮겨짐, 파일은 그대로)
     ant-fixtures-20261128/   키트 ANT deck 12개 검사 fixture 102개의 Calibre 판정(위 pending golden에서 항목 그대로 옮김, SPEC 0020)
     chip-openflow-20261128/  오픈소스 흐름 코어·SOP28 칩의 Calibre DRC·ANT·LVS 요약과 같은 GDS의 KLayout 판정
     chip-v2-20261128/        v2 칩 GDS 해시, Calibre DRC/ANT/LVS 요약, Genus/Innovus/Tempus 요약
@@ -144,9 +145,9 @@ verification/reliability/
 
 | 행 (`id`) | 단계 | 판정 | 근거 요약 | CI가 PR마다 확인하는 것 |
 | --- | --- | --- | --- | --- |
-| `drc-fixtures` | DRC 규칙 판정 | 일치 | 구현 96개 규칙의 fixture 451개 중 449개 대상 규칙 발동 여부 일치, 2개(0169·0170) Calibre 입력 거부로 제외 | `reliability-table`: fixture를 다시 만들어 `verified` 규칙의 KLayout 판정이 두 fixture golden과 같은지(`reliability.py check`) |
-| `drc-mutations` | DRC 실제 형상 변형본 | 일치 | 1차 609개 × 96개 규칙 = 58,464 판정 불일치 0(81개 거부·빈 셀 5개 제외), 2차 798개 × 96개 = 76,608 판정 불일치 0(빈 셀 2개 제외) | 경로 필터에 걸린 PR과 main push에서 키트 부분을 다시 만들어 대조(`check-mutations`). 코어 창 196개는 기준점 전용 |
-| `drc-unported` | DRC 미구현 규칙 | 근거 없음 | 113개 규칙 + ACUTE·NONSIMPLE fixture 755개의 Calibre golden 확보, KLayout 판정 없음 | 판정 대조 없음. 정의와 golden이 1:1인지(`check-pending`) |
+| `drc-fixtures` | DRC 규칙 판정 | 일치 | 구현 113개 규칙의 fixture 679개 중 677개 대상 규칙 발동 여부 일치, 2개(0169·0170) Calibre 입력 거부로 제외(금속·via·PAD 228개는 SPEC 0021) | `reliability-table`: fixture를 다시 만들어 `verified` 규칙의 KLayout 판정이 두 fixture golden과 같은지(`reliability.py check`) |
+| `drc-mutations` | DRC 실제 형상 변형본 | 일치 | 1차 609개 × 113개 규칙 = 68,817 판정 불일치 0(81개 거부·빈 셀 5개 제외), 2차 키트 셀 602개 × 113개 = 68,026 판정 불일치 0(빈 셀 2개 제외), 같은 코어 GDS를 준 기준점 대조로 코어 창까지 798개 × 113개 = 90,174 판정 불일치 0 | 경로 필터에 걸린 PR과 main push에서 키트 부분을 다시 만들어 대조(`check-mutations`). 코어 창 196개는 기준점 전용 |
+| `drc-unported` | DRC 미구현 규칙 | 근거 없음 | 96개 규칙 + ACUTE·NONSIMPLE fixture 527개의 Calibre golden 확보, KLayout 판정 없음(처음 755개 중 228개는 SPEC 0021에서 옮김) | 판정 대조 없음. 정의와 golden이 1:1인지(`check-pending`) |
 | `drc-chip-v2` | DRC 실제 칩 (v2, 상용 흐름) | 일치 | seal ring 없음 0 ↔ 0, 있음 0 ↔ 1(`1.PWL.bad1`, KLayout 미구현) | 없음. v2 GDS는 저장소 밖(11-27 결정), 기준점에서만 |
 | `drc-chip-openflow` | DRC 실제 칩 (오픈소스 흐름) | 일치 | 코어·SOP28 칩 KLayout 0 ↔ Calibre 0 | `asic-gate`가 PR마다 새 GDS의 구현 규칙 DRC 0건 확인. Calibre 대조는 기준점에서만 |
 | `lvs-core` | LVS 코어 | 일치 | 같은 GDS에서 Netgen 일치, Calibre CORRECT | `asic-gate`가 PR마다 오픈소스 LVS |
@@ -166,14 +167,14 @@ DRC 규칙 판정 칸의 기준은 Calibre `v2023.4_17.10`, 키트 DRC deck sha2
 - golden은 **fixture 파일 내용 해시**로 묶는다. 생성기가 바뀌어 fixture 해시가 달라지면 그 fixture는 golden이 없는 것으로 본다(3절의 규칙 상태로 처리). (구현자 판단)
 - **실제 형상 변형본 golden**(`drc-mutations-20261128/`): 키트 표준셀·GPIO 셀의 도형 하나를 옮기기·키우기·줄이기·지우기로 바꾼 GDS 695개를 Calibre로 GDS마다 한 번씩 검사한 결과다. `scripts/asic/mutate.py`(seed 20261128, 셀당 6개)가 같은 형상을 다시 만들고, golden은 GDS 바이트 대신 **형상 해시**(층별 다각형 좌표의 sha256)로 묶는다. `reliability.py check-mutations`는 형상 해시가 golden과 같은 GDS마다 `verified` 규칙의 발동 여부를 Calibre와 비교하고, 하나라도 다르거나 형상 해시가 다르면 실패한다. Calibre가 거부한 81개(자기 교차 다각형)와 최상위 셀이 빈 5개는 사유가 붙은 제외다. 첫 대조에서 `ENC … OVERLAP`(둘러싸는 층에 일부만 겹친 도형도 위반)을 KLayout 구현이 놓친 13건이 나와 같은 작업에서 고쳤다. 고친 판정은 "안쪽 도형의 변이 둘러싸는 층 경계를 가로지른다(변의 일부는 안, 일부는 밖)"이며, 둘러싸는 층 도형이 안쪽 도형 안에 통째로 있거나 바깥에 가까이 있는 경우는 위반이 아니라는 것을 fixture `0427`~`0450`의 Calibre 결과(`drc-fixtures-20261128b/`)로 확인했다. (구현자 판단)
 - **2차 변형본 golden**(`drc-mutations-20261128b/`): `scripts/asic/mutate_v2.py`(seed 20261129)가 키트 셀과 오픈소스 흐름 코어 GDS의 30×30 µm 창을 한 번씩 고친 800개다(병합 의미로 편집해 Calibre 거부 0). 코어 GDS는 우리 RTL로 만든 결과라 저장소에 없고 RTL이 바뀌면 달라지므로, CI는 키트 셀 604개만 다시 만들어 비교하고 코어 창 196개는 `not_regenerated`(기준점 전용)로 수와 이유만 적는다. 같은 코어 GDS(sha256 일치)를 `--core-gds`로 주면 창도 비교한다. 일치로도 실패로도 세지 않는 것은 이 경우뿐이다. (구현자 판단)
-- **pending golden**(`drc-unported-20261128/`, `meta.pending: true`): 아직 KLayout으로 옮기지 않은 113개 규칙·전역 플래그(ACUTE·NONSIMPLE)·ANT deck 12개 검사의 fixture 857개(DRC 755 + ANT 102)를 Calibre로 판정한 결과다. 정의는 `scripts/asic/drc_cases_pending.py`에 있다. KLayout 판정이 없으므로 대조하지 않고, `reliability.py check`도 이 파일을 읽지 않는다. `reliability-table`의 `check-pending`은 golden 항목과 fixture 정의가 1:1이고 해시가 같은지, Calibre가 판정한 fixture에서 정의의 기대값(`fail`)이 Calibre와 같은지만 확인한다. Calibre가 입력을 거부한 0225·0226(자기 교차)은 사유가 붙은 제외다. 규칙을 옮길 때 이 golden이 그 규칙의 첫 근거가 된다. 옮긴 규칙의 항목은 파일을 고치지 않고 새 fixture golden으로 복사하며, `check-pending`은 pending 파일에 남은 그 항목을 규칙이 `MOVED_RULES`에 있고 verified일 때만 `moved`로 센다(2026-11-28 ANT 102개, `ant-fixtures-20261128/`, SPEC 0020).
+- **pending golden**(`drc-unported-20261128/`, `meta.pending: true`): 아직 KLayout으로 옮기지 않은 113개 규칙·전역 플래그(ACUTE·NONSIMPLE)·ANT deck 12개 검사의 fixture 857개(DRC 755 + ANT 102)를 Calibre로 판정한 결과다. 정의는 `scripts/asic/drc_cases_pending.py`에 있다. KLayout 판정이 없으므로 대조하지 않고, `reliability.py check`도 이 파일을 읽지 않는다. `reliability-table`의 `check-pending`은 golden 항목과 fixture 정의가 1:1이고 해시가 같은지, Calibre가 판정한 fixture에서 정의의 기대값(`fail`)이 Calibre와 같은지만 확인한다. Calibre가 입력을 거부한 0225·0226(자기 교차)은 사유가 붙은 제외다. 규칙을 옮길 때 이 golden이 그 규칙의 첫 근거가 된다. 옮긴 규칙의 항목은 파일을 고치지 않고 새 fixture golden으로 복사하며, `check-pending`은 pending 파일에 남은 그 항목을 규칙이 `MOVED_RULES`에 있고 verified일 때만 `moved`로 센다(2026-11-28 ANT 102개, `ant-fixtures-20261128/`, SPEC 0020; 금속·via·PAD 228개, `drc-fixtures-20261128c/`, SPEC 0021).
 - 대응표 칸의 판정은 "일치 / 불일치 / 근거 없음(미검증)" 세 가지다. 수치 비교(타이밍 차이 등)는 기록만 하고, 허용 오차는 팀이 정할 때까지 게이트 조건으로 쓰지 않는다. 허용 오차를 근거 없이 정하면 조용한 기준 완화와 같아지기 때문이다. (구현자 판단)
 
 ### 3. 미검증 목록과 DRC 규칙 상태
 
 - 현재 항목(9개, `unverified.json`): `drc-unported-rules`, `drc-global-flags`, `gpio-internal-lvs`(ETRI 검증 셀로 처리, 근거 QnA #1125·#952), `synth-vs-genus`, `pnr-sta-vs-innovus-tempus`, `sdc-portability`, `pex`, `wire-rc-zero`, `pinmap-25`. 처음 계획한 "오픈소스 LVS↔Calibre LVS 대조"는 같은 GDS의 코어·칩 Calibre LVS 결과로 빠졌고, 패드 내부는 `gpio-internal-lvs`에 남았다. `std-cell-netgen-11`(우리 Netgen 경로가 표준셀 11종을 확인 못 함)은 2026-11-28 원인을 찾아 고친 뒤 34/34 일치로 빠졌다(`golden/lvs-20261128/README.md`). `antenna`는 KLayout 검사와 Calibre 대조로 빠졌다(SPEC 0020).
 - 각 항목은 id, 내용, 이유, 빠지려면 필요한 근거, `allows_checks`(이 항목 때문에 `unsupported`로 남아도 되는 흐름 검사), 관련 문서를 가진다. `asic-gate`는 모든 항목의 `allows_checks`를 합친 집합만 허용한다. 모르는 검사 이름이 있으면 `--gate`가 시작하지 않는다.
-- **DRC는 규칙 단위 상태로 관리한다.** `unported`(미구현) → `ported`(KLayout 구현, 자체 시험 통과, Calibre 근거 없음) → `verified`(그 규칙의 모든 fixture가 해시가 맞는 Calibre golden과 판정 일치). 현재 96개는 `verified`, 113개는 `unported`. 키트 ANT deck 12개 검사는 같은 파일의 `antenna_rules`에 같은 상태로 두며 모두 `verified`다(SPEC 0020). 상태는 `verification/asic/drc-rules.json`의 구현 여부와 `golden_compared`로 정한다. 새 규칙을 옮기는 PR이 Calibre 재실행 없이 머지될 수 있어야 하고(기준점은 묶음 단위), 동시에 이미 검증된 규칙이 조용히 근거를 잃는 것은 막아야 하기 때문이다. (구현자 판단)
+- **DRC는 규칙 단위 상태로 관리한다.** `unported`(미구현) → `ported`(KLayout 구현, 자체 시험 통과, Calibre 근거 없음) → `verified`(그 규칙의 모든 fixture가 해시가 맞는 Calibre golden과 판정 일치). 현재 113개는 `verified`(금속·via·PAD 17개는 SPEC 0021), 96개는 `unported`. 키트 ANT deck 12개 검사는 같은 파일의 `antenna_rules`에 같은 상태로 두며 모두 `verified`다(SPEC 0020). 상태는 `verification/asic/drc-rules.json`의 구현 여부와 `golden_compared`로 정한다. 새 규칙을 옮기는 PR이 Calibre 재실행 없이 머지될 수 있어야 하고(기준점은 묶음 단위), 동시에 이미 검증된 규칙이 조용히 근거를 잃는 것은 막아야 하기 때문이다. (구현자 판단)
 
 뒤로 가는 변경을 막는 규칙은 두 검사가 나눠 맡는다. `baseline-guard`(`scripts/asic/baseline_guard.py`, pull_request_target)는 PR 코드를 실행하지 않고 파일 내용만 비교한다(1절 위협 모형). fixture 정의를 실행해야 하는 규칙은 `reliability-table`의 `reliability.py check`(pull_request)가 맡는다.
 

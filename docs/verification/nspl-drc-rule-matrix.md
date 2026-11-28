@@ -2,7 +2,7 @@
 
 원본 전체를 목록화한 결과다. 구현·시험 수는 공정 정확도나 제출 승인 비율이 아니다.
 
-활성 209개 / 원본 비활성 7개 / 상태 {'geometry_port': 96, 'unported': 113}
+활성 209개 / 원본 비활성 7개 / 상태 {'geometry_port': 113, 'unported': 96}
 
 | 원본 규칙 | 줄 | 이전 routing 검사 | 확장 검사 | Assura 동일 ID | 공개 변환본 동일 ID | 부족한 조건·다음 작업 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -116,36 +116,36 @@
 | 7.CONT.bad2 | 887 | 미실행 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 7.CONT.bad3 | 894 | 미실행 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 8.MET1.W | 903 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
-| 8.MET1.S1 | 908 | 부분·추가 조건 있음 | 미구현 | True | True | 원본 유도 도형·edge·영역 조건 이식과 항목별 시험 필요 |
-| 8.MET1.S2 | 913 | 미실행 | 미구현 | True | True | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
+| 8.MET1.S1 | 908 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 8.MET1.S2 | 913 | 미실행 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 8.MET1.bad1 | 926 | 미실행 | 기하 검사·Calibre 일치(verified) | False | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 9.VIA1.W | 934 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 9.VIA1.S1 | 940 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
-| 9.VIA1.S2 | 945 | 미실행 | 미구현 | True | False | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 9.VIA1.E1 | 952 | 부분·추가 조건 있음 | 미구현 | True | True | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 9.VIA1.E2 | 957 | 부분·추가 조건 있음 | 미구현 | True | False | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 9.VIA1.E3 | 962 | 부분·추가 조건 있음 | 미구현 | True | True | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 9.VIA1.E4 | 967 | 부분·추가 조건 있음 | 미구현 | True | False | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
+| 9.VIA1.S2 | 945 | 미실행 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 9.VIA1.E1 | 952 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 9.VIA1.E2 | 957 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 9.VIA1.E3 | 962 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 9.VIA1.E4 | 967 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 9.VIA1.S | 972 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 9.VIA1.bad1 | 979 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 10.MET2.W | 993 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
-| 10.MET2.S1 | 998 | 부분·추가 조건 있음 | 미구현 | True | True | 원본 유도 도형·edge·영역 조건 이식과 항목별 시험 필요 |
-| 10.MET2.S2 | 1003 | 미실행 | 미구현 | True | True | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
+| 10.MET2.S1 | 998 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 10.MET2.S2 | 1003 | 미실행 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 10.MET2.bad1 | 1016 | 미실행 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 11.VIA2.W | 1024 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 11.VIA2.S1 | 1030 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
-| 11.VIA2.S2 | 1035 | 미실행 | 미구현 | True | False | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 11.VIA2.E1 | 1042 | 부분·추가 조건 있음 | 미구현 | True | True | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 11.VIA2.E2 | 1047 | 부분·추가 조건 있음 | 미구현 | True | False | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 11.VIA2.E3 | 1052 | 부분·추가 조건 있음 | 미구현 | True | True | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
-| 11.VIA2.E4 | 1057 | 부분·추가 조건 있음 | 미구현 | True | False | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
+| 11.VIA2.S2 | 1035 | 미실행 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 11.VIA2.E1 | 1042 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 11.VIA2.E2 | 1047 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 11.VIA2.E3 | 1052 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 11.VIA2.E4 | 1057 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 11.VIA2.S | 1062 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 11.VIA2.bad1 | 1069 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 12.MET3.W | 1084 | routing 기하 검사 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
-| 12.MET3.S1 | 1089 | 부분·추가 조건 있음 | 미구현 | True | True | 원본 유도 도형·edge·영역 조건 이식과 항목별 시험 필요 |
-| 12.MET3.S2 | 1094 | 미실행 | 미구현 | True | True | WITH WIDTH의 좁은/넓은 형상·배열 구분과 edge 조건 이식 필요 |
+| 12.MET3.S1 | 1089 | 부분·추가 조건 있음 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
+| 12.MET3.S2 | 1094 | 미실행 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 12.MET3.bad1 | 1107 | 미실행 | 기하 검사·Calibre 일치(verified) | True | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
-| 13.PAD.P | 1114 | 미실행 | 미구현 | False | False | 원본 유도 도형·edge·영역 조건 이식과 항목별 시험 필요 |
+| 13.PAD.P | 1114 | 미실행 | 기하 검사·Calibre 일치(verified) | False | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 13.PAD.A | 1122 | 미실행 | 기하 검사·Calibre 일치(verified) | True | True | Calibre 본문은 최소 폭 검사. min/max라는 주석 및 Assura 사각 치수 검사와 대조 필요 |
 | 13.PAD.E | 1127 | 미실행 | 기하 검사·Calibre 일치(verified) | False | False | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |
 | 13.PAD.S | 1134 | 미실행 | 기하 검사·Calibre 일치(verified) | False | True | fixture·변형본 판정이 Calibre golden과 일치(verified). fixture를 바꾸거나 더하면 기준점에서 Calibre 판정 필요 |

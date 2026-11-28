@@ -57,6 +57,24 @@ for name in ['3.PL1.bad3', '4.PL2.bad2']:
 for name, layers in [('7.CONT.bad1', 'CONT MET1'), ('9.VIA1.bad1', 'VIA1 MET1_AND_MET2')]:
     add(name, 'uncovered', layers)
 add('7.CONT.bad2', 'not_interacting', 'CONT ACTIVE_OR_POLY')
+
+# Batch 1 (SPEC 0021): metal/via/pad rules on the deck's width classes MET*UN10/UP10 (WITH WIDTH,
+# drc_geometry.py), the via-array layers *_ARRAY and the pad-pitch fill.
+for name, layer, value in [
+    ('8.MET1.S1', 'MET1UN10', .8), ('10.MET2.S1', 'MET2UN10', 1), ('12.MET3.S1', 'MET3UN10', 1),
+    ('9.VIA1.S2', 'VIA1_ARRAY', .8), ('11.VIA2.S2', 'VIA2_ARRAY', .8)]:
+    add(name, 'space', layer, value)
+for name, layers, value in [
+    ('8.MET1.S2', 'MET1UP10 MET1', 1), ('10.MET2.S2', 'MET2UP10 MET2', 1.2),
+    ('12.MET3.S2', 'MET3UP10 MET3', 1.2)]:
+    add(name, 'separation_unshielded', layers, value)
+for name, layers in [
+    ('9.VIA1.E1', 'VIA1 MET1UN10'), ('9.VIA1.E2', 'VIA1 MET1UP10'),
+    ('9.VIA1.E3', 'VIA1 MET2UN10'), ('9.VIA1.E4', 'VIA1 MET2UP10'),
+    ('11.VIA2.E1', 'VIA2 MET2UN10'), ('11.VIA2.E2', 'VIA2 MET2UP10'),
+    ('11.VIA2.E3', 'VIA2 MET3UN10'), ('11.VIA2.E4', 'VIA2 MET3UP10')]:
+    add(name, 'enclosure', layers, .6)
+add('13.PAD.P', 'interacting', 'PAD PAD_PITCH_FILL')
 add('7.CONT.W', 'cut_size', 'CONT', [[.6, .6], [.6, 1.2]])
 add('9.VIA1.W', 'cut_size', 'VIA1', [[.8, .8]])
 add('11.VIA2.W', 'cut_size', 'VIA2', [[.8, .8]])

@@ -4,8 +4,8 @@
   "items": [
     {
       "id": "drc-unported-rules",
-      "what": "Calibre DRC deck 활성 209개 중 KLayout으로 옮기지 않은 113개 규칙(drc-rules.json의 implementation이 unported인 규칙)",
-      "why": "well 전위·연결 조건, 넓은 금속의 조건부 간격, tap·guard ring·ESD처럼 단순 폭·간격으로 옮길 수 없는 규칙이 남아 있다. 옮긴 96개만 Calibre golden과 판정이 일치한다. 2026-11-28 113개 규칙 모두 fixture의 Calibre 판정을 받았다(golden/drc-unported-20261128, DRC fixture 755개, 정의는 scripts/asic/drc_cases_pending.py). KLayout 구현은 아직 없다.",
+      "what": "Calibre DRC deck 활성 209개 중 KLayout으로 옮기지 않은 96개 규칙(drc-rules.json의 implementation이 unported인 규칙)",
+      "why": "well 전위·연결 조건, tap 거리, active·poly·implant의 edge 조건, POLY2 저항, ESD·guard ring, 칩에 없는 소자(CAP·BJT·diode)처럼 단순 폭·간격으로 옮길 수 없는 규칙이 남아 있다. 옮긴 113개만 Calibre golden과 판정이 일치한다(넓은 금속의 조건부 간격·via 둘러싸기·via 배열·PAD 간격 17개는 2026-11-28 SPEC 0021에서 옮김). 2026-11-28 남은 96개 규칙 모두 fixture의 Calibre 판정을 받았다(golden/drc-unported-20261128, 남은 DRC fixture 527개, 정의는 scripts/asic/drc_cases_pending.py). KLayout 구현은 아직 없다.",
       "exit_evidence": "남은 규칙을 모두 옮기고(ported) 기준점에서 그 fixture의 Calibre golden을 받아 모든 규칙이 verified가 된 기록",
       "allows_checks": ["asic-drc"],
       "docs": ["docs/specs/0019-merge-gate.md", "docs/verification/nspl-drc-rule-audit.md", "verification/asic/drc-rules.json", "verification/reliability/golden/drc-unported-20261128/README.md"]

@@ -21,6 +21,10 @@ def check(layout, top, selected=None):
     grid = .01/layout.dbu
     if abs(grid-round(grid)) > 1e-7 or grid < 1:
         raise ValueError('GDS dbu cannot represent the 0.01 um process grid exactly')
+    if grid < 2:
+        # WITH WIDTH >= 10 keeps a 10.00 um wire and drops a 9.99 um one (C1b fixtures); with integer
+        # sizing that needs a threshold between two grid steps, so at least two dbu per grid step.
+        raise ValueError('GDS dbu cannot represent the WITH WIDTH threshold: dbu must be at most half the 0.01 um grid')
     scale = lambda x: round(x/layout.dbu)
     raw = {}
     for name, number in LAYERS.items():
@@ -50,6 +54,21 @@ def check(layout, top, selected=None):
     reg['MET1_AND_MET2'] = reg['MET1'] & reg['MET2']
     reg['MET2_AND_MET3'] = reg['MET2'] & reg['MET3']
     reg['ACTIVE_OR_POLY'] = reg['ACT'] | reg['POLY1'] | reg['POLY2']
+    # Deck `MET1UP10 = WITH WIDTH MET1 >= 10`, `MET1UN10 = WITH WIDTH MET1 < 10` (same for MET2/MET3).
+    # WITH WIDTH keeps parts, not whole polygons: the 2 um tail of a 20 um plate is UN10 (C1b 0014,
+    # 0030, 0128). The wide part is the opening (size down, then up) by just under half of 10 um, so a
+    # 10.00 um wire stays wide and a 9.99 um wire does not (C1b width-10.00/9.99 fixtures).
+    half = scale(10/2)-1
+    for metal in ('MET1', 'MET2', 'MET3'):
+        wide = reg[metal].sized(-half).sized(half) & reg[metal]
+        reg[metal+'UP10'], reg[metal+'UN10'] = wide, reg[metal]-wide
+    # Deck `ARRAY_VIA1 = SIZE (SIZE VIA1 BY 0.8) BY 2.4 UNDEROVER`, `ARRAY1 = VIA1 AND ARRAY_VIA1`.
+    # A grown block exactly 4.8 um wide vanishes (C1b 3x3-s0.40-degenerate: Calibre clean).
+    for cut in ('VIA1', 'VIA2'):
+        block = reg[cut].sized(scale(.8)).sized(-scale(2.4)).sized(scale(2.4))
+        reg[cut+'_ARRAY'] = reg[cut] & block
+    # Deck `PITCHPAD = SIZE PAD BY 19.99 OVERUNDER`, `A = PITCHPAD NOT PAD`; 13.PAD.P is `PAD INTERACT A`.
+    reg['PAD_PITCH_FILL'] = reg['PAD'].sized(scale(19.99)).sized(-scale(19.99))-reg['PAD']
     names = sorted(PORTS if selected is None else selected)
     rules = {}
     for name in names:
@@ -65,6 +84,13 @@ def check(layout, top, selected=None):
             errors = [regions[0].separation_check(regions[1], scale(value))]
             if kind == 'separation_no_stack':
                 errors.append(regions[0] & regions[1])
+        elif kind == 'separation_unshielded':
+            # Deck `EXT MET1UP10 MET1 < v`: the wide part against its own metal. Every UP10 edge has a
+            # coincident MET1 edge, and KLayout's default shielding then hides the facing edge across the
+            # gap (C1b S2 fixtures: 0 markers). Calibre EXT measures without shielding unless the deck says
+            # EXCLUDE SHIELDED, so measure unshielded. Coincident edges face the same way and are not pairs.
+            errors = [regions[0].separation_check(regions[1], scale(value), False, pya.Region.Euclidian,
+                                                  None, None, None, False)]
         elif kind == 'enclosure':
             # Deck: ENC inner outer < v ABUT < 90 SINGULAR OVERLAP REGION. ENC compares
             # interacting layers only: contacts solely on ACT must not fail the separate
@@ -79,6 +105,8 @@ def check(layout, top, selected=None):
                 errors += [outer.enclosing_check(inner, scale(value)), crossing]
         elif kind == 'not_interacting':
             errors = [regions[0].not_interacting(regions[1])]
+        elif kind == 'interacting':
+            errors = [regions[0].interacting(regions[1])]
         elif kind == 'overlap':
             errors = [regions[0] & regions[1]]
         elif kind == 'overlap_except':

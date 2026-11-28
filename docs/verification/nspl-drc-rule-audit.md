@@ -2,7 +2,7 @@
 
 2026-11-24 · SPEC 0018 · PR #10 위의 후속 작업
 
-**Calibre 원본의 활성 검사 209개와 비활성 7개를 목록화했다. 이 중 96개를 KLayout 기하 검사로 옮겨 정상·위반 등 427개 도형 시험을 통과했다. 나머지 113개와 원본 도구 교차 대조는 미완료다.** (2026-11-28 갱신: 둘러싸기 경계 24개를 더해 451개가 되었고, Calibre로 같은 fixture를 실행해 96개 규칙 모두 판정이 같다. 451개 중 449개 일치, 2개는 Calibre 입력 거부로 제외. 근거는 `verification/reliability/table.md`, 규칙 상태는 SPEC 0019 3절.) 이 수치는 구현 항목 수이며 공정 검증률이나 제작 준비율이 아니다.
+**Calibre 원본의 활성 검사 209개와 비활성 7개를 목록화했다. 이 중 96개를 KLayout 기하 검사로 옮겨 정상·위반 등 427개 도형 시험을 통과했다. 나머지 113개와 원본 도구 교차 대조는 미완료다.** (2026-11-28 갱신: 둘러싸기 경계 24개를 더해 451개가 되었고, Calibre로 같은 fixture를 실행해 96개 규칙 모두 판정이 같다. 451개 중 449개 일치, 2개는 Calibre 입력 거부로 제외. 근거는 `verification/reliability/table.md`, 규칙 상태는 SPEC 0019 3절.) (2026-11-28 갱신 2: SPEC 0021 묶음 1에서 금속·via·PAD 17개 규칙을 더 옮겼다. 이미 받아 둔 Calibre fixture 228개와 변형본 두 golden에서 모두 Calibre와 같아 verified 규칙은 113개, 미이식은 96개다. DRC fixture는 679개이며 677개 일치, 2개 제외.) 이 수치는 구현 항목 수이며 공정 검증률이나 제작 준비율이 아니다.
 
 전체 번호·원본 줄·본문 해시·이전 검사·추가 구현·부족한 조건은 [전체 대조표](nspl-drc-rule-matrix.md)와 [기계 판독 목록](../../verification/asic/drc-rules.json)에 있다. 담당자에게 전달할 글은 [별도 요청문](pdk-support-request.md)에 정리했다. 발송하지 않았다.
 
@@ -21,7 +21,7 @@
 
 ## 실제로 늘린 검사와 시험
 
-96개에는 grid, well·active·poly·implant·금속 폭, 일부 간격·enclosure, contact/via 치수, 겹침·배치 누락 조건이 포함된다. 복잡한 원본 식을 bbox로 대신 계산하지 않는다. 전위가 같은 well/다른 well, `WITH WIDTH`의 넓은 금속 구분, finger 합계·guard ring·BJT·diode의 복잡한 조건은 미구현으로 남겼다.
+96개에는 grid, well·active·poly·implant·금속 폭, 일부 간격·enclosure, contact/via 치수, 겹침·배치 누락 조건이 포함된다. 복잡한 원본 식을 bbox로 대신 계산하지 않는다. 전위가 같은 well/다른 well, `WITH WIDTH`의 넓은 금속 구분, finger 합계·guard ring·BJT·diode의 복잡한 조건은 미구현으로 남겼다. (2026-11-28 갱신 2: `WITH WIDTH`의 넓은 금속 구분은 SPEC 0021에서 옮겼다. 넓은 부분은 다각형 전체가 아니라 열림(반 폭만큼 줄였다 키움)으로 구한 부분이고, 폭 10.00 µm는 넓은 쪽이다. 넓은 금속과 같은 층 금속의 간격(`*.S2`)은 KLayout 기본 차폐를 끄고 잰다. 둘 다 Calibre fixture로 정했다.)
 
 도형(지금 451개)은 PDK 숫자를 별도로 지정한 시험 정의(`scripts/asic/drc_cases.py`)에서 만든다. 검사 코드의 값을 가져와 기대값을 만들지 않는다. 모든 구현 규칙에는 정상·위반이 있으며 다음 조건도 포함한다.
 
@@ -42,6 +42,7 @@
 | `OFFGRID_FVTN` | Calibre 본문은 FVTP, Assura는 FVTN/FVTP 각각 검사 | Calibre 본문 그대로 구현하고 차이를 명시. FVTN까지 검사했다고 주장하지 않음 |
 | `13.PAD.A` | Calibre 본문은 최소 폭 80µm, min/max 주석과 차이. Assura에는 별도의 사각 치수 식 | 최소 폭으로 시험. 80µm 초과를 임의로 금지하지 않고 적용 기준 질문 |
 | 금속 antenna | Calibre DRC의 3개 metal ANT는 비활성, Assura에는 실행 식이 있음. 별도 Calibre ANT deck도 있음 | 어떤 검사 묶음을 제출에 적용할지 담당자 확인. 임의로 삭제·통합하지 않음. 별도 ANT deck은 그대로 옮겨 흐름에서 실행(SPEC 0020). DRC deck의 `3.PL1.ANT`는 미구현 |
+| `*.S2` 넓은 금속 간격 | `EXT MET1UP10 MET1`에서 넓은 부분의 변마다 같은 자리에 금속 변이 있음. KLayout 기본 차폐가 그 변으로 틈 건너편을 가려 위반 0건 | 차폐 없이 재는 kind `separation_unshielded`(SPEC 0021). Calibre fixture 48개와 같음 |
 | 공개 변환본의 `NMOS`·`POLY1_ON_ACT` | 원본의 INTERACT 선택과 변환본의 AND 교집합은 다른 도형을 만들 수 있음 | 옮긴 식은 원본의 전체 polygon 선택을 유지하고 좁은 tail 반례로 시험 |
 | Assura/변환본 ID 차이 | `7.CONT.E.1`·`7.SONT.S8`·`5.PSD.*` 등 다른 이름이 있음 | 같은 문자열이 없는 것을 곧바로 검사 누락으로 결론 내리지 않음 |
 
@@ -55,6 +56,8 @@
 | --- | --- | --- | --- |
 | 코어 | 96개 | 0개 | 4.633초 |
 | 제안 SOP28 | 96개 | 0개 | 13.595초 |
+
+(2026-11-28 갱신 2: 같은 두 GDS와 v2 칩 두 판에 구현 규칙 113개를 실행해 모두 0건이었다. 같은 GDS의 Calibre DRC는 0건이고, v2 seal ring 판만 아직 옮기지 않은 `1.PWL.bad1` 1건이다. 기록은 `verification/reliability/golden/drc-fixtures-20261128c/README.md`.)
 
 두 GDS 모두 원본 NODRC 면적과 실제 제외 면적은 0이었다. 오류 0건이어도 상태는 `incomplete`, `qualified_process_drc`는 false다. 아직 없는 113개 검사, 전역 입력 플래그, 원본 도구와의 대조를 통과한 결과가 아니다. 원본 NODRC 영역과 층별 제외 면적도 보고서에 기록한다.
 

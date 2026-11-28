@@ -1,6 +1,7 @@
 """Golden results are keyed by the fixture definition, not by GDS bytes."""
 import collections
 import contextlib
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -41,7 +42,8 @@ class CaseHashTests(unittest.TestCase):
     def test_every_fixture_case_hashes(self):
         hashes = [reliability.case_sha256(c) for c in cases()]
         # 427 in golden/drc-fixtures-20261128 + 24 in golden/drc-fixtures-20261128b + 102 ANT in golden/ant-fixtures-20261128
-        self.assertEqual(len(hashes), 553)
+        # + 228 DRC batch 1 in golden/drc-fixtures-20261128c (SPEC 0021)
+        self.assertEqual(len(hashes), 781)
 
 
 def golden(*fixtures):
@@ -273,14 +275,14 @@ class RuleStateTests(unittest.TestCase):
         self.assertEqual(reliability.state_counts(catalog), {'unported': 1, 'ported': 1, 'verified': 1})
         self.assertEqual(reliability.state_counts(catalog, {'B', 'C'}), {'unported': 0, 'ported': 1, 'verified': 1})
         real = json.loads(RULES_JSON.read_text(encoding='utf-8'))
-        # DRC deck 96 + 113 and ANT deck 12 (antenna_rules, all verified)
-        self.assertEqual(reliability.state_counts(real), {'unported': 113, 'ported': 0, 'verified': 108})
+        # DRC deck 113 verified + 96 unported (after batch 1, SPEC 0021) and ANT deck 12 (antenna_rules, all verified)
+        self.assertEqual(reliability.state_counts(real), {'unported': 96, 'ported': 0, 'verified': 125})
 
-    def test_catalog_has_96_verified_and_113_unported(self):
+    def test_catalog_has_113_verified_and_96_unported(self):
         from drc_ports import PORTS
         catalog = json.loads(RULES_JSON.read_text(encoding='utf-8'))
         states = [reliability.rule_state(r) for r in catalog['rules']]
-        self.assertEqual((states.count('verified'), states.count('ported'), states.count('unported')), (96, 0, 113))
+        self.assertEqual((states.count('verified'), states.count('ported'), states.count('unported')), (113, 0, 96))
         from drc_antenna import RULES as ANTENNA
         self.assertEqual({r['id'] for r in catalog['antenna_rules'] if reliability.rule_state(r) == 'verified'},
                          set(ANTENNA))
@@ -375,8 +377,9 @@ class TableTests(unittest.TestCase):
         self.assertIn('hold 최대 0.353 ns', rows['pnr-sta']['scope'])
         self.assertTrue(rows['pnr-sta']['scope'].startswith('STA 계산만:'))
         self.assertIn('check-pending', rows['drc-unported']['pr_check'])
-        self.assertIn('451개 중 449개', rows['drc-fixtures']['note'])
+        self.assertIn('679개 중 677개', rows['drc-fixtures']['note'])
         self.assertIn('golden/drc-fixtures-20261128b/golden.json', rows['drc-fixtures']['evidence'])
+        self.assertIn('golden/drc-fixtures-20261128c/golden.json', rows['drc-fixtures']['evidence'])
         self.assertEqual(rows['drc-mutations']['evidence'], ['golden/drc-mutations-20261128/golden.json',
                                                              'golden/drc-mutations-20261128b/golden.json'])
         self.assertEqual(len({r['stage'] for r in self.table['rows']}), len(self.table['rows']))  # labels tell rows apart
@@ -665,7 +668,7 @@ class EdgeGoldenFileTests(unittest.TestCase):
 
     def test_all_fixture_golden_covers_every_case(self):
         loaded = reliability.load_golden(RELIABILITY/'golden')
-        self.assertEqual(len(loaded['fixtures']), 553)
+        self.assertEqual(len(loaded['fixtures']), 781)
         self.assertEqual({f['case_sha256'] for f in loaded['fixtures']}, {reliability.case_sha256(c) for c in cases()})
 
     def test_readme_without_server_details(self):
@@ -675,6 +678,34 @@ class EdgeGoldenFileTests(unittest.TestCase):
         self.assertIsNone(SERVER_TRACE.search(text))
         self.assertIsNone(LOCAL_PATH.search(text))
         self.assertIsNone(LOCAL_PATH.search((self.FOLDER/'golden.json').read_text(encoding='utf-8')))
+
+
+class Batch1GoldenFileTests(unittest.TestCase):
+    """golden/drc-fixtures-20261128c: the pending golden's entries of the 17 batch-1 rules, copied unchanged."""
+
+    def test_entries_are_the_pending_entries_and_back_the_moved_fixtures(self):
+        g = json.loads((BATCH1_DIR/'golden.json').read_text(encoding='utf-8'))
+        pending_bytes = (PENDING_DIR/'golden.json').read_bytes()
+        pending = json.loads(pending_bytes)
+        self.assertEqual(g['fixtures'], [e for e in pending['fixtures'] if e['rule'] in BATCH1_RULES])
+        self.assertEqual(g['meta']['moved_from_sha256'],
+                         hashlib.sha256(pending_bytes.replace(b'\r\n', b'\n')).hexdigest())
+        self.assertEqual(g['meta']['deck_sha256'], drc_catalog.SOURCE_SHA)
+        self.assertFalse(g['meta'].get('pending'))
+        self.assertEqual(len(g['fixtures']), 228)
+        self.assertEqual(collections.Counter(e['calibre'] for e in g['fixtures']), {'fired': 121, 'clean': 107})
+        # drc_cases.py 0553-0780, same order and hashes; every definition says what Calibre reported
+        moved = cases()[553:781]
+        self.assertEqual({c['rule'] for c in moved}, BATCH1_RULES)
+        self.assertEqual([reliability.case_sha256(c) for c in moved], [e['case_sha256'] for e in g['fixtures']])
+        self.assertEqual([c['fail'] for c in moved], [e['calibre'] == 'fired' for e in g['fixtures']])
+
+    def test_readme_without_server_details(self):
+        text = (BATCH1_DIR/'README.md').read_text(encoding='utf-8')
+        for needle in ('v2023.4_17.10', drc_catalog.SOURCE_SHA, 'moved_from_sha256', '2026-11-28', 'SPEC 0021'):
+            self.assertIn(needle, text)
+        self.assertIsNone(SERVER_TRACE.search(text))
+        self.assertIsNone(LOCAL_PATH.search(text))
 
 
 class MutationGoldenFileTests(unittest.TestCase):
@@ -711,6 +742,11 @@ class MutationGoldenFileTests(unittest.TestCase):
 
 ANT_RULES = {'ANT_01', 'ANT_02_1', 'ANT_02_2', 'ANT_02_3', 'ANT_03_1', 'ANT_03_2', 'ANT_03_3', 'ANT_04',
              'ANT_05_1', 'ANT_05_2', 'ANT_06_01', 'ANT_06_02'}
+# DRC deck batch 1 (SPEC 0021): the 17 C1b metal/via/pad rules, moved with their 228 fixtures.
+BATCH1_RULES = {'8.MET1.S1', '8.MET1.S2', '9.VIA1.S2', '9.VIA1.E1', '9.VIA1.E2', '9.VIA1.E3', '9.VIA1.E4',
+                '10.MET2.S1', '10.MET2.S2', '11.VIA2.S2', '11.VIA2.E1', '11.VIA2.E2', '11.VIA2.E3', '11.VIA2.E4',
+                '12.MET3.S1', '12.MET3.S2', '13.PAD.P'}
+BATCH1_DIR = RELIABILITY/'golden'/'drc-fixtures-20261128c'
 # Calibre-refused 0225/0226 are not corrected: `raises` means our writer/KLayout raises (like 0169/0170).
 REFUSED = {('C1a', '0225-NONSIMPLE-bow-tie.gds'), ('C1a', '0226-NONSIMPLE-orthogonal-self-crossing.gds')}
 CORRECTED = {('C1a', '0227-NONSIMPLE-self-touching-vertex.gds'): {'fail': False}}
@@ -727,12 +763,13 @@ class PendingCaseTests(unittest.TestCase):
         cls.records = drc_cases_pending.records()
         cls.module = drc_cases_pending
 
-    def test_three_groups_755_pending_fixtures(self):
-        # 857 ran in Calibre; the 102 ANT fixtures moved to drc_cases.py when drc_antenna.py ported the deck.
-        self.assertEqual(collections.Counter(r['group'] for r in self.records), {'C1a': 229, 'C1b': 228, 'C1c': 298})
+    def test_two_groups_527_pending_fixtures(self):
+        # 857 ran in Calibre; the 102 ANT fixtures moved to drc_cases.py when drc_antenna.py ported the deck,
+        # and the 228 DRC fixtures of C1b with the batch 1 rules (SPEC 0021), so no C1b fixture is left.
+        self.assertEqual(collections.Counter(r['group'] for r in self.records), {'C1a': 229, 'C1c': 298})
         self.assertEqual([r['case'] for r in self.records], self.module.cases())
-        self.assertEqual(len({reliability.case_sha256(r['case']) for r in self.records}), 755)
-        self.assertEqual(collections.Counter(r['deck'] for r in self.records), {'DRC': 755})
+        self.assertEqual(len({reliability.case_sha256(r['case']) for r in self.records}), 527)
+        self.assertEqual(collections.Counter(r['deck'] for r in self.records), {'DRC': 527})
         for record in self.records:
             self.assertEqual(set(record['case']), {'rule', 'label', 'shapes', 'fail', 'hierarchy', 'dbu', 'raises'})
             group_index = record['index']
@@ -744,8 +781,9 @@ class PendingCaseTests(unittest.TestCase):
         unported = {rule for rule, state in states.items() if state == 'unported'}
         drc = {r['case']['rule'] for r in self.records if r['deck'] == 'DRC'}
         self.assertEqual(drc, unported | {'ACUTE', 'NONSIMPLE'})
-        self.assertEqual(self.module.MOVED_RULES, ANT_RULES)
-        self.assertFalse({r['case']['rule'] for r in self.records} & ANT_RULES)
+        self.assertEqual(self.module.MOVED_RULES, ANT_RULES | BATCH1_RULES)
+        self.assertFalse({r['case']['rule'] for r in self.records} & (ANT_RULES | BATCH1_RULES))
+        self.assertTrue(all(states[rule] == 'verified' for rule in BATCH1_RULES))
         self.assertFalse({r['case']['rule'] for r in self.records} & {r for r, s in states.items() if s != 'unported'})
 
     def test_pending_cases_stay_out_of_the_ported_selftest(self):
@@ -800,7 +838,7 @@ class PendingGoldenTests(unittest.TestCase):
         self.assertEqual(result['problems'], [])
         self.assertEqual(result['status'], 'pass')
         self.assertEqual(result['fixtures'], 857)
-        self.assertEqual((result['definitions'], result['moved'], result['excluded']), (755, 102, 2))
+        self.assertEqual((result['definitions'], result['moved'], result['excluded']), (527, 330, 2))
         self.assertEqual(result['sources'], ['drc-unported-20261128/golden.json'])
 
     def test_golden_counts_and_meta(self):
@@ -843,8 +881,9 @@ class PendingGoldenTests(unittest.TestCase):
 
     def test_fixture_check_ignores_pending_golden(self):
         loaded = reliability.load_golden(RELIABILITY/'golden')
-        self.assertEqual(len(loaded['fixtures']), 553)
+        self.assertEqual(len(loaded['fixtures']), 781)
         self.assertIn('ant-fixtures-20261128/golden.json', [s['path'] for s in loaded['sources']])
+        self.assertIn('drc-fixtures-20261128c/golden.json', [s['path'] for s in loaded['sources']])
         self.assertNotIn('drc-unported-20261128/golden.json', [s['path'] for s in loaded['sources']])
 
     def test_check_pending_reports_drift(self):
@@ -927,7 +966,7 @@ class PendingGoldenTests(unittest.TestCase):
                                                                encoding='utf-8')
             result = reliability.check_pending(Path(tmp)/'golden', [r for r in records if r is not victim])
         self.assertEqual(result['status'], 'fail')
-        self.assertEqual(result['moved'], 102)
+        self.assertEqual(result['moved'], 330)
         self.assertTrue(any('1.NWL.S.1' in p for p in result['problems']), result['problems'])
 
     def test_check_pending_without_pending_golden_fails(self):
