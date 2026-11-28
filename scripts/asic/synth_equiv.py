@@ -218,7 +218,7 @@ def check(netlist, liberty, out, sources=None, top=None, models=None, synth_log=
             gate = out/'gate_aliased.v'
             gate.write_text(with_aliases(text, top, lines), encoding='utf-8')
         result['register_names'] = {'flops': len(outputs), 'aliased': sum(max(len(b), 1) for b in paired.values()),
-                                    'unpaired_instances': unpaired,
+                                    'unpaired_instances': unpaired if lines else [],
                                     'naming': 'instance names (<path>_reg[<i>]) → aliases' if lines else
                                               'flop outputs carry RTL names'}
         ports = json.loads((out/'gold.json').read_text(encoding='utf-8'))['modules'][top]['ports']
