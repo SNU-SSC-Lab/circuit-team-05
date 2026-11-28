@@ -121,12 +121,12 @@
     {
       "id": "synth",
       "stage": "합성",
-      "open_source": "Yosys 0.68+40 (흐름 asic-synth)",
-      "commercial": "Genus 23.14-s090_1",
+      "open_source": "CI가 만든 Yosys netlist ↔ 그 PR의 RTL (흐름 검사 asic-synth-equiv: 포트·클록 구조 검사 + 다음 상태 형식 증명 + 리셋 뒤 출발 조건)",
+      "commercial": "Genus 23.14-s090_1 netlist (기준점 RTL ac5d641 1건)",
       "verdict": "match",
-      "scope": "기준점 1건: 같은 RTL(main ac5d641, 수정 없음)의 Genus netlist(325셀)와 Yosys netlist(452셀)를 각각 RTL과 대조",
-      "note": "형식 증명(Yosys equiv_make·equiv_simple·equiv_induct, 셀은 키트 Liberty function): RTL ↔ Genus 109/109 짝 증명, RTL ↔ Yosys 72/72(Yosys의 one-hot FSM 재부호화는 합성 로그 부호표로 대응). 일부러 고친 netlist 5개는 모두 실패. 시험(증명 아님): 같은 팀 시험 integration·regression 42,907작업을 RTL·두 netlist 모두 통과. 타이밍·면적은 비교하지 않음",
-      "pr_check": "PR마다 확인하지 않음. Genus netlist는 저장소 밖에 두고 기준점에서만 다시 대조(drc-chip-v2와 같음). P&R 뒤 netlist의 기능은 asic-gate가 PR마다 같은 팀 시험으로 확인",
+      "scope": "기준점 1건: RTL ac5d641의 Genus netlist(325셀)와 Yosys netlist 2개(CI형 0.33 437셀, 로컬 0.68 452셀)를 각각 RTL과 대조. RTL이 바뀐 뒤의 Yosys netlist는 asic-synth-equiv가 PR마다 대조",
+      "note": "판정은 오픈소스 형식 검증(Yosys equiv_*)과 구조 검사. 상용 LEC 대조는 아님(Conformal 요청은 다음 서버 묶음 후보). 구조 검사: 포트 이름·방향·폭, 모든 flop이 상승 에지·비동기 없음·클록 포트 직결. 형식 증명: 짝지은 신호의 다음 상태 함수 RTL ↔ Genus 109/109, RTL ↔ Yosys 72/72(one-hot FSM은 합성 로그 부호표). 리셋 1주기 뒤 모든 짝이 같음(유계 SAT). Genus의 독립 합성이 같은 검사를 통과해 오픈소스 판정을 교차 확인. 일부러 고친 netlist 17개 모두 실패. 시험(증명 아님): 팀 시험 42,907작업을 RTL·Genus·Yosys 통과",
+      "pr_check": "asic-gate의 run_asic --gate가 PR마다 CI가 만든 Yosys netlist를 그 PR의 RTL과 대조(asic-synth-equiv, 실패하면 게이트 실패). Genus 대조는 기준점에서만(Genus netlist는 저장소 밖, drc-chip-v2와 같음). P&R 뒤 netlist의 기능은 asic-gate가 같은 팀 시험으로 확인",
       "evidence": ["golden/synth-20261128/summary.json"],
       "unverified": [],
       "updated": "2026-11-28"

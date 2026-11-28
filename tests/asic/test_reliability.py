@@ -405,6 +405,9 @@ class TableTests(unittest.TestCase):
         self.assertEqual(rows['synth']['evidence'], ['golden/synth-20261128/summary.json'])
         self.assertTrue(rows['synth']['scope'].startswith('기준점 1건'))
         self.assertIn('기준점에서만', rows['synth']['pr_check'])
+        self.assertIn('asic-synth-equiv', rows['synth']['pr_check'])
+        self.assertIn('CI가 만든 Yosys netlist', rows['synth']['open_source'])
+        self.assertIn('상용 LEC 대조는 아님', rows['synth']['note'])
         for key in ('lvs-cells', 'lvs-chip'):
             self.assertIn('golden/lvs-20261128/summary.json', rows[key]['evidence'])
 
@@ -1018,23 +1021,33 @@ class EvidenceSummaryTests(unittest.TestCase):
         self.assertIn('remove_from_collection', readme)
 
     def test_synth_summary(self):
+        # A record of RTL ac5d641 (checkpoint). The RTL may change afterwards: per-PR proof is asic-synth-equiv,
+        # so src/ is deliberately not pinned here (2026-11-28 review I4).
         summary, readme = self.load('synth-20261128')
-        genus, yosys = summary['netlists']['genus'], summary['netlists']['yosys']
+        self.assertEqual(summary['meta']['rtl_commit'], 'ac5d641')
+        self.assertEqual(len(summary['meta']['rtl_sha256']), 10)
+        self.assertIn('상용 LEC 대조는 아직 없다', summary['meta']['verdict_by'])
+        genus = summary['commercial']['genus']
         self.assertEqual(genus['sha256'], '6fef0f3e70eb4c857500e3d697cd0017ab54d4dc8481fc014e9997bc3600ed24')
         self.assertEqual((genus['tool'], genus['cells'], genus['flops']), ('Genus(TM) Synthesis Solution 23.14-s090_1', 325, 64))
         self.assertEqual(sum(genus['by_type'].values()), 325)
-        self.assertEqual((yosys['cells'], yosys['flops']), (452, 66))
-        self.assertEqual(sum(yosys['by_type'].values()), 452)
-        formal = summary['formal']
-        for key, pairs in (('rtl_vs_genus', 109), ('rtl_vs_yosys', 72)):
-            self.assertEqual((formal[key]['status'], formal[key]['pairs'], formal[key]['proven']), ('pass', pairs, pairs))
-            self.assertEqual(formal[key]['outputs_left_out'], [])
-        self.assertTrue(all(v.startswith('fail') for k, v in formal['negative_controls'].items() if k != 'note'))
-        self.assertEqual(formal['kit_verilog_vs_liberty']['different'], [])
-        self.assertEqual({r['jobs'] for r in summary['simulation']['results'].values()}, {42907})
-        self.assertEqual(summary['meta']['rtl_sha256'], {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-                                                         for p in sorted((ROOT/'src').glob('*.v'))})
+        record = summary['open_source_record']
+        results = record['results']
+        for key, pairs in (('rtl_vs_genus', 109), ('rtl_vs_yosys_ci_type', 72), ('rtl_vs_yosys_local', 72)):
+            r = results[key]
+            self.assertEqual((r['status'], r['ports'], r['clocks'], r['start_condition']), ('pass',) * 4, key)
+            self.assertEqual((r['pairs'], r['proven'], r['outputs_left_out']), (pairs, pairs, []), key)
+        self.assertEqual(len(results['rtl_vs_genus']['gold_bits_without_gate_signal']), 18)
+        controls = {k: v for k, v in results['negative_controls'].items() if k != 'note'}
+        self.assertEqual(len(controls), 17)
+        self.assertTrue(all(v.startswith('fail') for v in controls.values()))
+        for kind in ('clocks', 'ports', 'start condition'):
+            self.assertTrue(any(kind in v for v in controls.values()), kind)
+        self.assertEqual(results['kit_verilog_vs_liberty']['different'], [])
+        sim = results['simulation']
+        self.assertEqual({sim[k]['jobs'] for k in ('rtl', 'genus', 'yosys_local')}, {42907})
         self.assertIn('6fef0f3e70eb4c857500e3d697cd0017ab54d4dc8481fc014e9997bc3600ed24', readme)
+        self.assertIn('상용 LEC', readme)
         self.assertFalse(list((RELIABILITY/'golden'/'synth-20261128').glob('*.v')))
 
     def test_spice_summary(self):

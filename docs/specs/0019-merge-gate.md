@@ -71,7 +71,7 @@ SPEC 0017·0018로 실제 5팀 코어와 제안 SOP28 GDS를 만들고 검사하
 | --- | --- | --- | --- | --- |
 | `RTL CI` (`ci.yml`) | `pr-policy`, `policy-unit (ubuntu-24.04)`, `policy-unit (windows-2022)`, `rtl` | PR 규칙·정책 단위 시험·RTL 린트·시뮬레이션 | 기존 그대로 | main에 있음 |
 | `MyChip PDK` (`pdk.yml`) | `pdk (pr)` | 합성·OpenSTA·게이트 수준 시험 | 기존 그대로 | main에 있음 |
-| `ASIC gate` (`asic.yml` 개편) | `asic-gate` | RTL → OpenROAD P&R → GDS → 코어 LVS → 구현된 DRC 규칙(`drc_audit.py` 코어·칩)·antenna(`asic-antenna`·`asic-chip-antenna`, SPEC 0020) → 최종 netlist 기능 회귀 → STA | 코어 LVS 일치, 구현 DRC 규칙 오류 0, antenna 위반 0, 기능 회귀 통과, setup/hold slack ≥ 0(추정 RC 기준), 미검증 목록 `allows_checks` 밖의 검사는 모두 실행·통과 | 구현. 로컬 통과. GitHub(PR #12) 실행 2분 52초~4분 13초 |
+| `ASIC gate` (`asic.yml` 개편) | `asic-gate` | RTL → 합성 동치(`asic-synth-equiv`, 2026-11-28) → OpenROAD P&R → GDS → 코어 LVS → 구현된 DRC 규칙(`drc_audit.py` 코어·칩)·antenna(`asic-antenna`·`asic-chip-antenna`, SPEC 0020) → 최종 netlist 기능 회귀 → STA | 합성 netlist ↔ RTL 대조 통과, 코어 LVS 일치, 구현 DRC 규칙 오류 0, antenna 위반 0, 기능 회귀 통과, setup/hold slack ≥ 0(추정 RC 기준), 미검증 목록 `allows_checks` 밖의 검사는 모두 실행·통과 | 구현. 로컬 통과. GitHub(PR #12) 실행 2분 52초~4분 13초 |
 | `ASIC gate` (`asic.yml`) | `reliability-table` | DRC fixture·변형본의 KLayout 판정을 Calibre golden과 다시 대조, pending golden 묶음 확인 | `verified` 규칙이 모든 fixture golden과 일치하고 golden fixture가 하나도 사라지지 않음, 변형본 불일치 0, pending golden이 정의와 1:1 | 구현. 로컬 통과. GitHub(PR #12) 실행 8~13분(변형본 대조 포함, 실행마다 다름) |
 | `Baseline guard` (`baseline.yml`, 신규) | `baseline-guard` | 기준 브랜치와 비교해 기준 파일·규칙 상태·미검증 목록·검사 코드 변경 검사(PR 코드는 실행하지 않음) | 3절 규칙. 위반이 있으면 실패하고 도재겸이 PR 우회로 머지 | 구현. 로컬 통과. GitHub 실행 없음(main에 `baseline.yml`이 없어 이 PR에서는 돌지 않음) |
 
@@ -154,7 +154,7 @@ verification/reliability/
 | `lvs-cells` | LVS 표준셀 | 일치 | Calibre 34/34 CORRECT ↔ 우리 경로(KLayout 추출 + `lvs_reduce.py` + Netgen) 34/34 일치(2026-11-28 재검사, `cell-qualification.json`) | 셀 대조는 PR마다 하지 않음. 같은 줄이기·설정을 쓰는 코어 LVS는 `asic-gate` |
 | `lvs-chip` | LVS 칩·pad | 일치 | 같은 GDS에서 Calibre 칩 LVS CORRECT ↔ 오픈소스 연결 검사 단선·합선 0 + 코어 Netgen 일치. 오픈소스 쪽 패드 내부 LVS는 없음 | 연결 검사·코어 LVS는 `asic-gate`. `asic-chip-lvs`는 미검증 허용 |
 | `spice` | SPICE 시뮬레이션 | 일치 | ngspice ↔ Spectre 최대 상대오차 과도 1.5%, DC 3.67%, 측정값 0.62%, GPIO 과도 0.92% | 없음(기준점에서만) |
-| `synth` | 합성 | 일치(기준점 1건) | 같은 RTL(`ac5d641`)의 Genus netlist ↔ RTL 109/109, Yosys netlist ↔ RTL 72/72 짝 형식 증명. 같은 팀 시험 42,907작업도 셋 다 통과 | 없음. Genus netlist는 저장소 밖, 기준점에서만(`drc-chip-v2`와 같음) |
+| `synth` | 합성 | 일치(Genus는 기준점 1건) | RTL `ac5d641`의 Genus netlist ↔ RTL 109/109, Yosys netlist ↔ RTL 72/72 짝 형식 증명 + 포트·클록 구조 검사 + 리셋 뒤 출발 조건. 판정은 오픈소스 형식 검증(상용 LEC 대조 아님) | `asic-gate`가 CI가 만든 Yosys netlist를 그 PR의 RTL과 대조(`asic-synth-equiv`). Genus는 기준점에서만(저장소 밖) |
 | `pnr-sta` | P&R·STA | 일치(STA 계산만) | 같은 입력에서 OpenSTA ↔ Tempus 끝점 72개 slack 차 setup 최대 0.253 ns, hold 최대 0.353 ns. 흐름의 `estimated.spef`는 RC 0. Innovus 배치와는 비교하지 않는다(아래 3절) | 없음. 흐름 STA는 배선 RC 0(`wire-rc-zero`), `asic-chip-timing`은 미검증 허용 |
 | `pex` | PEX | 근거 없음 | Calibre xRC 기준 자료 확보, OpenRCX 보정·대조 전 | 미검증 `pex`, `wire-rc-zero` |
 | `antenna` | antenna | 일치 | KLayout antenna 검사 12개(SPEC 0020)가 Calibre ANT fixture 102개와 모두 일치, 칩 3건(GDS 4개) KLayout 0 ↔ Calibre 0 | `reliability-table`: ANT fixture를 다시 판정해 golden과 대조. `asic-gate`: 코어·칩 antenna 0건(`asic-antenna`·`asic-chip-antenna`, 미확인 허용 없음) |
@@ -220,7 +220,7 @@ flowchart TD
     PR --> ASIC["asic-gate · asic.yml 개편"]
     ASIC --> PATHS{"물리 흐름 대상 변경?"}
     PATHS -- 아니오 --> SKIP["변경 없음으로 통과"]
-    PATHS -- 예 --> FLOW["합성 · P&R · GDS · 코어 LVS · 구현 DRC · 기능 회귀 · STA"]
+    PATHS -- 예 --> FLOW["합성 · 합성 동치(asic-synth-equiv, 2026-11-28 추가) · P&R · GDS · 코어 LVS · 구현 DRC · 기능 회귀 · STA"]
     FLOW --> UNV["unverified.json allows_checks만 미확인 허용 · 추가"]
     PR --> REL["reliability-table (asic.yml) · 추가"]
     GOLD["verification/reliability/golden · 추가"] --> REL
@@ -262,6 +262,7 @@ flowchart TD
 + def load_allowed(path=UNVERIFIED): ...   # 모든 항목의 allows_checks 합집합, 모르는 검사 이름이면 ValueError
 + def exit_status(checks, error=None, target='core', allowed=frozenset()):
 + def estimated_sta(log): ...             # setup·hold worst slack이 둘 다 있고 둘 다 >= 0이어야 pass
++ def synth_equivalence(netlist, lib, out): ...  # 2026-11-28: asic-synth-equiv, 이 실행의 Yosys netlist ↔ RTL(synth_equiv.py)
 ```
 
 ### 구현 파일과 역할
@@ -280,7 +281,7 @@ flowchart TD
 | `scripts/asic/baseline_guard.py` | 기준 커밋과 PR head의 규칙 상태·미검증 목록·golden·검사 코드를 파일 내용으로만 비교해 우회가 필요한 변경을 실패시킴. PR 코드는 실행하지 않음(`--run-fixtures`는 로컬 전용) |
 | `scripts/asic/flow.py`, `scripts/run_asic.py` | `--gate`가 `unverified.json`의 `allows_checks`로 판정. `--experimental`은 고정 목록 `UNQUALIFIED_DEFAULT`로 유지. `asic-estimated-sta` 판정 함수 분리. `constraints.sdc` 2행은 입력 포트를 `get_ports`로 나열(2026-11-28) |
 | `scripts/pdk.py` | `input_ports`·`sdc_data_inputs`: netlist의 입력 포트에서 SDC 2행을 만든다(흐름과 MyChip PDK 검사의 OpenSTA가 같이 씀) |
-| `scripts/asic/synth_equiv.py` | 기준점 도구: gate netlist ↔ RTL 형식 증명(Yosys `equiv_*`), 키트 Verilog 셀 모델 ↔ Liberty 대조. PR마다 돌지 않는다 |
+| `scripts/asic/synth_equiv.py` | gate netlist ↔ RTL: 포트·클록 구조 검사, 다음 상태 형식 증명(Yosys `equiv_*`), 리셋 뒤 출발 조건(유계 SAT). 흐름 검사 `asic-synth-equiv`가 PR마다 CI의 Yosys netlist에, 기준점에서 Genus netlist에 쓴다. 키트 Verilog 셀 모델 ↔ Liberty 대조(기준점) |
 | `verification/reliability/**` | 대응표·미검증 목록·golden·기준점 절차 |
 | `verification/asic/drc-rules.json` | 구현 96개 규칙의 golden 대조 여부(`golden_compared`)와 남은 일(`remaining`) |
 | `.github/workflows/asic.yml` | 워크플로 `ASIC gate`, job `asic-gate`(경로 필터, OpenROAD 실행 라이브러리 apt 설치와 `ldd` 확인)와 `reliability-table` |
@@ -396,7 +397,18 @@ ruleset 설정 JSON은 저장소에 커밋하지 않고 적용 후 내용을 이
 
 미검증 항목 세 개를 다뤘다. 대응표·미검증 목록·golden을 바꾸므로 기준점 PR이다(`baseline-guard` 우회 대상).
 
-**`synth-vs-genus` 닫음.** 같은 RTL(`ac5d641`)로 Genus `23.14-s090_1`이 만든 netlist(325셀)와 흐름의 Yosys netlist(452셀)를 각각 RTL과 형식 증명했다(`scripts/asic/synth_equiv.py`, Yosys `equiv_make`·`equiv_simple`·`equiv_induct`, 셀은 키트 Liberty function). RTL ↔ Genus 109/109, RTL ↔ Yosys 72/72 짝이 증명됐다. 일부러 한 셀을 바꾼 netlist 4개와 틀린 FSM 부호표 1개는 모두 실패했다. 형식 증명과 따로, 같은 팀 시험(integration·regression, 42,907작업)을 RTL과 두 netlist에 돌려 모두 통과했다. Genus netlist는 저장소에 넣지 않고 sha256만 `golden/synth-20261128/`에 둔다. CI는 이 대조를 다시 하지 않는다. 대응표 `synth` 행은 기준점 1건으로 적었다.
+**`synth-vs-genus` 닫음.** 같은 RTL(`ac5d641`)로 Genus `23.14-s090_1`이 만든 netlist(325셀)와 Yosys netlist 두 개(CI와 같은 apt 0.33 437셀, 로컬 0.68+40 452셀)를 각각 RTL과 대조했다(`scripts/asic/synth_equiv.py`). 검사는 네 부분이고 종류를 나눠 적는다.
+
+| 부분 | 종류 | 결과 |
+| --- | --- | --- |
+| 포트 이름·방향·폭 | 구조 검사 | 셋 다 같음 |
+| 클록: 모든 flop이 상승 에지, 비동기 set/reset 없음, 클록 포트 직결(RTL·gate 모두) | 구조 검사 | 셋 다 통과. SAT 모델은 클록 핀을 보지 않으므로 따로 본다 |
+| 짝지은 신호의 다음 상태 함수(`equiv_make`·`equiv_simple`·`equiv_induct`, 셀은 키트 Liberty function) | 형식 증명 | Genus 109/109, Yosys 72/72 |
+| 리셋 1주기 뒤 모든 짝이 같음(초기 상태 자유, `equiv_miter` + `sat`, 8주기) | 형식 검사(유계) | 셋 다 통과 |
+
+일부러 고친 netlist 17개(셀 바꿈·FSM 표·음에지·다른 신호로 클록·비동기 flop·포트 삭제·출력 상수·리셋값)는 모두 실패했다. 형식 검증과 따로, 같은 팀 시험(42,907작업)을 RTL·Genus·Yosys netlist에 돌려 모두 통과했다. 판정은 오픈소스 형식 검증이고 상용 LEC 대조가 아니다. Genus의 독립 합성이 같은 검사를 통과한 것이 교차 확인이다. Conformal LEC 요청은 다음 서버 묶음 후보다.
+
+**흐름 검사 `asic-synth-equiv` 추가(흐름 변경).** `run_asic`이 합성 직후 이 실행의 Yosys netlist를 그 PR의 RTL과 위 네 부분으로 대조한다(Yosys 0.33·0.68에서 같은 결과, 약 2초). 실패하면 `run_asic --gate`가 실패한다. 워크플로 파일은 바꾸지 않았다. 그래서 RTL이 바뀌어도 PR마다 보증이 있고, golden `synth-20261128/`은 RTL `ac5d641` 당시의 기준점 기록으로 남는다(시험은 `src/`를 고정하지 않는다). Genus netlist는 저장소에 넣지 않고 sha256만 둔다.
 
 **`sdc-portability` 줄임.** 흐름 `constraints.sdc` 2행과 MyChip PDK 검사의 OpenSTA 스크립트 2행을 표준 SDC로 바꿨다. 입력 포트는 Yosys로 netlist에서 읽는다.
 
