@@ -204,6 +204,9 @@ def lvs_verdict(report, cells, top):
     else:
         lines = [line.strip() for line in report.splitlines() if line.strip()]
         final = lines[-1] if lines else ''
+    # Netgen 1.5.323 appends a line containing only '.' after its verdict.
+    # Accept that exact terminator, never arbitrary text after success.
+    final = re.sub(r'\n\s*\.\s*$', '', final).strip()
     if final.strip() != 'Circuits match uniquely.':
         return False
     if re.search(r'property errors|do not match|mismatch|black.?box|undefined', report, re.I):

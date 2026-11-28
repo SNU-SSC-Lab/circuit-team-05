@@ -66,10 +66,29 @@ def q(path):
     return str(path)
 
 
-def synthesize(files, top, lib, work):
+def abc_liberty(content, dont_use):
+    """Exclude complete cell blocks from the pinned NSPL ABC view only."""
+    if any(not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', cell) for cell in dont_use):
+        raise ValueError('invalid excluded cell name')
+    for cell in dont_use:
+        pattern = r'^  cell\(' + re.escape(cell) + r'\) \{.*?^  \}[ \t]*\n'
+        content, count = re.subn(pattern, '', content, flags=re.M | re.S)
+        if count != 1:
+            raise ValueError(f'cannot exclude exactly one Liberty cell: {cell}')
+    return content
+
+
+def synthesize(files, top, lib, work, *, dont_use=()):
     """RTL -> netlist of kit cells. Returns (check, netlist path or None)."""
     digital = PDK['digital']
     work.mkdir(parents=True, exist_ok=True)
+    mapping_lib = lib
+    if dont_use:
+        # Yosys 0.33 (Ubuntu 24.04) lacks abc -dont_use. Filter only the
+        # ABC view; preserve the original library for models and timing.
+        content = abc_liberty(lib.read_text(encoding='utf-8'), dont_use)
+        mapping_lib = work/'abc-filtered.lib'
+        mapping_lib.write_text(content, encoding='utf-8')
     netlist, stat, check = work / 'netlist.v', work / 'stat.json', work / 'check.txt'
     code, err = yosys([
         f'read_liberty -lib {q(lib)}',
@@ -79,7 +98,7 @@ def synthesize(files, top, lib, work):
         # The kit's only flops: DFFPOSX1, DFFNEGX1 and DFFSRX1 (async clear and preset, active low).
         'dfflegalize -cell $_DFF_P_ 01 -cell $_DFF_N_ 01 -cell $_DFFSR_PNN_ 01 -cell $_DLATCH_P_ 01',
         f'dfflibmap -liberty {q(lib)}',
-        f'abc -liberty {q(lib)}',
+        f'abc -liberty {q(mapping_lib)}',
         'opt_clean -purge',
         f"hilomap -singleton -hicell {' '.join(digital['tie_high'])} -locell {' '.join(digital['tie_low'])}",
         'opt_clean -purge',
@@ -96,7 +115,7 @@ def synthesize(files, top, lib, work):
     design = json.loads(stat.read_text(encoding='utf-8'))['design']
     cells = design.get('num_cells_by_type', {})
     unmapped = sorted(c for c in cells if c.startswith('$'))
-    forbidden = sorted(c for c in cells if c in digital['forbidden_cells'])
+    forbidden = sorted(c for c in cells if c in set(digital['forbidden_cells']) | set(dont_use))
     problems = [l.strip() for l in check.read_text(encoding='utf-8').splitlines() if YOSYS_PROBLEM.search(l)]
     problems = [f'not a kit cell: {c} (latch or unsupported construct)' for c in unmapped] + \
                [f'forbidden cell {c} x{cells[c]}' for c in forbidden] + problems

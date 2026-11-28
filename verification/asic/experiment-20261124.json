@@ -1,0 +1,241 @@
+{
+  "commit": "83e5feb887a7973a0e640af53ac9206f9c13eab7",
+  "dirty_checkout": true,
+  "tools": {
+    "openroad": "26Q2-1164-g08f67ee5ec ",
+    "yosys": "Yosys 0.33 (git sha1 2584903a060)",
+    "klayout": "KLayout 0.28.16",
+    "iverilog": "Icarus Verilog version 14.0 (devel) (s20260301-349-gf49307688)",
+    "netgen": "Netgen 1.5.133",
+    "python": "3.12.3"
+  },
+  "wall_seconds": 256.202,
+  "status": "incomplete",
+  "execution_status": "pass",
+  "ready_for_submission": false,
+  "checks": {
+    "asic-input": {
+      "status": "pass",
+      "adapter": "technology/adapter.json"
+    },
+    "asic-synth": {
+      "status": "pass",
+      "problems": [],
+      "cells": 437,
+      "flops": 66,
+      "area_um2": 247334.4,
+      "by_type": {
+        "AND2X1": 81,
+        "AOI22X1": 10,
+        "DFFPOSX1": 66,
+        "INVX1": 74,
+        "MUX2X1": 70,
+        "NAND2X1": 51,
+        "NAND3X1": 16,
+        "NOR3X1": 12,
+        "OR2X1": 29,
+        "XNOR2X1": 25,
+        "XOR2X1": 3
+      },
+      "excluded_cells": [
+        "AND2X2",
+        "AOI21X1",
+        "BUFX4",
+        "INVX2",
+        "INVX4",
+        "INVX8",
+        "NOR2X1",
+        "OAI21X1",
+        "OAI22X1",
+        "OR2X2",
+        "TBUFX2"
+      ]
+    },
+    "asic-pnr": {
+      "status": "pass",
+      "wall_seconds": 13.362,
+      "exit_code": 0,
+      "log": "asic-pnr.log",
+      "peak_rss_kib": 403268,
+      "user_seconds": 13.18,
+      "system_seconds": 0.39
+    },
+    "asic-route": {
+      "status": "pass",
+      "router_drc": 0
+    },
+    "asic-estimated-sta": {
+      "status": "pass",
+      "slacks_ns": [
+        47.03,
+        1.644
+      ],
+      "clock": "propagated",
+      "corner": "TT 5V 25C",
+      "derates": "none; typical trial only",
+      "rc": "uncalibrated global-route estimate; not qualified PEX"
+    },
+    "asic-cts": {
+      "status": "pass",
+      "clock_sinks": 66,
+      "expected_flops": 66
+    },
+    "asic-gds": {
+      "status": "pass",
+      "wall_seconds": 1.929,
+      "exit_code": 0,
+      "log": "asic-gds.log",
+      "peak_rss_kib": 392292,
+      "user_seconds": 1.69,
+      "system_seconds": 0.18
+    },
+    "asic-drc-subset": {
+      "status": "pass",
+      "wall_seconds": 2.524,
+      "exit_code": 0,
+      "log": "asic-drc-subset.log",
+      "peak_rss_kib": 382040,
+      "user_seconds": 2.14,
+      "system_seconds": 0.37,
+      "errors": 0
+    },
+    "asic-chip-gds": {
+      "status": "pass",
+      "wall_seconds": 4.129,
+      "exit_code": 0,
+      "log": "asic-chip-gds.log",
+      "peak_rss_kib": 393296,
+      "user_seconds": 3.21,
+      "system_seconds": 0.88
+    },
+    "asic-chip-connectivity": {
+      "status": "pass",
+      "wall_seconds": 9.603,
+      "exit_code": 0,
+      "log": "asic-chip-connectivity.log",
+      "peak_rss_kib": 450828,
+      "user_seconds": 8.14,
+      "system_seconds": 1.46
+    },
+    "asic-chip-lvs": {
+      "status": "unsupported",
+      "detail": "core LVS is separate; GPIO/ESD extraction and independent GPIO reference not qualified"
+    },
+    "asic-chip-timing": {
+      "status": "unsupported",
+      "detail": "qualified GPIO and package timing/RC unavailable"
+    },
+    "asic-pinmap": {
+      "status": "unsupported",
+      "detail": "proposed 28 connected pads vs guide <=25 used pins; team review required"
+    },
+    "asic-extract": {
+      "status": "pass",
+      "wall_seconds": 3.478,
+      "exit_code": 0,
+      "log": "asic-extract.log",
+      "peak_rss_kib": 402924,
+      "user_seconds": 3.08,
+      "system_seconds": 0.33
+    },
+    "asic-netgen": {
+      "status": "pass",
+      "wall_seconds": 0.469,
+      "exit_code": 0,
+      "log": "asic-netgen.log",
+      "peak_rss_kib": 27264,
+      "user_seconds": 0.31,
+      "system_seconds": 0.04
+    },
+    "asic-lvs": {
+      "status": "pass",
+      "report": "lvs/lvs.log",
+      "devices": 3892
+    },
+    "asic-gate": {
+      "status": "pass",
+      "tests": {
+        "boundary_packets": "pass",
+        "positions_and_illegal": "pass",
+        "protocol_and_back_to_back": "pass",
+        "reset_each_phase": "pass",
+        "all_legal_weights": "pass",
+        "random_jobs": "pass"
+      },
+      "jobs": 42907,
+      "groups": [
+        "integration",
+        "regression"
+      ],
+      "seconds": 206.5,
+      "wall_seconds": 206.5
+    },
+    "asic-pex": {
+      "status": "unsupported",
+      "detail": "NSPL calibrated RC rules unavailable; estimated.spef is a global-route estimate"
+    },
+    "asic-drc": {
+      "status": "unsupported",
+      "detail": "full NSPL rule coverage not yet qualified; router DRC is separate"
+    }
+  },
+  "source_hashes": {
+    "scripts/asic/audit_lef.py": "70b6d22eaaa88ca3ad48e993101c32ce1feaca1fd58abe32f8dd7f8861335dba",
+    "scripts/asic/check_shift.py": "478deac1a249210b7e84c91687b5aeb12de8962e3a9428c56283fa106266fd1f",
+    "scripts/asic/chip.py": "403ed6184415e6ba8652c3b110022e7cf4afa4cc20b7ab10ba7e2892c88b9eba",
+    "scripts/asic/chip_check.py": "4b8ba733a838a11b14d499101ccb1bbc161f46e3854f3514dfeda5dc691fdf20",
+    "scripts/asic/compare.py": "4c77d48ed14a0ce35ea6f7bddca80544331c9f926481d0d100ee23154668058e",
+    "scripts/asic/compare_openroad.tcl": "7aead8bc013fc7aa70aed674581b278de5c9840429c47438106afebb19f25165",
+    "scripts/asic/core_flow.tcl": "57d2cf3da3a39c56b961944d4e4626ea83de0788df330d5dbb99e5f257d790c3",
+    "scripts/asic/drc.py": "9861d99cacf644740acd942f1ae96989f827c2745f311ad4f909ebb86ac1c75c",
+    "scripts/asic/extract.py": "33947c62439496a6218354b7aab6bd8b706fea9068b6c621951be5454c123867",
+    "scripts/asic/fetch_pdk.py": "407b9f29ae141647591cc0d9b5ece268bfe26e1ad989490aaf5e7a40b8a47cf0",
+    "scripts/asic/fixtures.py": "96150222779ff6c34171023aa636296a3f674fade5114f8680aafe7a50570fbb",
+    "scripts/asic/flow.py": "9c74b18e7e9a21e02e4f1a4493a0484bd3c97c609749cbd038c3d28913fe0ffe",
+    "scripts/asic/inspect_pdn.tcl": "f38b45a124f5c2bd5e0c6b5ce4dc3748cb34edb6e4ba5b23d5968e5e50b10b58",
+    "scripts/asic/nspl.py": "a6105bec8b519a98bdae426b29d5a6e94b3d869fd304633e6c482eab67daf3d1",
+    "scripts/asic/pinplan.py": "ab47ac62cba321e565f62dd71c252dea874cf0f7b25e627b41dac7d60a168d22",
+    "scripts/asic/qualify_cells.py": "dc0453f00acc484c6ec6e326f21acc1357916ff97bd44f57fbb3e9c70fe2c92e",
+    "scripts/asic/reference.py": "49130505ba669c3c5cfe9d8d6a928b0f9b8968aff1fb13abb87fba69ca2e9a6f",
+    "scripts/asic/report.py": "d077cfc1bbca0c7179650c08b91e7b4e90a4bf6cfc37a98be55c894cd46d637f",
+    "scripts/asic/selftest.py": "9b5f5132cfde6443777ae19449a4d0c15513dcf4459f25f4a1bede962fd47f71",
+    "scripts/asic/setup_tools.py": "410839b4d404a197d2f032e8ebc3ee1176067edd916b0be694e03176a471ffe7",
+    "scripts/asic/stream.py": "eddc1162dd85f32f582e709231b4edc191105ee142c48ab9fa51c439a34e496f",
+    "scripts/pdk.py": "84fbec79e8209b00764834b6b75724ab3c60084a323f741b82f1359815923797",
+    "scripts/run_physical.py": "9bfb48e6a602acd94a9ec6c5054f45d287e019fc3d508d603cab9f2957e1792d",
+    "src/accumulator_reg.v": "ba4bb0d4b6f031efe7dd2017819afae6b6d6cf0d4ab62b6fbaf92e8c684fc8b2",
+    "src/adder12.v": "df4b616ae8da009332f8c25d11e26487b2407f8646eba712041c9170b8bb6947",
+    "src/dot8_controller.v": "63f6dd3393230cc0d60a98900d1dcc9079268c874fc2d5189bf0c52f61ca3e00",
+    "src/illegal_flag_reg.v": "c6b541f2b1c3ecaa43eedfbcab1cfd2601357bf9c31998f995d426f7f4771221",
+    "src/nibble_rx.v": "f0f5735127d0c30db7a179b2a04891019b84c8ac002466f1cc06e4ab11cf373d",
+    "src/result_tx.v": "12fceb3b8315fbeb11a7be0b9b73f6791d105542f085b370b09ece7701483c9b",
+    "src/ternary_decoder.v": "08c79f8015b43c9e3fd25153dd7783b41c44327d591b2aade38da6658a5548ce",
+    "src/ternary_term.v": "e8e7c95372fc593a415ddf1368a57fa6497b9a321d8d20eebddb904be8e69fcd",
+    "src/v_ternary8_top.v": "9927c354e41a803c2255956e4f68561f81192dc375119d1604ed366215b7fbaf",
+    "src/weight_shift_reg.v": "356d79d3e1292126266fcea06a11843849a2a6bae28522ac2d2090d032336d1e",
+    "tests/rtl/model.py": "3421399a2776a34399aeddef7bb0d467fc64dac6f0a9fc133187abc1fe34cf68",
+    "tests/rtl/test_model.py": "2b1051f24200cea10c5f3afd1a3f62a0768a595bab923afcdb4ef3b7c5fa8e41",
+    "tests/rtl/test_top.py": "f75ef6f59d7b63d0ca0d726084db5a3ffd8d4896adf3ab15605e349e7123f8e0",
+    "tests/rtl/test_units.py": "129b3cd5d824b8d2e04792961acf9961d30061d426eefe1d50e9f8c8b79c81f9",
+    "tests/rtl/transport.py": "e2165bb8699458e28d481523dda3d4ca65ac3f905290e91e4ad30bcf575b9629",
+    "verification/asic/cell-qualification.json": "79eba346ca0891c052c65139efb002b152f81f1b1c5d1f64c68c4c33c4bb3f02",
+    "verification/asic/cells.toml": "8d149d82be44e4bc10bc1f2507c38260c3747d18a0edc2f6f5b2855f7906a4c7",
+    "verification/asic/netgen_setup.tcl": "441207bae4e62dacae098680340126641559222207ddce98065e91ed66fb2036",
+    "verification/asic/pinmap.toml": "da8f0bf0d143f75c6157d93d62bda239bdefae7161bec807364b18ac358d9912",
+    "verification/asic/tools.json": "53e4afcf391a1c3f56bdebda5311642872a33866940046feaa08ee4414b0ce73"
+  },
+  "date": "2026-11-24",
+  "scope": "Local WSL Ubuntu 24.04 experiment, not a GitHub execution or submission approval",
+  "relocation": "Ubuntu Yosys/ABC and Netgen packages unpacked privately; Netgen startup library path relocated, comparison binary unchanged",
+  "ci_blocker": "GitHub runner not allocated: account payments/spending-limit annotation",
+  "verdict_inputs": false,
+  "evidence_sha256": {
+    "result.json": "26df597cdf9d44590259fa4d69c888794c7847fe10781bfda860ab9c10adcd70",
+    "drc-subset.json": "81ca3638660490b117a21c1b0f42b4b42bdcdbd57a2a42115abcc690b4cec7f7",
+    "chip-connectivity.json": "37eb4bc7ec6c9ec280434b5fffbb07ade72f73a039be372d472d13c0428230aa",
+    "lvs/lvs.log": "328a935a3fa58c51cea3744fbdd976ba2114b89acdd11ee039bf47298ef26ff8",
+    "lvs/lvs.json": "3ddd91b32cb189b9db50c50831f42654e2012427f1c48441dfca1e83adc6eb7d",
+    "pnr/final.v": "ce580909d5d2ba509b6d41d73bc9e4557daae8333bff94193a8a09b23c7f31e9",
+    "ternary8_sop28.gds": "9984572d89b4e02891bc74cb645abe535dcad0ba68b4329cf4f8d976b2faba09"
+  }
+}

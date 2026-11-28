@@ -9,7 +9,7 @@ MyChip 2026 4차(0.5 µm CMOS) 회로팀. 안내서 팀 3(3-A): 삼진 가중치
 | `src/` | 설계 원본 전부: RTL 모듈 10개 (`v_ternary8_top` 외) |
 | `mychip/` | 합성·배치배선·사인오프 결과 ([안내](mychip/README.md)) |
 | `docs/` | 문서 |
-| `.github/` | CI: `RTL CI`(팀 자체 검사), `MyChip integration`(칩 간 연결 계약), `MyChip PDK`(4차 PDK 합성·게이트 수준·타이밍·`mychip/` 검사, 이 저장소 코드로 실행) |
+| `.github/` | CI: `RTL CI`, `MyChip integration`, `MyChip PDK`, `Physical checks`, `ASIC RTL to GDS`(실제 구현 실험·미확인 공정 항목 별도 표시) |
 | `scripts/` · `tests/` · `verification/` | 팀 PR 규칙 검사·RTL CI·PDK 검사 도구와 시험 (저장소 맨 위 경로를 전제로 동작) |
 | `.githooks/` · `.claude/` · `.codex/` · `AGENTS.md` · `CLAUDE.md` | 에이전트·Git 후킹과 작업 규칙 |
 | `requirements-ci.txt` | CI 파이썬 의존성 |
@@ -98,9 +98,9 @@ flowchart TD
 - [후킹 사용 방법](docs/hooks.md): 설치·확인·검사와 지원 범위.
 - [PR 1·2·3 팀 안내](docs/team-pr-guide.md): 작업 내용과 팀원이 따라 할 순서. 계속 다듬을 초안.
 - [RTL CI](docs/ci.md): 검사 이름·시나리오·실행 방법과 결과 해석.
-- [RTL → GDS·검증·리포트](docs/verification/rtl-to-gds-guide.md): 1팀 방식과 도구를 비교한 뒤 구현할 전체 흐름. [SPEC 0017](docs/specs/0017-rtl-to-gds.md), 아직 미구현.
+- [RTL → GDS·검증·리포트](docs/verification/rtl-to-gds-guide.md): 비교·OpenROAD 구현·SOP28 조립·실행법·리포트. [SPEC 0017](docs/specs/0017-rtl-to-gds.md). 코어 LVS·기능 회귀와 금속 연결을 검사하며, 공정 RC·전체 DRC·GPIO 검증·핀맵은 미확인.
 - [P&R 검증 방법론](docs/verification/pnr-methodology.md): 합성 이후 검사 항목과 제출 검토의 구분.
-- [Magic·Netgen 상세 사용서](docs/verification/magic-netgen-guide.md): 설치·연습·실제 DRC/LVS 준비·PEX. `Physical checks`는 연습 회로 자체 시험이며 실제 5팀 물리 검증은 아직 미실행.
+- [Magic·Netgen 상세 사용서](docs/verification/magic-netgen-guide.md): 설치·연습·실제 DRC/LVS 준비·PEX. `Physical checks`는 연습 회로 자체 시험이며 실제 코어 검사는 위 ASIC 흐름으로 구분.
 
 ### Repository Guidelines
 

@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-24",
+  "scope": "local KLayout geometry audit; full-process DRC incomplete",
+  "base_commit": "0523b7fa645cf56770ea57df24b5caa566e137e1",
+  "worktree_changes": true,
+  "tests": {
+    "status": "pass",
+    "fixtures": 427,
+    "ported_rules": 96,
+    "failed_fixtures": [],
+    "wall_seconds": 0.547,
+    "golden_compared": false
+  },
+  "audits": {
+    "core": {
+      "status": "incomplete",
+      "qualified_process_drc": false,
+      "top": "v_ternary8_top",
+      "implementation_hashes": {
+        "drc.py": "ea682ee0dc802f4e8380afed35c15dbc170c6f255683b71cf8f0a98d3e18a0b2",
+        "drc_geometry.py": "82bca513595294f16e0fa5a2c9598531075838c706daf2cee9a8d1a350dc6a26",
+        "drc_ports.py": "44ce64db2a62c1a228269a1ae6e2efb9d7c1406c0187d9b34218e36f6d0a226b",
+        "drc_catalog.py": "924670da3ae1f73c900a3b41310f98a5995657b3d04c6f26d00f5c0eb00f239c",
+        "drc-rules.json": "9427e1c7e45471f238479ccaa9effe05070f6acaf6a63cbc61be4cf5279b9545"
+      },
+      "source_hashes": {
+        "calibre": "6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f",
+        "assura": "09ce215f4034ad9aa9709157fe3d61a2ba508b0407a89da6cfc7faa6f6581109",
+        "converted": "a7228105e5374d764bf7004ed9735e684281838c8db8bad985e5ed66816d9a03"
+      },
+      "klayout": "KLayout 0.28.16",
+      "gds_sha256": "188021dfb80ce7e3c5b82959855d99cbd33ac27170f999bb4919ea5f5544a3a6",
+      "errors": 0,
+      "tool_exit_code": 0,
+      "active_source_rules": 209,
+      "geometry_ports": 96,
+      "unported": 113,
+      "golden_compared": false,
+      "wall_seconds": 4.633,
+      "original_nodrc_area_um2": 0.0,
+      "masked_area_um2": {},
+      "evidence_hashes": {
+        "geometry.json": "93337b0a597a5e90d575821a47f188967e95700f90b997b1a3dd3fbb7322079a",
+        "geometry.log": "fe490aab833401d037be33b27f527e8a44a87205b2ae9e811510c416aeb1771a",
+        "result.json": "da3211760031dd0bb386cea7fcf0de1675b6a9cef29efa551b1c38d86a9dc011"
+      }
+    },
+    "chip": {
+      "status": "incomplete",
+      "qualified_process_drc": false,
+      "top": "ternary8_sop28",
+      "implementation_hashes": {
+        "drc.py": "ea682ee0dc802f4e8380afed35c15dbc170c6f255683b71cf8f0a98d3e18a0b2",
+        "drc_geometry.py": "82bca513595294f16e0fa5a2c9598531075838c706daf2cee9a8d1a350dc6a26",
+        "drc_ports.py": "44ce64db2a62c1a228269a1ae6e2efb9d7c1406c0187d9b34218e36f6d0a226b",
+        "drc_catalog.py": "924670da3ae1f73c900a3b41310f98a5995657b3d04c6f26d00f5c0eb00f239c",
+        "drc-rules.json": "9427e1c7e45471f238479ccaa9effe05070f6acaf6a63cbc61be4cf5279b9545"
+      },
+      "source_hashes": {
+        "calibre": "6c01207311236d148dc183576fa8f5156e1a21d40a19609322c810fa919c4f0f",
+        "assura": "09ce215f4034ad9aa9709157fe3d61a2ba508b0407a89da6cfc7faa6f6581109",
+        "converted": "a7228105e5374d764bf7004ed9735e684281838c8db8bad985e5ed66816d9a03"
+      },
+      "klayout": "KLayout 0.28.16",
+      "gds_sha256": "9984572d89b4e02891bc74cb645abe535dcad0ba68b4329cf4f8d976b2faba09",
+      "errors": 0,
+      "tool_exit_code": 0,
+      "active_source_rules": 209,
+      "geometry_ports": 96,
+      "unported": 113,
+      "golden_compared": false,
+      "wall_seconds": 13.595,
+      "original_nodrc_area_um2": 0.0,
+      "masked_area_um2": {},
+      "evidence_hashes": {
+        "geometry.json": "4080e6a9f3da50ca485a18116a396e31dad94c00ba477cad20c5575c7d919b9d",
+        "geometry.log": "bb77254ccf22d5e9c5e087b93605a1aa5a6c231f4f6b5179f900abba20a7ca45",
+        "result.json": "1618c8d93d7a1e1c37fffb292e042983c1cab9d5b2dec5bd2b0d555be2836f04"
+      }
+    }
+  }
+}

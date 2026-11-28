@@ -1,0 +1,16 @@
+# Original GDS vs independent CDL qualification, 2026-11-24.
+# These restrictions apply to the new ASIC build, not historical PDK checks.
+dont_use = ["AND2X2", "AOI21X1", "BUFX4", "INVX2", "INVX4", "INVX8", "NOR2X1", "OAI21X1", "OAI22X1", "OR2X2", "TBUFX2"]
+
+[reason]
+AOI21X1 = "Standalone LVS: A/B pin correspondence differs"
+OAI21X1 = "Standalone LVS: A/B pin correspondence differs"
+NOR2X1 = "Standalone LVS: A/B pin correspondence differs"
+INVX8 = "Standalone LVS: transistor property mismatch"
+AND2X2 = "Not qualified by current original-GDS/CDL comparison"
+BUFX4 = "Not qualified by current original-GDS/CDL comparison"
+INVX2 = "Not qualified by current original-GDS/CDL comparison"
+INVX4 = "Not qualified by current original-GDS/CDL comparison"
+OAI22X1 = "Not qualified by current original-GDS/CDL comparison"
+OR2X2 = "Not qualified by current original-GDS/CDL comparison"
+TBUFX2 = "Not qualified by current original-GDS/CDL comparison"
