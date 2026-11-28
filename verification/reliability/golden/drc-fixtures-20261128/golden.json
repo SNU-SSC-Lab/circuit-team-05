@@ -24,7 +24,7 @@
       "gds": "0001-OFFGRID_CHIPBOUNDARY-positive-half-grid.gds",
       "rule": "OFFGRID_CHIPBOUNDARY",
       "case_sha256": "2a414724400ce723b04262f5d80383d7278fe71860c242111b63e724646af2a6",
-      "calibre": "fired",
+      "calibre": "clean",
       "target_count": 4,
       "other_rules": {
         "OFFGRID_PWELL": 4,
