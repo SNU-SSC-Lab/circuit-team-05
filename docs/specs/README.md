@@ -28,4 +28,6 @@
 
 - [0020 키트 ANT deck antenna 검사 이식](0020-antenna-check.md): 12개 검사를 KLayout으로 옮겨 Calibre fixture 102개와 일치, 흐름 필수 검사 `asic-antenna`·`asic-chip-antenna`
 
+- [0021 DRC 미이식 규칙 묶음 1](0021-drc-port-batch1.md): 금속·via·PAD 17개 규칙을 KLayout으로 옮겨 fixture 228개·변형본 두 golden에서 Calibre와 일치, verified DRC 113개
+
 index.json은 검사 대상 파일과 확인한 규약의 버전을 기록한다. SHA256은 파일 내용으로 계산한 식별값이다. 사람이 읽는 설명은 각 SPEC의 RFC 확인 항목에 둔다.
