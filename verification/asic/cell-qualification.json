@@ -9,8 +9,8 @@
   "source_gds_sha256": "e42dc1fb4c9a31aaa669e8e4c3b93a4b0d6eea40a463f5eaef5dbd17b432618e",
   "source_cdl_sha256": "281efca41e93e7f88cf59e18e64159f9772111cfee1f86647cbd6ac3703e9f11",
   "extractor_sha256": "33947c62439496a6218354b7aab6bd8b706fea9068b6c621951be5454c123867",
-  "reducer_sha256": "5d0af0c6fb19f040d34912e6382df52ca460a0c5bb97edf673199ee3d43b4720",
-  "netgen_setup_sha256": "6c8aea98eda22de7d7b9806bdc8fa6cd11ce66ba8057d70730c4e40c222d5fa6",
+  "reducer_sha256": "6e63af186e3e6daf2be2fd198a4195e2fcf36988e3e39b8f786a325ca2fdc99c",
+  "netgen_setup_sha256": "c6b5d333ab3ccd4459d9f7d6e4760f9f1017979eced1f9f7e8a397c5945e1823",
   "matched": "34/34",
   "previous": {
     "date": "2026-11-24",
