@@ -74,7 +74,7 @@ python -m json.tool "$TEAM05_OUT/result.json"
 | `pnr/final.v`, `v_ternary8_top.gds` | 같은 실행의 최종 netlist·코어 GDS |
 | `pnr/estimated.spef` | 보정 전 전역 배선 추정값. 정밀 PEX 결과가 아님 |
 
-## 5. 생성한 GDS에 확장 DRC 96개 적용
+## 5. 생성한 GDS에 확장 DRC 적용(2026-11-28 기준 113개 규칙)
 
 ```bash
 python scripts/asic/drc_audit.py --pdk "$TEAM05_PDK" --gds "$TEAM05_OUT/v_ternary8_top.gds" --top v_ternary8_top --out "$TEAM05_OUT/drc-expanded"
@@ -206,7 +206,7 @@ PIC·POB4·PVDD·PVSS 중 작은 셀 하나부터 독립 기준 SPICE/CDL과 GDS
 
 ## 12. 지금 사용법에서 R&D를 시작하는 순서
 
-1. **3절의 451개 도형 시험, 4절의 코어 실행, 5절의 확장 DRC를 먼저 재현한다.** 기존 결과를 기준으로 보관한다. `--experimental`은 지정된 미확인 항목만 허용하며 실제 실패를 성공으로 바꾸지 않는다.
+1. **3절의 도형 시험, 4절의 코어 실행, 5절의 확장 DRC를 먼저 재현한다.** 기존 결과를 기준으로 보관한다. `--experimental`은 지정된 미확인 항목만 허용하며 실제 실패를 성공으로 바꾸지 않는다.
 2. **연구 질문 하나를 고른다.** 예를 들어 미구현 DRC 한 규칙, GPIO 한 셀, MET1 배선 한 패턴으로 범위를 좁힌다. PEX 연구라면 8절의 설정·명령·입출력 예제를 함께 받으면 출발점을 비교하기 좋다.
 3. **입력과 비교 조건을 고정하고 차이를 기록한다.** PDK·설정·입력 해시, 도구 버전, 명령, corner·단위, 기대 결과의 출처, 실제 출력과 오차·미지원 조건을 한 실험 묶음으로 남긴다. 현재 추출기의 결과를 다시 정답으로 넣지 않는다.
 4. **해당 범위가 확인된 뒤 전체 흐름에 연결한다.** 작은 예제 통과를 전체 공정 지원으로 확대하지 않는다. DRC 목록·시험, 셀별 LVS, RC 대조 근거를 함께 늘린다.

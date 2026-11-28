@@ -145,7 +145,7 @@ verification/reliability/
 
 | 행 (`id`) | 단계 | 판정 | 근거 요약 | CI가 PR마다 확인하는 것 |
 | --- | --- | --- | --- | --- |
-| `drc-fixtures` | DRC 규칙 판정 | 일치 | 구현 113개 규칙의 fixture 679개 중 677개 대상 규칙 발동 여부 일치, 2개(0169·0170) Calibre 입력 거부로 제외(금속·via·PAD 228개는 SPEC 0021) | `reliability-table`: fixture를 다시 만들어 `verified` 규칙의 KLayout 판정이 두 fixture golden과 같은지(`reliability.py check`) |
+| `drc-fixtures` | DRC 규칙 판정 | 일치 | 구현 113개 규칙의 fixture 679개 중 677개 대상 규칙 발동 여부 일치, 2개(0169·0170) Calibre 입력 거부로 제외(금속·via·PAD 228개는 SPEC 0021) | `reliability-table`: fixture를 다시 만들어 `verified` 규칙의 KLayout 판정이 fixture golden(`drc-fixtures-*`·`ant-fixtures-*`)과 같은지(`reliability.py check`) |
 | `drc-mutations` | DRC 실제 형상 변형본 | 일치 | 1차 609개 × 113개 규칙 = 68,817 판정 불일치 0(81개 거부·빈 셀 5개 제외), 2차 키트 셀 602개 × 113개 = 68,026 판정 불일치 0(빈 셀 2개 제외), 같은 코어 GDS를 준 기준점 대조로 코어 창까지 798개 × 113개 = 90,174 판정 불일치 0 | 경로 필터에 걸린 PR과 main push에서 키트 부분을 다시 만들어 대조(`check-mutations`). 코어 창 196개는 기준점 전용 |
 | `drc-unported` | DRC 미구현 규칙 | 근거 없음 | 96개 규칙 + ACUTE·NONSIMPLE fixture 527개의 Calibre golden 확보, KLayout 판정 없음(처음 755개 중 228개는 SPEC 0021에서 옮김) | 판정 대조 없음. 정의와 golden이 1:1인지(`check-pending`) |
 | `drc-chip-v2` | DRC 실제 칩 (v2, 상용 흐름) | 일치 | seal ring 없음 0 ↔ 0, 있음 0 ↔ 1(`1.PWL.bad1`, KLayout 미구현) | 없음. v2 GDS는 저장소 밖(11-27 결정), 기준점에서만 |
@@ -280,7 +280,7 @@ flowchart TD
 | `scripts/asic/baseline_guard.py` | 기준 커밋과 PR head의 규칙 상태·미검증 목록·golden·검사 코드를 파일 내용으로만 비교해 우회가 필요한 변경을 실패시킴. PR 코드는 실행하지 않음(`--run-fixtures`는 로컬 전용) |
 | `scripts/asic/flow.py`, `scripts/run_asic.py` | `--gate`가 `unverified.json`의 `allows_checks`로 판정. `--experimental`은 고정 목록 `UNQUALIFIED_DEFAULT`로 유지. `asic-estimated-sta` 판정 함수 분리 |
 | `verification/reliability/**` | 대응표·미검증 목록·golden·기준점 절차 |
-| `verification/asic/drc-rules.json` | 구현 96개 규칙의 golden 대조 여부(`golden_compared`)와 남은 일(`remaining`) |
+| `verification/asic/drc-rules.json` | 구현 규칙(2026-11-28 묶음 1 뒤 113개)의 golden 대조 여부(`golden_compared`)와 남은 일(`remaining`) |
 | `.github/workflows/asic.yml` | 워크플로 `ASIC gate`, job `asic-gate`(경로 필터, OpenROAD 실행 라이브러리 apt 설치와 `ldd` 확인)와 `reliability-table` |
 | `.github/workflows/baseline.yml` | 워크플로 `Baseline guard`, job `baseline-guard`(pull_request_target, 워크플로 커밋의 guard 사본이 base·head를 데이터로만 비교)와 `baseline-label` |
 | `.github/CODEOWNERS` | 기준 파일·`drc-rules.json`·guard·워크플로·CODEOWNERS·흐름 판정 코드·LVS 판정 코드 변경에 도재겸 리뷰 요청(필수 승인 아님, 1절 기준점 PR 흐름) |

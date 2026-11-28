@@ -11,7 +11,7 @@
 | 제출 직전 최종 GDS | 최종 칩 GDS의 Calibre DRC·ANT·LVS와 같은 GDS의 오픈소스 판정 |
 | 제출 GDS가 바뀌었을 때 | 바뀐 제출 GDS의 키트 Calibre DRC·ANT·LVS 전체. 아래 "제출 조건" |
 
-**제출 조건.** 제출 GDS가 바뀌면, 상용 서버를 쓸 수 있는 동안 키트 Calibre DRC·ANT·LVS 전체를 다시 돌려 결과를 기준점으로 남긴다. ETRI는 제출 DB의 DRC를 재수행하지 않는다(2026-11-28 운영기관 회신). 그래서 제출본 DRC는 전부 팀 책임이다. KLayout은 PR마다 verified 규칙만 판정하고, 아직 옮기지 않은 규칙이 남아 있는 동안 Calibre 전체 결과를 대신하지 못한다. 결과는 칩 결과 형식(5절, `golden/chip-<이름>-YYYYMMDD/`)으로 넣고, 같은 GDS의 KLayout 판정을 함께 적는다.
+**제출 조건.** 제출 GDS가 바뀌면, 상용 서버를 쓸 수 있는 동안 키트 Calibre DRC·ANT·LVS 전체를 다시 돌려 결과를 기준점으로 남긴다. ETRI 담당자는 칩 레이아웃을 개략적으로 확인하지만 제출 DB의 DRC를 재수행하지는 않는다(2026-11-28 운영기관 회신). 그래서 제출본 DRC는 전부 팀 책임이다. KLayout은 PR마다 verified 규칙만 판정하고, 아직 옮기지 않은 규칙이 남아 있는 동안 Calibre 전체 결과를 대신하지 못한다. 결과는 칩 결과 형식(5절, `golden/chip-<이름>-YYYYMMDD/`)으로 넣고, 같은 GDS의 KLayout 판정을 함께 적는다.
 
 생성기(`scripts/asic/drc_cases.py`)를 고쳐 `verified` 규칙의 fixture 정의가 바뀐 경우도 그 fixture의 golden이 사라지므로 기준점이 필요하다. 변형본 생성기(`scripts/asic/mutate.py`, `scripts/asic/mutate_v2.py`)를 고쳐 같은 seed에서 다른 형상이 나오는 경우도 같다.
 
@@ -95,8 +95,8 @@ KLayout 구현이 없는 규칙의 fixture golden이다. 항목 형식은 DRC fi
 
 2026-11-28 실행이 첫 기준점이다. Calibre `v2023.4_17.10`, 키트 deck 무수정으로 다음을 받았다.
 
-- DRC fixture 427개(첫 묶음 기록): 425 일치, 2개 Calibre 거부(dbu). 지금 숫자는 아래 둘러싸기 묶음과 합친 451개 중 449개 일치, 2개 제외. 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
-- 둘러싸기 경계 fixture 24개(`0427`~`0450`): 24개 모두 정의의 기대값과 같음 → `golden/drc-fixtures-20261128b/`. 두 묶음을 합쳐 fixture 451개 중 449개 일치, 2개 제외
+- DRC fixture 427개(첫 묶음 기록): 425 일치, 2개 Calibre 거부(dbu). 아래 둘러싸기 묶음과 합치면 451개 중 449개 일치, 2개 제외(금속·via·PAD 묶음 228개를 더한 지금은 679개 중 677개 일치, 2개 제외). 입력 묶음 sha256 `a125b25350f984c46dde3d9c73f172bd085508ac540eddb35b86709e18a394d8`, 생성 커밋 `303bcb6` → `golden/drc-fixtures-20261128/`
+- 둘러싸기 경계 fixture 24개(`0427`~`0450`): 24개 모두 정의의 기대값과 같음 → `golden/drc-fixtures-20261128b/`. 두 묶음을 합쳐 fixture 451개 중 449개 일치, 2개 제외(2026-11-28 첫 기준점 기록)
 - 키트 셀 변형본 695개(1차, `mutate.py`): 81개 Calibre 거부(자기 교차) → `golden/drc-mutations-20261128/`
 - 키트 셀 604개 + 코어 창 196개 변형본 800개(2차, `mutate_v2.py`): Calibre 거부 0 → `golden/drc-mutations-20261128b/`
 - 오픈소스 흐름 코어·SOP28 칩의 DRC·ANT·LVS → `golden/chip-openflow-20261128/`
